@@ -1,0 +1,180 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Overview &#8212; funcsim  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="funcsim documentation" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h1>
+<p>The basic idea is that all an end user can run a simulation after
+simply writing a specially-crafted function that performs a single
+trial (for a cross-sectional simulation) or that takes one step
+through time or space (for a recursive-dynamic simulation).</p>
+<div class="section" id="simple-cross-sectional-example">
+<h2>Simple cross-sectional example<a class="headerlink" href="#simple-cross-sectional-example" title="Permalink to this headline">¶</a></h2>
+<p>For a cross-sectional simulation, the trial function has the
+following form:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="c1"># function to perform one trial</span>
+<span class="k">def</span> <span class="nf">trial</span><span class="p">(</span><span class="n">draw</span><span class="p">):</span>
+    <span class="c1"># &#39;draw&#39; argument is required and must be the only argument</span>
+
+    <span class="c1"># independent draws from U(0, 1)</span>
+    <span class="n">u1</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">)</span>
+    <span class="n">u2</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">)</span>
+
+    <span class="c1"># do some kind of work</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">u1</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="mf">34.2</span> <span class="o">+</span> <span class="mf">0.95</span> <span class="o">*</span> <span class="n">x</span> <span class="o">+</span> <span class="n">u2</span>
+
+    <span class="c1"># return variables of interest as a dictionary</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">y</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Any number of independent uniform draws can be taken.</p>
+<p>Then a simulation is performed by invoking the <code class="docutils literal"><span class="pre">crosssec</span></code> function:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">funcsim</span> <span class="kn">as</span> <span class="nn">fs</span>
+
+<span class="n">da</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">crossec</span><span class="p">(</span><span class="n">trial</span><span class="o">=</span><span class="n">trial</span><span class="p">,</span> <span class="n">trials</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Here, the value passed as the <code class="docutils literal"><span class="pre">trials</span></code> argument is the number of
+trials that will be performed.  The returned object is a
+2-dimensional <a class="reference external" href="http://xarray.pydata.org/">xarray</a>
+<code class="docutils literal"><span class="pre">DataArray</span></code> instance, with a first dimension named <code class="docutils literal"><span class="pre">trails</span></code>
+and a second dimension named <code class="docutils literal"><span class="pre">variables</span></code>.</p>
+</div>
+<div class="section" id="simple-recursive-dynamic-example">
+<h2>Simple recursive-dynamic example<a class="headerlink" href="#simple-recursive-dynamic-example" title="Permalink to this headline">¶</a></h2>
+<p>For problems that reflect movement through time or space,
+a recursive-dynamic simulation is appropriate.  The user specifies a
+function describing one step forward, such as the one below.
+The <code class="docutils literal"><span class="pre">data</span></code> argument here reflects historical observations. It is a
+2-dimensional <code class="docutils literal"><span class="pre">DataArray</span></code> instance, with a first dimension named
+<code class="docutils literal"><span class="pre">steps</span></code> and a second dimension named <code class="docutils literal"><span class="pre">variables</span></code>.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">stats</span>
+
+<span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">draw</span><span class="p">):</span>
+    <span class="c1"># take one step through time</span>
+
+    <span class="c1"># value of &quot;p&quot; in the previous period</span>
+    <span class="n">plag</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">recall</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">lag</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># do some kind of work</span>
+    <span class="n">pnew</span> <span class="o">=</span> <span class="mf">0.25</span> <span class="o">+</span> <span class="mf">0.9</span> <span class="o">*</span> <span class="n">plag</span> <span class="o">+</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">))</span>
+
+    <span class="c1"># chronicle the new value of &quot;p&quot; in the historical record</span>
+    <span class="n">datanew</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">chron</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;p&quot;</span><span class="p">:</span> <span class="n">pnew</span><span class="p">})</span>
+
+    <span class="k">return</span> <span class="n">datanew</span>
+</pre></div>
+</div>
+<p>After specifying a <code class="docutils literal"><span class="pre">DataArray</span></code> containing historical data (here, called
+<code class="docutils literal"><span class="pre">data0</span></code>), the simulation is invoked thusly:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">out</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">recdyn</span><span class="p">(</span><span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">data0</span><span class="o">=</span><span class="n">data0</span><span class="p">,</span> <span class="n">steps</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">trials</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The output is a 3-dimensional <code class="docutils literal"><span class="pre">DataArray</span></code> instance, with dimensions named
+<code class="docutils literal"><span class="pre">trials</span></code>, <code class="docutils literal"><span class="pre">variables</span></code>, and <code class="docutils literal"><span class="pre">steps</span></code>.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">funcsim</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#simple-cross-sectional-example">Simple cross-sectional example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#simple-recursive-dynamic-example">Simple recursive-dynamic example</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">funcsim documentation</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Henry Bryant.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/overview.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
