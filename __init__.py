@@ -19,10 +19,4 @@ from rdarrays import recall
 from dependence import normal
 from dependence import corru
 
-import shrinkage
-
-
-def shrink(a):
-    # shrinkage cov estimator.
-    # 'a' is a numpy array, with vars in cols & obs in rows
-    return shrinkage.target_f(a)[0]
+from shrinkage import shrink

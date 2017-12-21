@@ -9,33 +9,33 @@ import itertools
 import numpy as np
 
 
-def wtilde(x, i, j):
+def _wtilde(x, i, j):
     # make a centered "w" series
     xtilde = x - x.mean(0)
     w = xtilde[:, i] * xtilde[:, j]
     return w - w.mean()
 
 
-def cov_s(x, i, j, l, m):
+def _cov_s(x, i, j, l, m):
     # unbiased estimates of covar between two individual sij
     n = float(len(x[:, 0]))
-    thesum = sum(wtilde(x, i, j) * wtilde(x, l, m))
+    thesum = sum(_wtilde(x, i, j) * _wtilde(x, l, m))
     thefrac = n / ((n - 1.0)**3.0)
     return thefrac * thesum
 
 
-def var_s(x, i, j):
-    return cov_s(x, i, j, i, j)
+def _var_s(x, i, j):
+    return _cov_s(x, i, j, i, j)
 
 
-def f(x, i, j):
+def _f(x, i, j):
     s = np.cov(x, rowvar=False)
-    part0 = (s[j, j] / s[i, i])**0.5 * cov_s(x, i, i, i, j)
-    part1 = (s[i, i] / s[j, j])**0.5 * cov_s(x, j, j, i, j)
+    part0 = (s[j, j] / s[i, i])**0.5 * _cov_s(x, i, i, i, j)
+    part1 = (s[i, i] / s[j, j])**0.5 * _cov_s(x, j, j, i, j)
     return 0.5 * (part0 + part1)
 
 
-def target_a(x):
+def _target_a(x):
     # diagonal, unit variance shrinkage estimator
     s = np.cov(x, rowvar=False)
     idx = range(len(s))
@@ -47,7 +47,7 @@ def target_a(x):
     lam_num = 0.0
     lam_denom = 0.0
     for i, j in itertools.product(idx, idx):
-        lam_num += var_s(x, i, j)
+        lam_num += _var_s(x, i, j)
         if i != j:
             lam_denom += s[i, j]**2.0
         else:  # i == j
@@ -59,7 +59,7 @@ def target_a(x):
     return vcv, lam
 
 
-def target_b(x):
+def _target_b(x):
     # diagonal, common variance shrinkage estimator.  From Ledoit & Wolf, "A
     # well conditioned estimator for large dimension covariance matrices."
     # //Journal of Multivariate Analysis//, 88(2004):365-411
@@ -74,7 +74,7 @@ def target_b(x):
     lam_num = 0.0
     lam_denom = 0.0
     for i, j in itertools.product(idx, idx):
-        lam_num += var_s(x, i, j)
+        lam_num += _var_s(x, i, j)
         if i != j:
             lam_denom += s[i, j]**2.0
         else:  # i == j
@@ -86,7 +86,7 @@ def target_b(x):
     return vcv, lam
 
 
-def target_c(x):
+def _target_c(x):
     # common variance and covariance shrinkage estimator.
     s = np.cov(x, rowvar=False)
     idx = range(len(s))
@@ -103,7 +103,7 @@ def target_c(x):
     lam_num = 0.0
     lam_denom = 0.0
     for i, j in itertools.product(idx, idx):
-        lam_num += var_s(x, i, j)
+        lam_num += _var_s(x, i, j)
         if i == j:
             lam_denom += (s[i, i] - v)**2.0
         else:
@@ -115,7 +115,7 @@ def target_c(x):
     return vcv, lam
 
 
-def target_d(x):
+def _target_d(x):
     # diagonal, unequal variance shrinkage estimator.  From Shafer & Strimmer,
     # "A shrinkage approach to large-scale covariance matrix estimation and
     # implications for Functional Genomics." //Statistical Applications in
@@ -131,7 +131,7 @@ def target_d(x):
     lam_denom = 0.0
     for i, j in itertools.product(idx, idx):
         if i != j:
-            lam_num += var_s(x, i, j)
+            lam_num += _var_s(x, i, j)
             lam_denom += s[i, j]**2.0
     lam = max(0.0, min(1.0, lam_num / lam_denom))
 
@@ -140,7 +140,7 @@ def target_d(x):
     return vcv, lam
 
 
-def target_e(x):
+def _target_e(x):
     # perfect positive correlation shrinkage estimator.  From Ledoit & Wolf,
     # "Improved estimation of the covariance matrix of stock returns with an
     # application to portfolio selection," //Journal of Empirical Finance//,
@@ -158,7 +158,7 @@ def target_e(x):
     lam_denom = 0.0
     for i, j in itertools.product(idx, idx):
         if i != j:
-            lam_num += var_s(x, i, j) - f(x, i, j)
+            lam_num += _var_s(x, i, j) - _f(x, i, j)
             lam_denom += (s[i, j] - (s[i, i] * s[j, j])**0.5)**2.0
     lam = max(0, min(1.0, lam_num / lam_denom))
 
@@ -167,7 +167,7 @@ def target_e(x):
     return vcv, lam
 
 
-def target_f(x):
+def _target_f(x):
     # constant correlation shrinkage estimator.  From Ledoit & Wolf,
     # "Honey, I shrunk the sample covariance matrix"
     # //Portfolio Management//, 30(2004): 110-119
@@ -191,7 +191,7 @@ def target_f(x):
     lam_denom = 0.0
     for i, j in itertools.product(idx, idx):
         if i != j:
-            lam_num += var_s(x, i, j) - rbar * f(x, i, j)
+            lam_num += _var_s(x, i, j) - rbar * _f(x, i, j)
             lam_denom += (s[i, j] - rbar * (s[i, i] * s[j, j])**0.5)**2.0
     lam = max(0, min(1.0, lam_num / lam_denom))
 
@@ -200,9 +200,29 @@ def target_f(x):
     return vcv, lam
 
 
+def shrink(a):
+    # shrinkage cov estimator.
+    # 'a' is a numpy array, with vars in cols & obs in rows
+    #
+    # First, try constant correlation shrinkage estimator, from Ledoit & Wolf,
+    # "Honey, I shrunk the sample covariance matrix"
+    # //Portfolio Management//, 30(2004): 110-119
+    #
+    # If that result is not positive definite, return the (guaranteed P.D.)
+    # diagonal, unequal variance shrinkage estimate.  From Shafer & Strimmer,
+    # "A shrinkage approach to large-scale covariance matrix estimation and
+    # implications for Functional Genomics." //Statistical Applications in
+    # Genetics and Molecular Biology//, vol 4(2005), issue 1.
+    sig = _target_f(a)[0]
+    if np.all(np.linalg.eigvals(sig) > 0):
+        return sig
+    else:
+        return _target_d(a)[0]
+
+
 if __name__ == '__main__':
 
-    targets = [target_a, target_b, target_c, target_d, target_f]
+    targets = [_target_a, _target_b, _target_c, _target_d, _target_f]
 
     def calc_all_norms(seed, mu, r, n):
         np.random.seed(seed)
