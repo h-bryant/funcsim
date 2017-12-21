@@ -23,7 +23,7 @@ def trial(draw):
 
 
 # simulate
-out = fs.crossec(trial=trial, trials=100)
+out = fs.crosssec(trial=trial, trials=100)
 
 # sort simulated u values, send to screen
 srtd_u_LHS = np.sort(out[:, 0])

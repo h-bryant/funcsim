@@ -24,5 +24,5 @@ def trial(draw):
 
 
 def test_0():
-    out = fs.crossec(trial=trial, trials=15)
+    out = fs.crosssec(trial=trial, trials=15)
     assert type(out) == xr.DataArray

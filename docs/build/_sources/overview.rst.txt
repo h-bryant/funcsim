@@ -38,7 +38,7 @@ Then a simulation is performed by invoking the ``crosssec`` function:
 
     import funcsim as fs
   
-    da = fs.crossec(trial=trial, trials=500)
+    da = fs.crosssec(trial=trial, trials=500)
 
 Here, the value passed as the ``trials`` argument is the number of
 trials that will be performed.  The returned object is a

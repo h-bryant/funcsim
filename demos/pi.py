@@ -19,6 +19,6 @@ def trial(draw):
     return {"h": h(x, y)}
 
 
-out = fs.crossec(trial=trial, trials=500)
+out = fs.crosssec(trial=trial, trials=500)
 area = float(out.mean())  # area of a quarter circle
 print("value of pi is approximately %s" % (4.0 * area))

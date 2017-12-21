@@ -71,7 +71,7 @@ def _lhs(K, R):
     return np.concatenate([[_strat(R)] for i in range(K)], axis=0)
 
 
-def crossec(trial, trials, parallel=False, seed=6):
+def crosssec(trial, trials, parallel=False, seed=6):
     """
     Cross sectional simulation
     """

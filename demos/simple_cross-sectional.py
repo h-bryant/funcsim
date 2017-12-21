@@ -25,6 +25,6 @@ def trial(draw):
 
 
 # simulate
-out = fs.crossec(trial=trial, trials=15)
+out = fs.crosssec(trial=trial, trials=15)
 print(out)
 print("\nMeans of the simulated variables:\n%s" % out.mean(dim='trials'))
