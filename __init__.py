@@ -16,6 +16,9 @@ from rdarrays import fromcsv
 from rdarrays import chron
 from rdarrays import recall
 
+from dependence import normal
+from dependence import corru
+
 import shrinkage
 
 
