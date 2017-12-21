@@ -46,8 +46,8 @@ def test_0():  # basic
     assert abs(float(out[:, 0, 10].mean()) - 1.047) < 0.001
 
 
-def test_1():  # use parallel
-    out = fs.recdyn(step=step, data0=data0(), steps=10, trials=500, parallel=True)
+def test_1():  # use multi
+    out = fs.recdyn(step=step, data0=data0(), steps=10, trials=500, multi=True)
     assert type(out) == xr.DataArray
     assert abs(float(out[:, 0, 10].mean()) - 1.047) < 0.001
 

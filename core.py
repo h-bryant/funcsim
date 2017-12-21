@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import xarray as xr
-import multi
+import multicore
 import tailcall
 
 
@@ -71,7 +71,7 @@ def _lhs(K, R):
     return np.concatenate([[_strat(R)] for i in range(K)], axis=0)
 
 
-def crosssec(trial, trials, parallel=False, seed=6):
+def crosssec(trial, trials, multi=False, seed=6):
     """
     Cross sectional simulation
     """
@@ -92,14 +92,14 @@ def crosssec(trial, trials, parallel=False, seed=6):
                             dims=['variables'])
 
     # create and return a 2-D DataArray with new dimension 'trials'
-    if parallel is True:
+    if multi is True:
         out = multi.parmap(tryl, range(trials))
     else:
         out = [tryl(r) for r in range(trials)]
     return xr.concat(out, pd.Index(list(range(trials)), name='trials'))
 
 
-def recdyn(step, data0, steps, trials, parallel=False, seed=6):
+def recdyn(step, data0, steps, trials, multi=False, seed=6):
     # recursive dynamic simulation
 
     # infer number of random vars reflected in 'step' fucntion
@@ -118,8 +118,8 @@ def recdyn(step, data0, steps, trials, parallel=False, seed=6):
         return _recurse(f=stp, x0=data0, S=steps)
 
     # create and return 3-D output DataArray, with new dimension 'trials'
-    if parallel is True:
-        out = multi.parmap(trial, range(trials))
+    if multi is True:
+        out = multicore.parmap(trial, range(trials))
     else:
         out = [trial(r) for r in range(trials)]
     prelim = xr.concat(out, pd.Index(list(range(trials)), name='trials'))

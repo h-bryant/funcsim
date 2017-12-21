@@ -20,7 +20,7 @@ def trial(draw):
     return {"h": h(x, y)}
 
 """
-out = fs.crosssec(trial=trial, trials=5000, parallel=False)
+out = fs.crosssec(trial=trial, trials=5000, multi=False)
 area = float(out.mean())  # area of a quarter circle
 sigf = float(out.std())
 n = len(out)
@@ -31,6 +31,6 @@ print("sig_area: %s" % (sigf / n**0.5))
 """
 
 for s in range(100):
-    out = fs.crosssec(trial=trial, trials=5000, parallel=False, seed=s)
+    out = fs.crosssec(trial=trial, trials=5000, multi=False, seed=s)
     area = float(out.mean())  # area of a quarter circle
     print(area)

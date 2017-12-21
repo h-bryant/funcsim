@@ -43,5 +43,5 @@ data0 = \
     xr.DataArray(data=a, coords=(('steps', steps), ('variables', variables)))
 
 # simulate
-out = fs.recdyn(step=step, data0=data0, steps=10, trials=20, parallel=True)
+out = fs.recdyn(step=step, data0=data0, steps=10, trials=20, multi=True)
 print(out)
