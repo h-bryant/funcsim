@@ -1,12 +1,5 @@
 import sys
-
-# check python version
-pyVersion = float(sys.version_info[0]) + 0.1 * float(sys.version_info[1])
-if pyVersion < 3.5:
-    raise Exception("Must be using Python >= 3.5")
-
-
-import sys, os
+import os
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 from core import crossec

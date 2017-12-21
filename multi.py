@@ -1,7 +1,11 @@
 import multiprocessing
 import sys
-import queue
 import os
+
+if (sys.version_info > (3, 0)):
+    import queue
+else:
+    import Queue as queue
 
 
 def fun(f, q_in, q_out):

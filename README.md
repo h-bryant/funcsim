@@ -5,10 +5,10 @@ Features:
 - cross-sectional and recursive dynamic simulations
 - pseudo-random numbers (so that results are comparable across multiple runs or scenarios)
 - stratified/Latin hypercube sampling
-- painless parallel execution
+- painless multi-core simulations
 - highly flexible, and as simple as possible (but no more)
 - functional paradigm
-- python 3
+- python 2 and 3 compatible
 
 Developed using:
 - python 3.5.3
