@@ -110,12 +110,9 @@ def recdyn(step, data0, steps, trials, multi=False, seed=6):
     u = _lhs(rvs * steps, trials)  # np.array, dimensions (rvs*steps) x trials
 
     def trial(r):
-        def stp(x):
-            # closure that binds to 'step' a 'u' generator for trial number 'r'
-            return step(x, _makeugen(u, r))
-
+        ugen = _makeugen(u, r)  # 'u' generator for trial number 'r'
         # perform all time steps for one trial
-        return _recurse(f=stp, x0=data0, S=steps)
+        return _recurse(f=lambda x: step(x, ugen), x0=data0, S=steps)
 
     # create and return 3-D output DataArray, with new dimension 'trials'
     if multi is True:
