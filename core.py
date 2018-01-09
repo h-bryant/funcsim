@@ -21,7 +21,7 @@ def _countrv(f, data0=None):
     # count number of times 'f', and any code 'f' invokes, calls 'next(draw)'
     # if 'data0' is None, infer that 'f' is the 'trial' func for a cross-sec sim
     # if 'data0' is a xr.DataArray, infer that 'f' is 'step' for rec. dyn. sim
-    maxcalls = 10000.0
+    maxcalls = 1000.0
     fakeugen = _countgen(maxcalls)
     if data0 is None:
         f(fakeugen)
