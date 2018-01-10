@@ -40,13 +40,14 @@ def chron(da, new):
     vidx = da.indexes['variables']
 
     # check that we know how to cope with the types for the 'steps' index
-    assert type(sidx[0]) in [pd.Period, np.int64]
+    if len(sidx) > 0:
+        assert type(sidx[0]) in [pd.Period, np.int64]
 
     # check that 'new' reflects all vars in 'da'
     assert sorted(list(vidx)) == sorted(new.keys())
 
     # extended steps index
-    nextStep = sidx[-1] + 1
+    nextStep = sidx[-1] + 1 if len(sidx) > 0 else 0
     if type(nextStep) == pd.Period:
         newSidx = sidx.append(pd.PeriodIndex([nextStep]))
     else:
