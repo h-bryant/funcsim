@@ -1,67 +1,60 @@
 import numpy as np
-import pandas as pd
 import xarray as xr
 
-# convenience functions for non-mutating operations on
-# xarray.DataArray instances with indexes 'steps' and 'variables'
+
+class RDdata():
+    # container for an np array with pre-allocated memory for future values
+    # for a single trial in an RD sim
+    def __init__(self, a, steps, namePositions):
+        # 'a' is hist data as np.array, with vars as columns and steps as rows
+        # 'steps' is integer number of new/future steps
+        # 'namePositions' is a dict with var names as keys and integer column
+        #     number of that var within 'a'
+
+        self._namePos = namePositions
+        self._histSteps = a.shape[0]
+        self._totSteps = self._histSteps + steps
+        self._varNames = set(namePositions.keys())
+
+        # set up values container for all variables & time steps
+        self._a = np.empty((len(self._namePos.keys()), self._totSteps))
+        self._a[:, 0:self._histSteps] = a.transpose()
+
+        self._currStep = 0
+
+    def incrStep(self):
+        self._currStep += 1
+
+    def append(self, varname, value):
+        self._a[self._namePos[varname], self._histSteps+self._currStep] = value
+
+    def recall(self, varname, lag=0):
+        return self._a[self._namePos[varname],
+                       self._histSteps + self._currStep - lag]
+
+    @property
+    def varNameSet(self):
+        return self._varNames
+
+    @property
+    def array(self):
+        return self._a
 
 
-def fromcsv(path):
-    # create a 2-D xr.DataArray from a csv file
-    #
-    # The csv file is expected to have:
-    # 1) variables in columns and observations in rows
-    # 2) variable names in the first row
-    # 3) dates in a the first column
-    # 4) float-like data in the fields
-    #
-    # The output DataArray will have
-    # a) a first dimension named 'steps' with a pd.PeriodIndex index
-    # b) a second dimension named 'variables'
+def chron(dobj, new):
+    # append data for all vars with a dict with var names as keys
 
-    pdframe = pd.read_csv(path, parse_dates=True, infer_datetime_format=True,
-                          index_col=0)
-    return xr.DataArray(pdframe.to_period(copy=False),
-                        dims=('steps', 'variables'))
-
-
-def chron(da, new):
-    # chronicle 'new' data in the historical record 'da' (prior to 'new')
-    #
-    # 'da' is an xarray.DataArray w/indexes ['steps', 'variables']
-    # 'new' is a dict with var names as keys and values as values
-
-    # check types of inputs
-    assert type(da) == xr.DataArray and type(new) == dict
-
-    # get indices from 'da'
-    assert sorted(da.indexes.keys()) == ['steps', 'variables']
-    sidx = da.indexes['steps']
-    vidx = da.indexes['variables']
-
-    # check that we know how to cope with the types for the 'steps' index
-    if len(sidx) > 0:
-        assert type(sidx[0]) in [pd.Period, np.int64]
-
-    # check that 'new' reflects all vars in 'da'
-    assert sorted(list(vidx)) == sorted(new.keys())
-
-    # extended steps index
-    nextStep = sidx[-1] + 1 if len(sidx) > 0 else 0
-    if type(nextStep) == pd.Period:
-        newSidx = sidx.append(pd.PeriodIndex([nextStep]))
-    else:
-        newSidx = sidx.append(pd.Index([nextStep]))
+    # check types of inputs; check that 'new' reflects all vars in 'da'
+    assert isinstance(dobj, RDdata)
+    assert type(new) == dict
+    assert dobj.varNameSet == set(new.keys())
 
     # actual work
-    newA = np.array([new[v] for v in vidx])  # preserve variable order
-    newA.shape = (1, len(vidx))
-    return xr.DataArray(np.concatenate((da.values, newA)),
-                        coords=[('steps', newSidx), ('variables', vidx)])
+    [dobj.append(i[0], i[1]) for i in new.items()]
+    dobj.incrStep()
+    return dobj
 
 
-def recall(da, var, lag):
-    # recall a value for a specific variable with the specified lag
-    # relative to the last observation
-    assert type(lag) == int and lag >= 1
-    return float(da.sel(variables=var)[-lag])
+def recall(dobj, var, lag):
+    # retrieve a previous value
+    return dobj.recall(var, lag)

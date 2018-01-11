@@ -1,8 +1,10 @@
+from copy import deepcopy as copy
 import numpy as np
 import pandas as pd
 import xarray as xr
 import multicore
 import tailcall
+import rdarrays
 
 
 def _recurse(f, x0, S):
@@ -25,10 +27,11 @@ def _countrv(f, data0=None):
     fakeugen = _countgen(maxcalls)
     if data0 is None:
         f(fakeugen)
-    elif type(data0) == xr.DataArray:
-        f(data0, fakeugen)
+    # elif type(data0) == xr.DataArray:
     else:
-        raise ValueError
+        f(data0, fakeugen)
+    # else:
+    #    raise ValueError
     calls = int(next(fakeugen) * maxcalls)
     return calls
 
@@ -71,6 +74,15 @@ def _lhs(K, R):
     return np.concatenate([[_strat(R)] for i in range(K)], axis=0)
 
 
+def _extendIndex(idx, nNewSteps):
+    # extend a 'steps' index; should work for ints or pd.Period
+    if len(idx) == 0:  # no previous index; just use integers for the new index
+        return list(range(nNewSteps))
+    newIdx = list(idx)
+    [newIdx.append(newIdx[-1] + 1) for i in range(nNewSteps)]
+    return newIdx
+
+
 def crosssec(trial, trials, multi=False, seed=6):
     """
     Cross sectional simulation
@@ -102,8 +114,21 @@ def crosssec(trial, trials, multi=False, seed=6):
 def recdyn(step, data0, steps, trials, multi=False, seed=6):
     # recursive dynamic simulation
 
+    # check that we know how to cope with the types for the 'steps' index
+    sidx = data0.indexes['steps']
+    if len(sidx) > 0:
+        assert type(sidx[0]) in [pd.Period, np.int64]
+
+    # indexes for the final output xr.DataArray
+    varNames = data0.indexes['variables']
+    namePositions = {nm: i for i, nm in enumerate(varNames)}
+    stepLabels = _extendIndex(sidx, steps)
+
+    # create example data object in which data for one trail can accumulate
+    data = rdarrays.RDdata(data0.to_masked_array(), steps, namePositions)
+
     # infer number of random vars reflected in 'step' fucntion
-    rvs = _countrv(step, data0)
+    rvs = _countrv(step, copy(data))
 
     # draws for all RVs in all time steps, w/ sampling stratified across trials
     np.random.seed(seed)
@@ -112,12 +137,15 @@ def recdyn(step, data0, steps, trials, multi=False, seed=6):
     def trial(r):
         ugen = _makeugen(u, r)  # 'u' generator for trial number 'r'
         # perform all time steps for one trial
-        return _recurse(f=lambda x: step(x, ugen), x0=data0, S=steps)
+        return _recurse(f=lambda x: step(x, ugen), x0=copy(data), S=steps)
 
     # create and return 3-D output DataArray, with new dimension 'trials'
     if multi is True:
-        out = multicore.parmap(trial, range(trials))
+        out = multicore.parmap(lambda r: trial(r)._a, range(trials))
     else:
-        out = [trial(r) for r in range(trials)]
-    prelim = xr.concat(out, pd.Index(list(range(trials)), name='trials'))
+        out = [trial(r)._a for r in range(trials)]
+
+    prelim = xr.DataArray(out, coords=[('trials', list(range(trials))),
+                                       ('variables', varNames),
+                                       ('steps', stepLabels)])
     return prelim.transpose('trials', 'variables', 'steps')

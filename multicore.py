@@ -1,6 +1,5 @@
 import multiprocessing
 import sys
-import os
 
 if (sys.version_info > (3, 0)):
     import queue
@@ -45,8 +44,8 @@ def parmap(f, X, nprocs=multiprocessing.cpu_count()):
 
     for p in proc:
         if p.is_alive():
-           sys.stdout.flush()
-           p.join()
+            sys.stdout.flush()
+            p.join()
 
     res = []
     try:
