@@ -95,15 +95,16 @@ def crosssec(trial, trials, multi=False, seed=6, stdnorm=False):
     rvs = _countrv(trial)
 
     # draws for all RVs, w/ sampling stratified across trials
-    np.random.seed(seed)
-    u = _lhs(rvs, trials)  # np.array, dimensions rvs x trials
-    w = stats.norm.ppf(u) if stdnorm is True else u
+    if rvs > 0:
+        np.random.seed(seed)
+        u = _lhs(rvs, trials)  # np.array, dimensions rvs x trials
+        w = stats.norm.ppf(u) if stdnorm is True else u
 
     def tryl(r):
         # closure that binds to 'trial' a 'u' generator for trial number 'r'
         # and coerces the output of 'trial' into an xarray.DataArray
-        return xr.DataArray(pd.Series(trial(_makewgen(w, r))),
-                            dims=['variables'])
+        wgen = _makewgen(w, r) if rvs > 0 else None
+        return xr.DataArray(pd.Series(trial(wgen)), dims=['variables'])
 
     # create and return a 2-D DataArray with new dimension 'trials'
     if multi is True:
@@ -133,12 +134,13 @@ def recdyn(step, data0, steps, trials, multi=False, seed=6, stdnorm=False):
     rvs = _countrv(step, copy(data))
 
     # draws for all RVs in all time steps, w/ sampling stratified across trials
-    np.random.seed(seed)
-    u = _lhs(rvs * steps, trials)  # np.array, dimensions (rvs*steps) x trials
-    w = stats.norm.ppf(u) if stdnorm is True else u
+    if rvs > 0:
+        np.random.seed(seed)
+        u = _lhs(rvs * steps, trials)  # np.array, dimensions (rvs*steps) x trials
+        w = stats.norm.ppf(u) if stdnorm is True else u
 
     def trial(r):
-        wgen = _makewgen(w, r)  # 'w' generator for trial number 'r'
+        wgen = _makewgen(w, r) if rvs > 0 else None  # 'w' gener. for trial 'r'
         # perform all time steps for one trial
         return _recurse(f=lambda x: step(x, wgen), x0=copy(data), S=steps)
 
