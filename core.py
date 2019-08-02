@@ -5,6 +5,7 @@ import xarray as xr
 import multicore
 import tailcall
 import rdarrays
+from scipy import stats
 
 
 def _recurse(f, x0, S):
@@ -46,13 +47,13 @@ def _countgen(scale):
         i += 1
 
 
-def _makeugen(u, r):
-    # given an array 'u' of indep. uniform draws, where rows reflect variables
+def _makewgen(w, r):
+    # given an array 'w' of indep. draws, where rows reflect variables
     # and columns reflect trials, make a generator for trial 'r' tha emits
     # a number of draws equal to the number of RVs
     i = 0
-    while i < u.shape[0]:
-        yield u[i, r]
+    while i < w.shape[0]:
+        yield w[i, r]
         i += 1
 
 
@@ -83,7 +84,7 @@ def _extendIndex(idx, nNewSteps):
     return newIdx
 
 
-def crosssec(trial, trials, multi=False, seed=6):
+def crosssec(trial, trials, multi=False, seed=6, stdnorm=False):
     """
     Cross sectional simulation
     """
@@ -96,11 +97,12 @@ def crosssec(trial, trials, multi=False, seed=6):
     # draws for all RVs, w/ sampling stratified across trials
     np.random.seed(seed)
     u = _lhs(rvs, trials)  # np.array, dimensions rvs x trials
+    w = stats.norm.ppf(u) if stdnorm is True else u
 
     def tryl(r):
         # closure that binds to 'trial' a 'u' generator for trial number 'r'
         # and coerces the output of 'trial' into an xarray.DataArray
-        return xr.DataArray(pd.Series(trial(_makeugen(u, r))),
+        return xr.DataArray(pd.Series(trial(_makewgen(w, r))),
                             dims=['variables'])
 
     # create and return a 2-D DataArray with new dimension 'trials'
@@ -111,7 +113,7 @@ def crosssec(trial, trials, multi=False, seed=6):
     return xr.concat(out, pd.Index(list(range(trials)), name='trials'))
 
 
-def recdyn(step, data0, steps, trials, multi=False, seed=6):
+def recdyn(step, data0, steps, trials, multi=False, seed=6, stdnorm=False):
     # recursive dynamic simulation
 
     # check that we know how to cope with the types for the 'steps' index
@@ -133,11 +135,12 @@ def recdyn(step, data0, steps, trials, multi=False, seed=6):
     # draws for all RVs in all time steps, w/ sampling stratified across trials
     np.random.seed(seed)
     u = _lhs(rvs * steps, trials)  # np.array, dimensions (rvs*steps) x trials
+    w = stats.norm.ppf(u) if stdnorm is True else u
 
     def trial(r):
-        ugen = _makeugen(u, r)  # 'u' generator for trial number 'r'
+        wgen = _makewgen(w, r)  # 'w' generator for trial number 'r'
         # perform all time steps for one trial
-        return _recurse(f=lambda x: step(x, ugen), x0=copy(data), S=steps)
+        return _recurse(f=lambda x: step(x, wgen), x0=copy(data), S=steps)
 
     # create and return 3-D output DataArray, with new dimension 'trials'
     if multi is True:
