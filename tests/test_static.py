@@ -19,7 +19,7 @@ def trial(draw):
 
 
 def test_0():
-    out = fs.crosssec(trial=trial, trials=500)
+    out = fs.static(trial=trial, trials=500)
     means = out.mean(dim='trials')
     meanEps = float(means.loc['eps'])
     meanB = float(means.loc['b'])

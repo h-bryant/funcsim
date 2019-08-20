@@ -3,14 +3,14 @@ Overview
 
 The basic idea is that all an end user can run a simulation after
 simply writing a specially-crafted function that performs a single
-trial (for a cross-sectional simulation) or that takes one step
+trial (for a static simulation) or that takes one step
 through time or space (for a recursive-dynamic simulation).
 
 
-Simple cross-sectional example
-------------------------------
+Simple static simulation example
+--------------------------------
 
-For a cross-sectional simulation, the trial function has the
+For a static simulation, the trial function has the
 following form:
 
 .. code-block:: python
@@ -32,13 +32,13 @@ following form:
 
 Any number of independent uniform draws can be taken.
 
-Then a simulation is performed by invoking the ``crosssec`` function:
+Then a simulation is performed by invoking the ``static`` function:
 
 .. code-block:: python
 
     import funcsim as fs
   
-    da = fs.crosssec(trial=trial, trials=500)
+    da = fs.static(trial=trial, trials=500)
 
 Here, the value passed as the ``trials`` argument is the number of
 trials that will be performed.  The returned object is a

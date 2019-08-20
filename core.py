@@ -84,11 +84,11 @@ def _extendIndex(idx, nNewSteps):
     return newIdx
 
 
-def crosssec(trial, trials, multi=False, seed=6, stdnorm=False):
+def static(trial, trials, multi=False, seed=6, stdnorm=False):
     """
     Cross sectional simulation
     """
-    # cross-sectional simulation
+    # static simulation
     # 'trial' is a function that takes argument 'draw'
 
     # infer number of random vars reflected in 'trial' fucntion

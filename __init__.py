@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
-from core import crosssec
+from core import static
 from core import recdyn
 
 from rdarrays import chron
