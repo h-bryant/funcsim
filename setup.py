@@ -13,6 +13,16 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/h-bryant/funcsim",
     packages=setuptools.find_packages(),
+    install_requires=[
+        'numpy',
+        'pandas',
+        'xarray'
+    ],
+    test_requires=[
+        'scipy',
+        'pytest',
+        'sphinx'
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: BSD License",
