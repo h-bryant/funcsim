@@ -1,3 +1,4 @@
+from __future__ import print_function
 import multiprocessing
 import sys
 
@@ -18,8 +19,8 @@ def fun(f, q_in, q_out):
             except Exception as e:
                 msg = "WARNING: function passed to multi.parmap "
                 msg += "encountered an exception: "
-                print("%s\n%s" (msg, e))
-                sys.stdout.flush()
+                print("%s\n%s" (msg, e), file=sys.stderr)
+                sys.stderr.flush()
                 q_out.put((i, None), True)
     except queue.Empty:
         sys.stdout.flush()
@@ -56,13 +57,15 @@ def parmap(f, X, nprocs=multiprocessing.cpu_count()):
 
     lost = len(sent) - len(res)
     if lost > 0:
-        print("WARNING: multi.parmap encountered %s lost jobs" % lost)
-        sys.stdout.flush()
+        print("WARNING: multi.parmap encountered %s lost jobs" % lost,
+              file=sys.stderr)
+        sys.stderr.flush()
 
     problems = sum([1 for i, x, in res if x is None])
     if problems > 0:
-        print("WARNING: multi.parmap encountered %s failed jobs" % problems)
-        sys.stdout.flush()
+        print("WARNING: multi.parmap encountered %s failed jobs" % problems,
+              file=sys.stderr)
+        sys.stderr.flush()
 
     ret = [x for i, x in sorted(res)]
     manager.shutdown()

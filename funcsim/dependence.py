@@ -33,7 +33,7 @@ def _makeA(sigma):
 
 
 def normal(sigma, draw):
-    # return a function that performs joint normal draws
+    # perform joint normal draws
     A = _makeA(sigma)
     K = len(A)  # number of variables
     return np.dot(A, stats.norm.ppf([next(draw) for i in range(K)]))

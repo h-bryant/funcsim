@@ -12,5 +12,3 @@ from dependence import normal
 from dependence import corru
 
 from shrinkage import shrink
-
-from helpers import fromcsv
