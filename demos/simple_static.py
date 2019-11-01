@@ -2,7 +2,7 @@
 
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                             "../../"))
+                             "../"))
 
 from scipy import stats
 import funcsim as fs
@@ -25,6 +25,6 @@ def trial(draw):
 
 
 # simulate
-out = fs.crosssec(trial=trial, trials=15)
+out = fs.static(trial=trial, trials=15)
 print(out)
 print("\nMeans of the simulated variables:\n%s" % out.mean(dim='trials'))

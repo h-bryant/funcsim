@@ -2,7 +2,7 @@
 
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                             "../../"))
+                             "../"))
 
 import numpy as np
 import funcsim as fs
@@ -23,7 +23,7 @@ def trial(draw):
 
 
 # simulate
-out = fs.crosssec(trial=trial, trials=100)
+out = fs.static(trial=trial, trials=100)
 
 # sort simulated u values, send to screen
 srtd_u_LHS = np.sort(out[:, 0])

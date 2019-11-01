@@ -2,7 +2,7 @@
 
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                             "../../"))
+                             "../"))
 
 import funcsim as fs
 import numpy as np
@@ -31,6 +31,6 @@ print("sig_area: %s" % (sigf / n**0.5))
 """
 
 for s in range(100):
-    out = fs.crosssec(trial=trial, trials=5000, multi=False, seed=s)
+    out = fs.static(trial=trial, trials=5000, multi=False, seed=s)
     area = float(out.mean())  # area of a quarter circle
     print(area)

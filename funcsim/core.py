@@ -108,7 +108,7 @@ def static(trial, trials, multi=False, seed=6, stdnorm=False):
 
     # create and return a 2-D DataArray with new dimension 'trials'
     if multi is True:
-        out = multi.parmap(tryl, range(trials))
+        out = multicore.parmap(tryl, range(trials))
     else:
         out = [tryl(r) for r in range(trials)]
     return xr.concat(out, pd.Index(list(range(trials)), name='trials'))

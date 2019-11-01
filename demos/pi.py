@@ -2,7 +2,7 @@
 
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                             "../../"))
+                             "../"))
 
 import funcsim as fs
 
@@ -19,6 +19,6 @@ def trial(draw):
     return {"h": h(x, y)}
 
 
-out = fs.crosssec(trial=trial, trials=500)
+out = fs.static(trial=trial, trials=500)
 area = float(out.mean())  # area of a quarter circle
 print("value of pi is approximately %s" % (4.0 * area))
