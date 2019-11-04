@@ -29,7 +29,7 @@ def _countrv(f, data0=None):
         f(fakeugen)
     else:
         f(data0, fakeugen)
-    calls = round((next(fakeugen) - 0.5) * 10**4)
+    calls = int(round((next(fakeugen) - 0.5) * 10**4))
     return calls
 
 
