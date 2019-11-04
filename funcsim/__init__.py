@@ -9,6 +9,6 @@ from rdarrays import chron
 from rdarrays import recall
 
 from dependence import normal
-from dependence import corru
+from dependence import cgauss
 
 from shrinkage import shrink
