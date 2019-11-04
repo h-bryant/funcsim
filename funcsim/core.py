@@ -87,7 +87,6 @@ def static(trial, trials, multi=False, seed=6, stdnorm=False):
 
     # infer number of random vars reflected in 'trial' fucntion
     rvs = _countrv(trial)
-    print("DEBUG: static: rvs=%s" % rvs)
 
     # draws for all RVs, w/ sampling stratified across trials
     if rvs > 0:
@@ -127,7 +126,6 @@ def recdyn(step, data0, steps, trials, multi=False, seed=6, stdnorm=False):
 
     # infer number of random vars reflected in 'step' fucntion
     rvs = _countrv(step, copy(data))
-    print("DEBUG: recdyn: rvs=%s" % rvs)
 
     # draws for all RVs in all time steps, w/ sampling stratified across trials
     if rvs > 0:
