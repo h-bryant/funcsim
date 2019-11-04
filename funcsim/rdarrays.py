@@ -47,7 +47,10 @@ def chron(dobj, new):
     # check types of inputs; check that 'new' reflects all vars in 'da'
     assert isinstance(dobj, RDdata)
     assert type(new) == dict
-    assert dobj.varNameSet == set(new.keys())
+    if not dobj.varNameSet == set(new.keys()):
+        msg = 'variable names passed to "chron" do not match the '
+        msg2 = 'variable names in "data0"'
+        raise ValueError(msg + msg2)
 
     # actual work
     [dobj.append(i[0], i[1]) for i in new.items()]

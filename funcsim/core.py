@@ -20,15 +20,32 @@ def _recurse(f, x0, S):
     return g(S, x0)
 
 
-def _countrv(f, data0=None):
-    # count number of times 'f', and any code 'f' invokes, calls 'next(draw)'
-    # if 'data0' is None, infer that 'f' is the 'trial' func for a cross-sec sim
-    # if 'data0' is a xr.DataArray, infer that 'f' is 'step' for rec. dyn. sim
+def _checkdata0(data0):
+    # check that user's data0 seems sane.  Return sorted list of variable names
+    if isinstance(data0, xr.DataArray) is False:
+        raise ValueError('"data0" must be an xarray.DataArray')
+    data0Coords = data0.coords
+    if not ("variables" in data0Coords.keys() and
+            "steps" in data0Coords.keys()):
+        raise ValueError('"data0" must have dimensions "variables" and "steps"')
+    return sorted(list(data0Coords["variables"]))
+
+
+def _checkf(f, data0=None):
+    # Count number of times 'f', and any code 'f' invokes, calls 'next(draw)'
+    # If 'data0' is None, infer that 'f' is the 'trial' func for a cross-sec sim
+    # If 'data0' is a xr.DataArray, infer that 'f' is 'step' for rec. dyn. sim
+    # Also, check that f returns something that makes sense.
     fakeugen = _countgen()
     if data0 is None:
-        f(fakeugen)
+        if type(f(fakeugen)) != dict:
+            raise ValueError('"trial" function must return a dict')
     else:
-        f(data0, fakeugen)
+        out = f(data0, fakeugen)
+        if isinstance(out, rdarrays.RDdata) is False:
+            msg = '"step" function must return the result of funcsim.chron()'
+            raise ValueError(msg)
+
     calls = int(round((next(fakeugen) - 0.5) * 10**4))
     return calls
 
@@ -86,7 +103,7 @@ def static(trial, trials, multi=False, seed=6, stdnorm=False):
     # 'trial' is a function that takes argument 'draw'
 
     # infer number of random vars reflected in 'trial' fucntion
-    rvs = _countrv(trial)
+    rvs = _checkf(trial)
 
     # draws for all RVs, w/ sampling stratified across trials
     if rvs > 0:
@@ -111,6 +128,8 @@ def static(trial, trials, multi=False, seed=6, stdnorm=False):
 def recdyn(step, data0, steps, trials, multi=False, seed=6, stdnorm=False):
     # recursive dynamic simulation
 
+    _checkdata0(data0)
+
     # check that we know how to cope with the types for the 'steps' index
     sidx = data0.indexes['steps']
     if len(sidx) > 0:
@@ -125,7 +144,7 @@ def recdyn(step, data0, steps, trials, multi=False, seed=6, stdnorm=False):
     data = rdarrays.RDdata(data0.to_masked_array(), steps, namePositions)
 
     # infer number of random vars reflected in 'step' fucntion
-    rvs = _countrv(step, copy(data))
+    rvs = _checkf(step, copy(data))
 
     # draws for all RVs in all time steps, w/ sampling stratified across trials
     if rvs > 0:
