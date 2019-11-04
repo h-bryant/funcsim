@@ -24,26 +24,20 @@ def _countrv(f, data0=None):
     # count number of times 'f', and any code 'f' invokes, calls 'next(draw)'
     # if 'data0' is None, infer that 'f' is the 'trial' func for a cross-sec sim
     # if 'data0' is a xr.DataArray, infer that 'f' is 'step' for rec. dyn. sim
-    maxcalls = 1000.0
-    fakeugen = _countgen(maxcalls)
+    fakeugen = _countgen()
     if data0 is None:
         f(fakeugen)
-    # elif type(data0) == xr.DataArray:
     else:
         f(data0, fakeugen)
-    # else:
-    #    raise ValueError
-    calls = int(next(fakeugen) * maxcalls)
+    calls = round((next(fakeugen) - 0.5) * 10**4)
     return calls
 
 
-def _countgen(scale):
-    # dummy generator for counting calls but always returning a number in [0, 1)
-    # 'scale' should be a float such that you will never call more this
-    # generator more than 'scale' times
+def _countgen():
+    # dummy generator for counting calls but always returning approximately 0.5.
     i = 0
-    while i < int(scale):
-        yield float(i) / scale
+    while i < int(10000):
+        yield 0.5 + float(i) * 10**-4
         i += 1
 
 
@@ -93,6 +87,7 @@ def static(trial, trials, multi=False, seed=6, stdnorm=False):
 
     # infer number of random vars reflected in 'trial' fucntion
     rvs = _countrv(trial)
+    print("DEBUG: static: rvs=%s" % rvs)
 
     # draws for all RVs, w/ sampling stratified across trials
     if rvs > 0:
@@ -132,11 +127,12 @@ def recdyn(step, data0, steps, trials, multi=False, seed=6, stdnorm=False):
 
     # infer number of random vars reflected in 'step' fucntion
     rvs = _countrv(step, copy(data))
+    print("DEBUG: recdyn: rvs=%s" % rvs)
 
     # draws for all RVs in all time steps, w/ sampling stratified across trials
     if rvs > 0:
         np.random.seed(seed)
-        u = _lhs(rvs * steps, trials)  # np.array, dimensions (rvs*steps) x trials
+        u = _lhs(rvs * steps, trials)  # np.array dimension (rvs*steps) x trials
         w = stats.norm.ppf(u) if stdnorm is True else u
 
     def trial(r):
