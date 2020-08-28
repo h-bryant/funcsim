@@ -14,3 +14,5 @@ from dependence import cgauss
 from shrinkage import shrink
 
 from edf import makeedf
+
+from kde import fitkde
