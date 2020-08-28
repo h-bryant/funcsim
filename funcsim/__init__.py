@@ -12,3 +12,5 @@ from dependence import normal
 from dependence import cgauss
 
 from shrinkage import shrink
+
+from edf import makeedf
