@@ -20,3 +20,6 @@ from kde import fitkde
 from ecdfgof import kstest
 from ecdfgof import adtest
 from ecdfgof import cvmtest
+
+from distfit import fit
+from distfit import compare

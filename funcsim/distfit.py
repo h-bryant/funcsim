@@ -2,9 +2,8 @@
 
 import scipy.stats as stats
 import numpy as np
-import skgof
 import warnings
-
+from ecdfgof import adtest, kstest
 
 warnings.filterwarnings("ignore")
 
@@ -152,8 +151,8 @@ def fit(data, scipydist, name=None):
     aic = 2.0 * len(params) - 2.0 * loglike                # Akaike
 
     # p-values for GOF tests
-    ad_pval = skgof.ad_test(data, dist)[1]  # Anderson-Darling
-    ks_pval = skgof.ks_test(data, dist)[1]  # Kolmogorov-Smirnov
+    ad_pval = adtest(data, dist)[1]  # Anderson-Darling
+    ks_pval = kstest(data, dist)[1]  # Kolmogorov-Smirnov
 
     return {"bic": bic, "aic": aic, "ad_pval": ad_pval,
             "ks_pval": ks_pval, "dist": dist, "name": name}
@@ -177,7 +176,7 @@ def _print_result(r, header=False):
                _fstr(r["ks_pval"]), _fstr(r["ad_pval"])))
 
 
-def compare_fit(data, long=False, disp=False):
+def compare(data, long=False, disp=False):
     dist_list = _long if long is True else _short
 
     if disp is True:
@@ -196,7 +195,7 @@ if __name__ == "__main__":
 
     # example: compare fit of possible distributions
     data = stats.norm.rvs(size=30)  # true loc=0.0, true scale=1.0
-    results = compare_fit(data, disp=True)
+    results = compare(data, disp=True)
     print("\nBest fit according to BIC: %s" % results[0]["name"])
 
     # example: decide that normal looks best, get "frozen" (parameterized)
