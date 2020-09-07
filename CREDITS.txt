@@ -1,0 +1,3 @@
+Code implementing the Anderson-Darling, Cramer-von Mises, and
+Kolmogorov-Smirnov goodness-of-fit tests is originally from
+scikit-gof (github.com/wrwrwr/scikit-gof/), MIT License.

@@ -16,3 +16,7 @@ from shrinkage import shrink
 from edf import makeedf
 
 from kde import fitkde
+
+from ecdfgof import kstest
+from ecdfgof import adtest
+from ecdfgof import cvmtest
