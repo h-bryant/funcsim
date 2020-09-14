@@ -37,15 +37,19 @@ def _checkcov(cov, name):
     return cov
 
 
-def normal(sigma, draw):
+def normal(draw, sigma, mu=None):
     # perform joint normal draws.  "sigma" should be a covariance matrix as
     # a numpy.array
     A = _makeA(_checkcov(sigma, "sigma"))
     K = len(A)  # number of variables
-    return np.dot(A, stats.norm.ppf([next(draw) for i in range(K)]))
+    prod = np.dot(A, stats.norm.ppf([next(draw) for i in range(K)]))
+    if mu is None:
+        return prod
+    else:
+        return mu + prod
 
 
 def cgauss(rho, draw):
     # draws from a Gaussian copula.  "rho" should be a correlation matrix
     # as a numpy.array
-    return stats.norm.cdf(normal(_checkcov(rho, "rho"), draw))
+    return stats.norm.cdf(draw, normal(_checkcov(rho, "rho")))
