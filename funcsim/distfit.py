@@ -114,7 +114,7 @@ _short = [
           ("beta",               stats.beta),
           ("cauchy",             stats.cauchy),
           ("chi2",               stats.chi2),
-          ("cosine",             stats.cosine),
+          # ("cosine",             stats.cosine),
           ("expon",              stats.expon),
           ("exponnorm",          stats.exponnorm),
           ("f",                  stats.f),
@@ -167,46 +167,17 @@ def _fstr(value):
     return ("%.3f" % value).rjust(8)
 
 
-def _print_result(r, header=False):
+def _result_line(r, header=False):
     if header is True:
-        print("   distribution,      BIC,      AIC,   KS p-val,   AD p-val")
+        return "   distribution,      BIC,      AIC,   KS p-val,   AD p-val\n"
     else:
-        print("%s, %s, %s,   %s,   %s" %
-              (r["name"].rjust(15), _fstr(r["bic"]), _fstr(r["aic"]),
-               _fstr(r["ks_pval"]), _fstr(r["ad_pval"])))
+        return ("%s, %s, %s,   %s,   %s\n" %
+                (r["name"].rjust(15), _fstr(r["bic"]), _fstr(r["aic"]),
+                 _fstr(r["ks_pval"]), _fstr(r["ad_pval"])))
 
 
-def compare(data, long=False, disp=False):
+def compare(data, long=False):
     dist_list = _long if long is True else _short
-
-    if disp is True:
-        print("Fitting %s probability distributions...\n" % len(dist_list))
-
     results = _fit_all(data, dist_list)
-
-    if disp is True:
-        _print_result(None, header=True)
-        list(map(_print_result, results))
-
-    return results
-
-
-if __name__ == "__main__":
-
-    # example: compare fit of possible distributions
-    data = stats.norm.rvs(size=30)  # true loc=0.0, true scale=1.0
-    results = compare(data, disp=True)
-    print("\nBest fit according to BIC: %s" % results[0]["name"])
-
-    # example: decide that normal looks best, get "frozen" (parameterized)
-    # instance of normal
-    mydist = fit(data, stats.norm)["dist"]
-
-    # invoke the PPF
-    v = mydist.ppf(0.5)
-    print("\nv=%s" % v)
-
-    # invoke the CDF
-    u = mydist.cdf(v)
-    print("u=%s" % u)
-
+    lines = [_result_line(None, header=True)] + list(map(_result_line, results))
+    return "".join(lines)
