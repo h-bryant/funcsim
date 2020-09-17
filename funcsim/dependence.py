@@ -49,7 +49,17 @@ def normal(draw, sigma, mu=None):
         return mu + prod
 
 
-def cgauss(rho, draw):
+def cgauss(draw, rho):
     # draws from a Gaussian copula.  "rho" should be a correlation matrix
     # as a numpy.array
-    return stats.norm.cdf(draw, normal(_checkcov(rho, "rho")))
+    return stats.norm.cdf(normal(draw, _checkcov(rho, "rho")))
+
+
+def cstudent(draw, sigma, nu):
+    # draws from a Student's t copula.  "rho" should be a correlation matrix
+    # as a numpy.array.  "sigma" is a covariance-like matrix; "nu" is the
+    # degrees-of-freedom parameter.
+    x = normal(draw, sigma)
+    chi2 = stats.chi2.ppf(next(draw), df=nu)
+    mult = (nu / chi2)**0.5
+    return stats.t.cdf(mult * x, df=nu)

@@ -10,6 +10,7 @@ from rdarrays import recall
 
 from dependence import normal
 from dependence import cgauss
+from dependence import cstudent
 
 from shrinkage import shrink
 from shrinkage import target_a
