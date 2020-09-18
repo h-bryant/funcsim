@@ -56,9 +56,9 @@ def cgauss(draw, rho):
 
 
 def cstudent(draw, sigma, nu):
-    # draws from a Student's t copula.  "rho" should be a correlation matrix
-    # as a numpy.array.  "sigma" is a covariance-like matrix; "nu" is the
-    # degrees-of-freedom parameter.
+    # draws from a Student's t copula.
+    # "sigma" is a covariance-like matrix
+    # "nu" is the degrees-of-freedom parameter
     x = normal(draw, sigma)
     chi2 = stats.chi2.ppf(next(draw), df=nu)
     mult = (nu / chi2)**0.5
