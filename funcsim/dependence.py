@@ -55,11 +55,11 @@ def cgauss(draw, rho):
     return stats.norm.cdf(normal(draw, _checkcov(rho, "rho")))
 
 
-def cstudent(draw, sigma, nu):
+def cstudent(draw, rho, nu):
     # draws from a Student's t copula.
-    # "sigma" is a covariance-like matrix
+    # "rho" is a correlation  matrix
     # "nu" is the degrees-of-freedom parameter
-    x = normal(draw, sigma)
+    x = normal(draw, rho)
     chi2 = stats.chi2.ppf(next(draw), df=nu)
     mult = (nu / chi2)**0.5
     return stats.t.cdf(mult * x, df=nu)
