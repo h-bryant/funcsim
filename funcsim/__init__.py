@@ -13,6 +13,7 @@ from dependence import cgauss
 from dependence import cstudent
 from dependence import cgumbel
 from dependence import cclayton
+from dependence import fitkdemv
 
 from shrinkage import shrink
 from shrinkage import target_a

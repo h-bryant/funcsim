@@ -38,6 +38,12 @@ def _checkcov(cov, name):
     return cov
 
 
+def _rand_int(u, M):
+    # given a standard uniform draw "u", select a
+    # random integer from a length "M" sequece: 0, 1, ..., M-1
+    return min(math.floor((M)*u), M)
+
+
 def _skew_stable_draw(draw, alpha, beta, gamma, delta):
     # random draw based on Nolan (1997) appraoch to
     # general stable distributions
@@ -139,3 +145,43 @@ def cgumbel(draw, nvars, theta):
     alpha = 1.0 / theta
     v = _skew_stable_draw(draw, alpha, 1.0, gamma, 0.0)
     return np.array([Ftilde(-math.log(next(draw))/v) for i in range(nvars)])
+
+
+class MvKde():
+
+    def __init__(self, data, bw='scott'):
+        # sample should be a numpy array
+
+        self._data = data
+        (self._M, self._K) = self._data.shape
+
+        # sample standard deviations
+        stdevs = data.std(axis=0)
+
+        # rule-of-thumb bandwidths
+        mult = self._M**(-1.0/(self._K+1.0))
+        self._scott =  np.square(mult * np.diagflat(stdevs))
+        smult = (4.0 / (self._K+2.0))**(2.0 / (self._K+4.0))
+        self._silverman = smult * self._scott
+
+        if bw == 'scott' or bw is None:
+            self._bw = self._scott
+        elif bw == 'silverman':
+            self._bw = self._silverman
+        else:
+            self._bw = bw
+
+    def sample(self, draw):
+        # random draw from the KDE
+
+        # hist obs about which we will sample
+        m = _rand_int(next(draw), self._M)
+
+        # means for this sample
+        mu = self._data[m]
+
+        return normal(draw, self._bw, mu)
+
+
+def fitkdemv(data, bw='scott'):
+    return MvKde(data, bw)
