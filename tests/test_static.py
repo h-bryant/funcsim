@@ -25,3 +25,12 @@ def test_0():
     meanB = float(means.loc['b'])
     assert abs(meanEps) < 0.01
     assert abs(meanB - 0.35) < 0.01
+
+
+def test_1():
+    out = fs.static(trialf=trial, ntrials=500, lhs=False)
+    means = out.mean(dim='trials')
+    meanEps = float(means.loc['eps'])
+    meanB = float(means.loc['b'])
+    assert abs(meanEps) < 0.03
+    assert abs(meanB - 0.35) < 0.03

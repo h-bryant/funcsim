@@ -78,6 +78,16 @@ def _strat(R):
     return draws
 
 
+def _mcs(K, R):
+    # Monte Carlo sampling.  For each of K independent uniform (over the
+    # unit interval) random variables, create a sample of length R.
+    # 'K' (an int) is the number of variables
+    # 'R' (an int) is the number of trials
+    # returns a KxR numpy array containing draws
+    return np.concatenate([[np.random.uniform(0.0, 1.0, R)]
+                           for i in range(K)], axis=0)
+
+
 def _lhs(K, R):
     # Latin hypercube sampling.  For each of K independent uniform (over the
     # unit interval) random variables, create a stratified sample of length R.
@@ -100,7 +110,8 @@ def static(trialf: Callable[[Generator[int, float, None]], dict[str, float]],
            ntrials: int,
            multi: bool = False,
            seed: int = 6,
-           stdnorm: bool = False
+           stdnorm: bool = False,
+           lhs: bool = True
            ) -> xr.DataArray:
     """
     Static stochastic simulation.
@@ -123,6 +134,9 @@ def static(trialf: Callable[[Generator[int, float, None]], dict[str, float]],
         If False, ``next(draw)`` within `trialf` will return standard uniform
         random draws. If True, ``next(draw)`` will return standard normal draws.
         Default is False.
+    lhs : bool, optional
+        If True, Latin Hypercube samplking is employed.  If False, simple
+        Monte Carlo sampling is employed.  Default in True.
 
     Returns
     -------
@@ -136,7 +150,10 @@ def static(trialf: Callable[[Generator[int, float, None]], dict[str, float]],
     # draws for all RVs, w/ sampling stratified across trials
     if rvs > 0:
         np.random.seed(seed)
-        u = _lhs(rvs, ntrials)  # np.array, dimensions rvs x trials
+        if lhs is True:
+            u = _lhs(rvs, ntrials)  # np.array, dimensions rvs x trials
+        else:
+            u = _mcs(rvs, ntrials)  # monte carlo, not latin hypercube
         w = stats.norm.ppf(u) if stdnorm is True else u
 
     def tryl(r):
@@ -153,7 +170,8 @@ def static(trialf: Callable[[Generator[int, float, None]], dict[str, float]],
     return xr.concat(out, pd.Index(list(range(ntrials)), name='trials'))
 
 
-def recdyn(step, data0, steps, trials, multi=False, seed=6, stdnorm=False):
+def recdyn(step, data0, steps, trials, multi=False, seed=6, stdnorm=False,
+           lhs=True):
     # recursive dynamic simulation
 
     _checkdata0(data0)
@@ -177,7 +195,10 @@ def recdyn(step, data0, steps, trials, multi=False, seed=6, stdnorm=False):
     # draws for all RVs in all time steps, w/ sampling stratified across trials
     if rvs > 0:
         np.random.seed(seed)
-        u = _lhs(rvs * steps, trials)  # np.array dimension (rvs*steps) x trials
+        if lhs is True:
+            u = _lhs(rvs * steps, trials)  # np.array dimension (rvs*steps) x trials
+        else:
+            u = _mcs(rvs * steps, trials)  # monte carlo
         w = stats.norm.ppf(u) if stdnorm is True else u
 
     def trial(r):
