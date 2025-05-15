@@ -46,6 +46,33 @@
 </div>
 <section id="module-funcsim">
 <span id="api-reference"></span><h2>API Reference<a class="headerlink" href="#module-funcsim" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="funcsim.static">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">static</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trialf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ntrials</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stdnorm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/core.html#static"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#funcsim.static" title="Link to this definition">¶</a></dt>
+<dd><p>Static stochastic simulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>trialf</strong> (<em>function</em>) – Function that performs a single trial.  Should take ‘draw’ as an
+argument, where ‘draw’ will be a generator that emits random draws
+that will be provided by <code class="docutils literal notranslate"><span class="pre">static</span></code>.</p></li>
+<li><p><strong>ntrials</strong> (<em>int</em>) – The number of trials to perform.</p></li>
+<li><p><strong>multi</strong> (<em>bool</em><em>, </em><em>optional</em>) – Use multiple processes/cores for the simulation. Default is False.</p></li>
+<li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – Seed for pseudo-random number generation. Default is 6.</p></li>
+<li><p><strong>stdnorm</strong> (<em>book</em><em>, </em><em>optional</em>) – If False, <code class="docutils literal notranslate"><span class="pre">next(draw)</span></code> within <cite>trialf</cite> will return standard uniform
+random draws. If True, <code class="docutils literal notranslate"><span class="pre">next(draw)</span></code> will return standard normal draws.
+Default is False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2-D xarray.DataArray with dimensions ‘trials’ and ‘variables’.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.DataArray</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 </section>
 

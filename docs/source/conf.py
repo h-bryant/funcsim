@@ -15,7 +15,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
-    # 'sphinx_autodoc_typehints',  # Optional: renders type hints more cleanly
+    'sphinx_autodoc_typehints',  # Optional: renders type hints more cleanly
 ]
 
 templates_path = ['_templates']

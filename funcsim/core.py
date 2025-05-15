@@ -6,6 +6,7 @@ import multicore
 import tailcall
 import rdarrays
 from scipy import stats
+from collections.abc import Callable, Generator
 
 
 def _recurse(f, x0, S):
@@ -95,13 +96,38 @@ def _extendIndex(idx, nNewSteps):
     return newIdx
 
 
-def static(trial, trials, multi=False, seed=6, stdnorm=False):
+def static(trialf: Callable[[Generator[int, float, None]], float],
+           ntrials: int,
+           multi: bool = False,
+           seed: int = 6,
+           stdnorm: bool = False
+           ) -> xr.DataArray:
     """
-    Cross sectional simulation
-    """
-    # static simulation
-    # 'trial' is a function that takes argument 'draw'
+    Static stochastic simulation.
 
+    Parameters
+    ----------
+    trialf : function
+        Function that performs a single trial.  Should take 'draw' as an
+        argument, where 'draw' will be a generator that emits random draws
+        that will be provided by ``static``.
+    ntrials : int
+        The number of trials to perform.
+    multi : bool, optional
+        Use multiple processes/cores for the simulation. Default is False.
+    seed : int, optional
+        Seed for pseudo-random number generation. Default is 6.
+    stdnorm : book, optional
+        If False, ``next(draw)`` within `trialf` will return standard uniform
+        random draws. If True, ``next(draw)`` will return standard normal draws.
+        Default is False.
+
+    Returns
+    -------
+    xarray.DataArray
+        2-D xarray.DataArray with dimensions 'trials' and 'variables'.
+
+    """
     # infer number of random vars reflected in 'trial' fucntion
     rvs = _checkf(trial)
 

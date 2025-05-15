@@ -14,6 +14,6 @@ API Reference
 -------------
 
 .. automodule:: funcsim
-   :members:
+   :members: static
    :undoc-members:
    :show-inheritance:
