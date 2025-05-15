@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="funcsim",
-    version="0.0.14",
+    version="0.1.00",
     license="bsd-3-clause",
     author="Henry Bryant",
     author_email="henry@tamu.edu",
@@ -16,13 +16,14 @@ setuptools.setup(
     url="https://github.com/h-bryant/funcsim",
     packages=setuptools.find_packages(),
     install_requires=[
-        'numpy',
-        'pandas',
-        'xarray',
-        'six>=1.0.0'
+        'copulae>=0.8.0',
+        'numpy>=2.2.5',
+        'pandas>=2.2.3',
+        'plotly>=6.0.1',
+        'scipy>=1.15.3',
+        'xarray>=2025.4.0'
     ],
     test_requires=[
-        'scipy',
         'pytest',
         'sphinx'
     ],
