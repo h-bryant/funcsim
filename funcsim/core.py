@@ -129,26 +129,26 @@ def static(trialf: Callable[[Generator[int, float, None]], float],
 
     """
     # infer number of random vars reflected in 'trial' fucntion
-    rvs = _checkf(trial)
+    rvs = _checkf(trialf)
 
     # draws for all RVs, w/ sampling stratified across trials
     if rvs > 0:
         np.random.seed(seed)
-        u = _lhs(rvs, trials)  # np.array, dimensions rvs x trials
+        u = _lhs(rvs, ntrials)  # np.array, dimensions rvs x trials
         w = stats.norm.ppf(u) if stdnorm is True else u
 
     def tryl(r):
         # closure that binds to 'trial' a 'u' generator for trial number 'r'
         # and coerces the output of 'trial' into an xarray.DataArray
         wgen = _makewgen(w, r) if rvs > 0 else None
-        return xr.DataArray(pd.Series(trial(wgen)), dims=['variables'])
+        return xr.DataArray(pd.Series(trialf(wgen)), dims=['variables'])
 
     # create and return a 2-D DataArray with new dimension 'trials'
     if multi is True:
-        out = multicore.parmap(tryl, range(trials))
+        out = multicore.parmap(tryl, range(ntrials))
     else:
-        out = [tryl(r) for r in range(trials)]
-    return xr.concat(out, pd.Index(list(range(trials)), name='trials'))
+        out = [tryl(r) for r in range(ntrials)]
+    return xr.concat(out, pd.Index(list(range(ntrials)), name='trials'))
 
 
 def recdyn(step, data0, steps, trials, multi=False, seed=6, stdnorm=False):

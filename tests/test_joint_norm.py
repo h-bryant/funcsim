@@ -13,7 +13,7 @@ def test_normal_0():
         return {"eps0": eps[0], "eps1": eps[1]}
 
     # perform simulations
-    out = fs.static(trial=f, trials=2000)
+    out = fs.static(trialf=f, ntrials=2000)
     sampcorr = np.corrcoef(out, rowvar=False)[0, 1]
     assert abs(sampcorr - 0.5) < 0.05
 
@@ -29,6 +29,6 @@ def test_normal_1():
         return {"eps0": eps[0], "eps1": eps[1]}
 
     # perform simulations
-    out = fs.static(trial=f, trials=2000)
+    out = fs.static(trialf=f, ntrials=2000)
     sampcorr = np.corrcoef(out, rowvar=False)[0, 1]
     assert abs(sampcorr - 0.5) < 0.05
