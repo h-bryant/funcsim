@@ -38,12 +38,12 @@ Then a simulation is performed by invoking the ``static`` function:
 
     import funcsim as fs
   
-    da = fs.static(trial=trial, trials=500)
+    da = fs.static(trialf=trial, ntrials=500)
 
-Here, the value passed as the ``trials`` argument is the number of
+Here, the value passed as the ``ntrials`` argument is the number of
 trials that will be performed.  The returned object is a
 2-dimensional `xarray <http://xarray.pydata.org/>`_
-``DataArray`` instance, with a first dimension named ``trails``
+``DataArray`` instance, with a first dimension named ``trials``
 and a second dimension named ``variables``.
 
 
@@ -80,7 +80,7 @@ After specifying a ``DataArray`` containing historical data (here, called
 
 .. code-block:: python
 
-    out = fs.recdyn(step=step, data0=data0, steps=10, trials=500)
+    out = fs.recdyn(stepf=step, data0=data0, nsteps=10, ntrials=500)
 
 The output is a 3-dimensional ``DataArray`` instance, with dimensions named
 ``trials``, ``variables``, and ``steps``.

@@ -1,7 +1,4 @@
-.. funcsim documentation master file, created by
-   sphinx-quickstart on Thu Sep 21 16:19:30 2017.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. funcsim documentation master file
 
 funcsim documentation
 =====================
@@ -10,12 +7,13 @@ funcsim documentation
    :maxdepth: 2
    :caption: Contents:
 
-   overview
+   overview.rst
 
 
-Indices and tables
-==================
+API Reference
+-------------
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. automodule:: funcsim
+   :members:
+   :undoc-members:
+   :show-inheritance:
