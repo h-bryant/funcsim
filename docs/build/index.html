@@ -55,7 +55,9 @@
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>trialf</strong> (<em>function</em>) – Function that performs a single trial.  Should take ‘draw’ as an
 argument, where ‘draw’ will be a generator that emits random draws
-that will be provided by <code class="docutils literal notranslate"><span class="pre">static</span></code>.</p></li>
+that will be provided by <code class="docutils literal notranslate"><span class="pre">static</span></code>.  This fucntion should return
+a dict with variable names (as strings) as keys and values for those
+variables (as floats) as values.</p></li>
 <li><p><strong>ntrials</strong> (<em>int</em>) – The number of trials to perform.</p></li>
 <li><p><strong>multi</strong> (<em>bool</em><em>, </em><em>optional</em>) – Use multiple processes/cores for the simulation. Default is False.</p></li>
 <li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – Seed for pseudo-random number generation. Default is 6.</p></li>

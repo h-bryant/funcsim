@@ -96,7 +96,7 @@ def _extendIndex(idx, nNewSteps):
     return newIdx
 
 
-def static(trialf: Callable[[Generator[int, float, None]], float],
+def static(trialf: Callable[[Generator[int, float, None]], dict[str, float]],
            ntrials: int,
            multi: bool = False,
            seed: int = 6,
@@ -110,7 +110,9 @@ def static(trialf: Callable[[Generator[int, float, None]], float],
     trialf : function
         Function that performs a single trial.  Should take 'draw' as an
         argument, where 'draw' will be a generator that emits random draws
-        that will be provided by ``static``.
+        that will be provided by ``static``.  This fucntion should return
+        a dict with variable names (as strings) as keys and values for those
+        variables (as floats) as values.
     ntrials : int
         The number of trials to perform.
     multi : bool, optional

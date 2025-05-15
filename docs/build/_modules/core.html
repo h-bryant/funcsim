@@ -131,7 +131,7 @@
 
 <div class="viewcode-block" id="static">
 <a class="viewcode-back" href="../index.html#funcsim.static">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">static</span><span class="p">(</span><span class="n">trialf</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Generator</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">]],</span> <span class="nb">float</span><span class="p">],</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">static</span><span class="p">(</span><span class="n">trialf</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Generator</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">]],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
            <span class="n">ntrials</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
            <span class="n">multi</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
            <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
@@ -145,7 +145,9 @@
 <span class="sd">    trialf : function</span>
 <span class="sd">        Function that performs a single trial.  Should take &#39;draw&#39; as an</span>
 <span class="sd">        argument, where &#39;draw&#39; will be a generator that emits random draws</span>
-<span class="sd">        that will be provided by ``static``.</span>
+<span class="sd">        that will be provided by ``static``.  This fucntion should return</span>
+<span class="sd">        a dict with variable names (as strings) as keys and values for those</span>
+<span class="sd">        variables (as floats) as values.</span>
 <span class="sd">    ntrials : int</span>
 <span class="sd">        The number of trials to perform.</span>
 <span class="sd">    multi : bool, optional</span>
@@ -164,26 +166,26 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># infer number of random vars reflected in &#39;trial&#39; fucntion</span>
-    <span class="n">rvs</span> <span class="o">=</span> <span class="n">_checkf</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span>
+    <span class="n">rvs</span> <span class="o">=</span> <span class="n">_checkf</span><span class="p">(</span><span class="n">trialf</span><span class="p">)</span>
 
     <span class="c1"># draws for all RVs, w/ sampling stratified across trials</span>
     <span class="k">if</span> <span class="n">rvs</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
-        <span class="n">u</span> <span class="o">=</span> <span class="n">_lhs</span><span class="p">(</span><span class="n">rvs</span><span class="p">,</span> <span class="n">trials</span><span class="p">)</span>  <span class="c1"># np.array, dimensions rvs x trials</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">_lhs</span><span class="p">(</span><span class="n">rvs</span><span class="p">,</span> <span class="n">ntrials</span><span class="p">)</span>  <span class="c1"># np.array, dimensions rvs x trials</span>
         <span class="n">w</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="k">if</span> <span class="n">stdnorm</span> <span class="ow">is</span> <span class="kc">True</span> <span class="k">else</span> <span class="n">u</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">tryl</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
         <span class="c1"># closure that binds to &#39;trial&#39; a &#39;u&#39; generator for trial number &#39;r&#39;</span>
         <span class="c1"># and coerces the output of &#39;trial&#39; into an xarray.DataArray</span>
         <span class="n">wgen</span> <span class="o">=</span> <span class="n">_makewgen</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="k">if</span> <span class="n">rvs</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>
-        <span class="k">return</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">trial</span><span class="p">(</span><span class="n">wgen</span><span class="p">)),</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;variables&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">trialf</span><span class="p">(</span><span class="n">wgen</span><span class="p">)),</span> <span class="n">dims</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;variables&#39;</span><span class="p">])</span>
 
     <span class="c1"># create and return a 2-D DataArray with new dimension &#39;trials&#39;</span>
     <span class="k">if</span> <span class="n">multi</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-        <span class="n">out</span> <span class="o">=</span> <span class="n">multicore</span><span class="o">.</span><span class="n">parmap</span><span class="p">(</span><span class="n">tryl</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="n">trials</span><span class="p">))</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">multicore</span><span class="o">.</span><span class="n">parmap</span><span class="p">(</span><span class="n">tryl</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="n">ntrials</span><span class="p">))</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">out</span> <span class="o">=</span> <span class="p">[</span><span class="n">tryl</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">trials</span><span class="p">)]</span>
-    <span class="k">return</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">trials</span><span class="p">)),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;trials&#39;</span><span class="p">))</span></div>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[</span><span class="n">tryl</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ntrials</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">ntrials</span><span class="p">)),</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;trials&#39;</span><span class="p">))</span></div>
 
 
 
