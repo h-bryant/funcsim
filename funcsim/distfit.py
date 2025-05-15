@@ -1,5 +1,5 @@
 
-
+import sys
 import scipy.stats as stats
 import numpy as np
 import warnings
@@ -46,7 +46,7 @@ _long = [
          ("gamma",              stats.gamma),
          ("gengamma",           stats.gengamma),
          ("genhalflogistic",    stats.genhalflogistic),
-         ("gilbrat",            stats.gilbrat),
+         # ("gilbrat",            stats.gilbrat),
          ("gompertz",           stats.gompertz),
          ("gumbel_r",           stats.gumbel_r),
          ("gumbel_l",           stats.gumbel_l),
@@ -177,6 +177,10 @@ def _result_line(r, header=False):
 
 
 def compare(data, long=False):
+    if len(data) < 100:
+        print(f"WARNING: using 'compare' with only {len(data)} observations "
+              f"can produce unreliable results. Interpret "
+              f"with caution.", file=sys.stderr)
     dist_list = _long if long is True else _short
     results = _fit_all(data, dist_list)
     lines = [_result_line(None, header=True)] + list(map(_result_line, results))

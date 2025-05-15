@@ -11,7 +11,7 @@ def _memoize(f):
             self.f = f
 
         def __call__(self, sig):
-            key = hash(sig.tostring())
+            key = hash(sig.tobytes())
             if key not in self.keys():
                 self[key] = self.f(sig)
             return self[key]

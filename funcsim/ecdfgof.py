@@ -41,7 +41,7 @@ from __future__ import division
 from collections import namedtuple
 from functools import partial
 
-from numpy import arange, log, sort
+from numpy import arange, log, sort, clip
 from six import string_types
 from scipy.stats import distributions
 
@@ -84,8 +84,10 @@ def ad_stat(data):
     The warning can be silenced or raised using numpy.errstate(divide=...).
     """
     samples = len(data)
+    data_edit = clip(data, 0.0001, 0.9999)
     factors = arange(1, 2 * samples, 2)
-    return -samples - (factors * log(data * (1 - data[::-1]))).sum() / samples
+    return -samples - (factors *
+                       log(data_edit * (1 - data_edit[::-1]))).sum() / samples
 
 
 def simple_test(data, dist, args=(), stat=ad_stat, pdist=ad_unif,
