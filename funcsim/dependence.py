@@ -178,7 +178,7 @@ class MvKde():
         m = _rand_int(next(draw), self._M)
 
         # means for this sample
-        mu = self._data[m]
+        mu = self._data.iloc[m]
 
         return normal(draw, self._bw, mu)
 
