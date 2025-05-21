@@ -73,7 +73,7 @@ def vlToArray(vl: VectorLike) -> NDArray:
         The converted 1-D NumPy array.
     """
     if not vlValidate(vl):
-        raise ValueError("vlToArray: vl is not a vector-like object")
+        raise ValueError("argument passed is not a vector-like object")
     if isinstance(vl, (list, tuple)):
         a = np.array(vl)
     elif isinstance(vl, pd.Series):
