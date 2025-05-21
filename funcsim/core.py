@@ -111,7 +111,7 @@ def static(trialf: Callable[[Generator[int, float, None]], dict[str, float]],
            multi: bool = False,
            seed: int = 6,
            stdnorm: bool = False,
-           lhs: bool = True
+           sampling: str = 'lh'
            ) -> xr.DataArray:
     """
     Static stochastic simulation.
@@ -134,9 +134,9 @@ def static(trialf: Callable[[Generator[int, float, None]], dict[str, float]],
         If False, ``next(draw)`` within `trialf` will return standard uniform
         random draws. If True, ``next(draw)`` will return standard normal draws.
         Default is False.
-    lhs : bool, optional
-        If True, Latin Hypercube samplking is employed.  If False, simple
-        Monte Carlo sampling is employed.  Default in True.
+    sampling : {'lh', 'mc'}, optional
+        If 'lh', Latin Hypercube sampling is employed.  If 'mc', simple
+        Monte Carlo sampling is employed.  Default is 'lh'.
 
     Returns
     -------
@@ -150,10 +150,12 @@ def static(trialf: Callable[[Generator[int, float, None]], dict[str, float]],
     # draws for all RVs, w/ sampling stratified across trials
     if rvs > 0:
         np.random.seed(seed)
-        if lhs is True:
+        if sampling == 'lh':
             u = _lhs(rvs, ntrials)  # np.array, dimensions rvs x trials
-        else:
+        elif sampling == 'mc':
             u = _mcs(rvs, ntrials)  # monte carlo, not latin hypercube
+        else:
+            raise ValueError('sampling must be "lh" or "mc"')
         w = stats.norm.ppf(u) if stdnorm is True else u
 
     def tryl(r):
@@ -171,7 +173,7 @@ def static(trialf: Callable[[Generator[int, float, None]], dict[str, float]],
 
 
 def recdyn(step, data0, steps, trials, multi=False, seed=6, stdnorm=False,
-           lhs=True):
+           sampling='lh'):
     # recursive dynamic simulation
 
     _checkdata0(data0)
@@ -195,10 +197,12 @@ def recdyn(step, data0, steps, trials, multi=False, seed=6, stdnorm=False,
     # draws for all RVs in all time steps, w/ sampling stratified across trials
     if rvs > 0:
         np.random.seed(seed)
-        if lhs is True:
+        if sampling == 'lh':    
             u = _lhs(rvs * steps, trials)  # np.array dimension (rvs*steps) x trials
-        else:
+        elif sampling == 'mc':  
             u = _mcs(rvs * steps, trials)  # monte carlo
+        else:
+            raise ValueError('sampling must be "lh" or "mc"')
         w = stats.norm.ppf(u) if stdnorm is True else u
 
     def trial(r):

@@ -28,7 +28,7 @@ def test_0():
 
 
 def test_1():
-    out = fs.static(trialf=trial, ntrials=500, lhs=False)
+    out = fs.static(trialf=trial, ntrials=500, sampling='mc')
     means = out.mean(dim='trials')
     meanEps = float(means.loc['eps'])
     meanB = float(means.loc['b'])
