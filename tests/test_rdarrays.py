@@ -30,15 +30,15 @@ def test_rda():
     d = rd.RDdata(x, steps=3, namePositions=namePos)
 
     # add values for a step
-    d = rd.chron(d, {"p": 998.0, "c": 13.0})
-    assert rd.recall(d, "p", 1) == 998.0
-    assert rd.recall(d, "c", 1) == 13.0
-    assert rd.recall(d, "p", 2) == 0.99
+    d.append({"p": 998.0, "c": 13.0})
+    assert d.recall("p", 1) == 998.0
+    assert d.recall("c", 1) == 13.0
+    assert d.recall("p", 2) == 0.99
 
     # add values for another step
-    d = rd.chron(d, {"p": 999.0, "c": 14.0})
-    assert rd.recall(d, "p", 1) == 999.0
-    assert rd.recall(d, "c", 1) == 14.0
-    assert rd.recall(d, "p", 2) == 998.0
-    assert rd.recall(d, "c", 2) == 13.0
-    assert rd.recall(d, "p", 3) == 0.99
+    d.append({"p": 999.0, "c": 14.0})
+    assert d.recall("p", 1) == 999.0
+    assert d.recall("c", 1) == 14.0
+    assert d.recall("p", 2) == 998.0
+    assert d.recall("c", 2) == 13.0
+    assert d.recall("p", 3) == 0.99

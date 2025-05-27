@@ -10,11 +10,11 @@ def gbm(s0, dt, mu, sig, eps):
     return s0 * math.exp((mu - 0.5 * sig**2) * dt + eps * sig * dt ** 0.5)
 
 
-def step(data, draw):
+def step(draw, data):
     # take one step through time
 
     # value of p in previous period
-    pLag1 = fs.recall(data, "p", lag=1)
+    pLag1 = data.recall("p", lag=1)
 
     # uniform draw --> standard normal draw
     u = next(draw)
@@ -24,9 +24,44 @@ def step(data, draw):
     pNew = gbm(s0=pLag1, dt=1.0 / 12.0, mu=0.05, sig=0.10, eps=eps)
     cNew = max(0.0, pNew - 1.0)
 
-    # return updated price history
-    dataNew = fs.chron(data, {"p": pNew, "c": cNew})
-    return dataNew
+    # return new values for this step
+    return {"p": pNew, "c": cNew, "unused": np.nan}
+
+
+def step_with_extra_var(draw, data):
+    # take one step through time
+
+    # value of p in previous period
+    pLag1 = data.recall("p", lag=1)
+
+    # uniform draw --> standard normal draw
+    u = next(draw)
+    eps = stats.norm.ppf(u)
+
+    # update all intermediate variables
+    pNew = gbm(s0=pLag1, dt=1.0 / 12.0, mu=0.05, sig=0.10, eps=eps)
+    cNew = max(0.0, pNew - 1.0)
+
+    # return new values for this step, including an extra variable
+    return {"unused": np.nan, "p": pNew, "c": cNew, "extraVar": 7.0}
+
+
+def step_with_missing_var(draw, data):
+    # take one step through time
+
+    # value of p in previous period
+    pLag1 = data.recall("p", lag=1)
+
+    # uniform draw --> standard normal draw
+    u = next(draw)
+    eps = stats.norm.ppf(u)
+
+    # update all intermediate variables
+    pNew = gbm(s0=pLag1, dt=1.0 / 12.0, mu=0.05, sig=0.10, eps=eps)
+    cNew = max(0.0, pNew - 1.0)
+
+    # return new values for this step, but missing one variable (c.f. data0)
+    return {"p": pNew, "c": cNew}
 
 
 def data0():
@@ -39,26 +74,40 @@ def data0():
     return d0
 
 
-def test_0():  # basic
-    out = fs.recdyn(step=step, data0=data0(), steps=10, trials=500)
+def test_00():  # basic
+    # vars in data0 and stepf match
+    out = fs.recdyn(stepf=step, data0=data0(), nsteps=10, ntrials=500)
     assert type(out) == xr.DataArray
-    print(out)
-    print(out[:, 0, 10].mean())
-    assert abs(float(out[:, 0, 10].mean()) - 1.0234) < 0.01
+    value = float(out.sel(steps=12, variables="c").mean())
+    assert abs(value - 0.05) < 0.01
 
 
-def test_1():  # use multi
-    out = fs.recdyn(step=step, data0=data0(), steps=10, trials=500, multi=True)
+def test_01():  # basic
+    # extra var returned by stepf (compared to contents of data0)
+    out = fs.recdyn(stepf=step_with_missing_var, data0=data0(), nsteps=10, ntrials=500)
     assert type(out) == xr.DataArray
-    assert abs(float(out[:, 0, 10].mean()) - 1.0234) < 0.01
+    value = float(out.sel(steps=12, variables="c").mean())
+    assert abs(value - 0.05) < 0.01
+
+
+def test_02():  # basic
+    # missing var returned by stepf (compared to contents of data0)
+    out = fs.recdyn(stepf=step_with_extra_var, data0=data0(), nsteps=10, ntrials=500)
+    assert type(out) == xr.DataArray
+    value = float(out.sel(steps=12, variables="c").mean())
+    assert abs(value - 0.05) < 0.01
 
 
 def test_2():  # alternative seed
-    out = fs.recdyn(step=step, data0=data0(), steps=10, trials=500, seed=123)
+    out = fs.recdyn(stepf=step, data0=data0(), nsteps=10, ntrials=500, seed=123)
     assert type(out) == xr.DataArray
-    assert abs(float(out[:, 0, 10].mean()) - 1.0234) < 0.01
+    value = float(out.sel(steps=12, variables="c").mean())
+    assert abs(value - 0.05) < 0.01
 
 
 def test_3():  # many steps (check that recursion does not bust stack)
-    out = fs.recdyn(step=step, data0=data0(), steps=2000, trials=10)
+    out = fs.recdyn(stepf=step, data0=data0(), nsteps=2000, ntrials=10)
     assert type(out) == xr.DataArray
+    value = float(out.sel(steps=12, variables="c").mean())
+    assert abs(value - 0.05) < 0.01
+

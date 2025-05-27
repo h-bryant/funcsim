@@ -1,35 +1,37 @@
+import sys
 from copy import deepcopy as copy
 import numpy as np
 import pandas as pd
 import xarray as xr
 import multicore
-import tailcall
 import rdarrays
 from scipy import stats
 from collections.abc import Callable, Generator
 
 
-def _recurse(f, x0, S):
-    # wrap f in tail call recursive function g
-    @tailcall.TailCaller
-    def g(n, x):
-        if n == 0:
-            return x
-        x1 = f(x)
-        return tailcall.TailCall(g, n-1, x1)
-
-    return g(S, x0)
-
-
 def _checkdata0(data0):
-    # check that user's data0 seems sane.  Return sorted list of variable names
+    # check that user's data0 seems sane.  Return list of variable names
+    # in data0 order.
+
     if isinstance(data0, xr.DataArray) is False:
         raise ValueError('"data0" must be an xarray.DataArray')
+
+    # check that data0 has the right dimension names 
     data0Coords = data0.coords
+    if not len(data0Coords) == 2:
+        raise ValueError('"data0" must have exactly two dimensions')
     if not ("variables" in data0Coords.keys() and
             "steps" in data0Coords.keys()):
         raise ValueError('"data0" must have dimensions "variables" and "steps"')
-    return sorted(list(data0Coords["variables"]))
+    
+    # Check for an appropriate index for the 'variables' dimension
+    stepsCoords = data0Coords["steps"]
+    if not (np.issubdtype(stepsCoords.dtype, np.integer) or
+            isinstance(stepsCoords.to_index(), pd.PeriodIndex)):
+        raise ValueError('"data0" must have either an integer index or a '
+                         'pandas PeriodIndex for the "steps" dimension')
+
+    return list(data0Coords["variables"])
 
 
 def _checkf(f, data0=None):
@@ -39,16 +41,19 @@ def _checkf(f, data0=None):
     # Also, check that f returns something that makes sense.
     fakeugen = _countgen()
     if data0 is None:
-        if type(f(fakeugen)) != dict:
-            raise ValueError('"trial" function must return a dict')
+        out = f(fakeugen)
+        if type(out) != dict:
+            raise ValueError('"trialf" function must return a dict')
     else:
-        out = f(data0, fakeugen)
-        if isinstance(out, rdarrays.RDdata) is False:
-            msg = '"step" function must return the result of funcsim.chron()'
-            raise ValueError(msg)
+        out = f(fakeugen, data0)
+        if type(out) != dict:
+            raise ValueError('"stepf" function must return a dict')
+
+    # check that the dict returned by 'f' has variable names as keys
+    varnames = list(out.keys())
 
     calls = int(round((next(fakeugen) - 0.5) * 10**4))
-    return calls
+    return calls, varnames
 
 
 def _countgen():
@@ -145,7 +150,7 @@ def static(trialf: Callable[[Generator[int, float, None]], dict[str, float]],
 
     """
     # infer number of random vars reflected in 'trial' fucntion
-    rvs = _checkf(trialf)
+    rvs, _ = _checkf(trialf)
 
     # draws for all RVs, w/ sampling stratified across trials
     if rvs > 0:
@@ -172,11 +177,61 @@ def static(trialf: Callable[[Generator[int, float, None]], dict[str, float]],
     return xr.concat(out, pd.Index(list(range(ntrials)), name='trials'))
 
 
-def recdyn(step, data0, steps, trials, multi=False, seed=6, stdnorm=False,
-           sampling='lh'):
-    # recursive dynamic simulation
+def recdyn(stepf: Callable[[Generator[int, float, None], rdarrays.RDdata],
+                           dict[str, float]],
+           data0: xr.DataArray,
+           nsteps: int,
+           ntrials: int,
+           multi: bool = False,
+           seed: int = 6,
+           stdnorm: bool = False,
+           sampling: str = 'lh'
+           ) -> xr.DataArray:
+    """
+    Recursive dynamic stochastic simulation.
+
+    Parameters
+    ----------
+    stepf : function
+        Function that performs a single step through time.  Should take 'draw'
+        as a first argument, where 'draw' will be a generator that emits random
+        draws that will be provided by ``recdyn``.  Should take 'data' as a
+        second argument, where this will be a type of array that is also
+        provided by ``recdyn.`` This fucntion should return a dict with variable
+        names (as strings) as keys and values for those variables
+        (as floats) as values.
+    data0 : xarray.DataArray
+        Initial and/or historical data relevant to the simulation.
+        Should have dimensions 'variables' and 'steps'.  Any lagged values
+        needed by `stepf` must be in `data0`.  The 'steps' dimension should
+        have either an integer index or a pandas Period index.
+    nsteps : int
+        The number of steps to perform in each trial.
+    ntrials : int
+        The number of trials to perform.
+    multi : bool, optional
+        Use multiple processes/cores for the simulation. Default is False.
+    seed : int, optional
+        Seed for pseudo-random number generation. Default is 6.
+    stdnorm : book, optional
+        If False, ``next(draw)`` within `trialf` will return standard uniform
+        random draws. If True, ``next(draw)`` will return standard normal draws.
+        Default is False.
+    sampling : {'lh', 'mc'}, optional
+        If 'lh', Latin Hypercube sampling is employed.  If 'mc', simple
+        Monte Carlo sampling is employed.  Default is 'lh'.
+
+    Returns
+    -------
+    xarray.DataArray
+        3-D xarray.DataArray with dimensions 'trials', 'variables', and 'steps'.
+    """
 
     _checkdata0(data0)
+
+    # check for 'stepf'
+    if not isinstance(stepf, Callable):
+        raise ValueError('"stepf" must be a callable function')
 
     # check that we know how to cope with the types for the 'steps' index
     sidx = data0.indexes['steps']
@@ -185,22 +240,43 @@ def recdyn(step, data0, steps, trials, multi=False, seed=6, stdnorm=False,
 
     # indexes for the final output xr.DataArray
     varNames = data0.indexes['variables']
-    namePositions = {nm: i for i, nm in enumerate(varNames)}
-    stepLabels = _extendIndex(sidx, steps)
+    namePositionsPrelim = {nm: i for i, nm in enumerate(varNames)}
+    stepLabels = _extendIndex(sidx, nsteps)
 
     # create example data object in which data for one trail can accumulate
-    data = rdarrays.RDdata(data0.to_masked_array(), steps, namePositions)
+    dataPrelim = rdarrays.RDdata(data0.to_masked_array(),
+                                 nsteps, namePositionsPrelim)
 
     # infer number of random vars reflected in 'step' fucntion
-    rvs = _checkf(step, copy(data))
+    # and the variable names being returned by 'step' and their order
+    rvs, stepfNames = _checkf(stepf, copy(dataPrelim))
+
+    # specify that the data objects that accumulate data for each trial
+    # will reflect the union of the variables in 'data0' and the variables
+    # returned by 'step'
+    # breakpoint()
+    varNamesList = list(varNames)
+    if stepfNames == varNamesList:
+        finalNames = varNamesList
+        finalData0 = data0
+    else:
+        finalNames = list(set(varNamesList).union(set(stepfNames)))
+        finalData0 = data0.copy()
+        finalData0 = finalData0.reindex(
+            variables=finalNames, fill_value=np.nan)
+
+    # create a DataArray to hold the data for one trial
+    # create example data object in which data for one trail can accumulate
+    namePositions = {nm: i for i, nm in enumerate(finalNames)}
+    data = rdarrays.RDdata(finalData0.to_masked_array(), nsteps, namePositions)
 
     # draws for all RVs in all time steps, w/ sampling stratified across trials
     if rvs > 0:
         np.random.seed(seed)
         if sampling == 'lh':    
-            u = _lhs(rvs * steps, trials)  # np.array dimension (rvs*steps) x trials
+            u = _lhs(rvs * nsteps, ntrials)  # np.array: (rvs*steps) x trials
         elif sampling == 'mc':  
-            u = _mcs(rvs * steps, trials)  # monte carlo
+            u = _mcs(rvs * nsteps, ntrials)  # monte carlo
         else:
             raise ValueError('sampling must be "lh" or "mc"')
         w = stats.norm.ppf(u) if stdnorm is True else u
@@ -208,15 +284,21 @@ def recdyn(step, data0, steps, trials, multi=False, seed=6, stdnorm=False,
     def trial(r):
         wgen = _makewgen(w, r) if rvs > 0 else None  # 'w' gener. for trial 'r'
         # perform all time steps for one trial
-        return _recurse(f=lambda x: step(x, wgen), x0=copy(data), S=steps)
+        # return _recurse(f=lambda x: step(x, wgen), x0=copy(data), S=steps)
+        dataWorking = copy(data)
+        for s in range(nsteps):
+            # step 's' of trial 'r'
+            dataWorking.append(stepf(wgen, dataWorking))
+        return dataWorking
+
 
     # create and return 3-D output DataArray, with new dimension 'trials'
     if multi is True:
-        out = multicore.parmap(lambda r: trial(r)._a, range(trials))
+        out = multicore.parmap(lambda r: trial(r)._a, range(ntrials))
     else:
-        out = [trial(r)._a for r in range(trials)]
+        out = [trial(r)._a for r in range(ntrials)]
 
-    prelim = xr.DataArray(out, coords=[('trials', list(range(trials))),
-                                       ('variables', varNames),
+    prelim = xr.DataArray(out, coords=[('trials', list(range(ntrials))),
+                                       ('variables', finalNames),
                                        ('steps', stepLabels)])
     return prelim.transpose('trials', 'variables', 'steps')
