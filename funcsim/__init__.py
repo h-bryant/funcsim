@@ -14,9 +14,9 @@ from dependence import kdemv
 
 from shrinkage import shrink
 
-from edf import makeedf
+from edf import edf
 
-from kde import fitkde
+from kde import kde
 
 from ecdfgof import kstest
 from ecdfgof import adtest

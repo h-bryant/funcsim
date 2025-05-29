@@ -1,8 +1,18 @@
 import math
+import functools
 import numpy as np
 import pandas as pd
 import scipy
 import scipy.stats as stats
+import conversions
+
+
+def vectorized_method(func):
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        # vectorize the bound method (bound to `self`)
+        return np.vectorize(lambda *a, **k: func(self, *a, **k))(*args, **kwargs)
+    return wrapper
 
 
 class Kde():
@@ -30,16 +40,66 @@ class Kde():
         self.ppf_low = float(min(sample)) - 3.0 * (max(sample) - min(sample))
         self.ppf_high = float(max(sample)) + 3.0 * (max(sample) - min(sample))
 
-    def pdf(self, v):
-        # probability density function
+    @vectorized_method
+    def pdf(self,
+            v: float
+           ) -> float:
+        """
+        Probability density function of the KDE at value v.
+
+        Parameters
+        ----------
+        v : float
+            Value at which to evaluate the PDF.
+
+        Returns
+        -------
+        float
+            The estimated probability density at v.
+        """
         return float(self.gkde(v))
 
-    def cdf(self, v):
-        # cumulative distribution fucntion
+    @vectorized_method
+    def cdf(self,
+            v: float
+           ) -> float:
+        """
+        Cumulative distribution function of the KDE at value v.
+
+        Parameters
+        ----------
+        v : float
+            Value at which to evaluate the CDF.
+
+        Returns
+        -------
+        float
+            The estimated cumulative probability at v.
+        """
         return float(self.gkde.integrate_box_1d(self.cdf_low, v))
 
-    def ppf(self, u):
-        # numerical percent point function (inverse CDF)
+    @vectorized_method
+    def ppf(self,
+            u: float
+           ) -> float:
+        """
+        Numerical percent point function (inverse CDF) for the KDE.
+
+        Parameters
+        ----------
+        u : float
+            Probability value in the range [0.0, 1.0].
+
+        Returns
+        -------
+        float
+            The value x such that CDF(x) = u.
+
+        Raises
+        ------
+        ValueError
+            If u is not in [0.0, 1.0] or optimization fails.
+        """
         assert u >= 0.0 and u <= 1.0, \
             "u must be within the range [0.0, 1.0]"
 
@@ -99,5 +159,22 @@ class Kde():
                 raise ValueError(msg)
 
 
-def fitkde(sample, bw="scott"):
+def kde(sample: conversions.VectorLike,
+        bw: str = "scott") -> Kde:
+    """
+    Create a 1-D kernel density estimator (KDE) object.
+
+    Parameters
+    ----------
+    sample : VectorLike
+        1-D data sample (list, tuple, np.ndarray, xr.DataArray, or pd.Series).
+    bw : str, optional
+        Bandwidth selection method, 'scott', 'silverman', or a float.
+        Default is 'scott'.
+
+    Returns
+    -------
+    Kde
+        An instance of the Kde class.
+    """
     return Kde(sample, bw)
