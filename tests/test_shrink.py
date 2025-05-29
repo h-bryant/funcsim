@@ -7,9 +7,9 @@ import shrinkage
 
 
 def test_shrink():
-    targets = [shrinkage.target_a, shrinkage.target_b,
-               shrinkage.target_c, shrinkage.target_d,
-               shrinkage.target_f]
+    targets = [shrinkage._target_a, shrinkage._target_b,
+               shrinkage._target_c, shrinkage._target_d,
+               shrinkage._target_f]
 
     def calc_all_norms(seed, mu, r, n):
         np.random.seed(seed)
@@ -33,3 +33,10 @@ def test_shrink():
 
         all_norms = calc_all_norms(seed=1, mu=mu, r=r, n=20)
         assert abs(sum(all_norms) - 27.5470609894) < 0.01
+
+    def test_1():
+        np.random.seed(seed)
+        x = np.random.multivariate_normal(mu, r, size=n)
+        cov = shrinkage.shrink(x, target='F')
+        assert cov.shape == (3, 3)
+        assert np.all(np.linalg.eigvals(cov) > 0)

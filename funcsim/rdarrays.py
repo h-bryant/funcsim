@@ -38,7 +38,30 @@ class RDdata():
                     self._histSteps + self._currStep] = value   
         self._currStep += 1
 
-    def recall(self, varname, lag=0):
+    def recall(self,
+               varname: str,
+               lag: int = 0
+              ) -> float:
+        """
+        Recall the value of a variable at the current step minus lag.
+
+        Parameters
+        ----------
+        varname : str
+            Name of the variable to recall.
+        lag : int, optional
+            Number of steps to lag (default is 0).
+
+        Returns
+        -------
+        float
+            The recalled value.
+
+        Raises
+        ------
+        MissingValue
+            If the requested value is not available.
+        """
         try:
             ret = self._a[self._namePos[varname],
                           self._histSteps + self._currStep - lag]

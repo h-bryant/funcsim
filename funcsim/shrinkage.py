@@ -7,6 +7,7 @@ Genetics and Molecular Biology//, vol 4(2005), issue 1.
 
 import itertools
 import numpy as np
+import conversions
 
 
 def _wtilde(x, i, j):
@@ -35,7 +36,7 @@ def _f(x, i, j):
     return 0.5 * (part0 + part1)
 
 
-def target_a(x):
+def _target_a(x):
     # diagonal, unit variance shrinkage estimator
     s = np.cov(x, rowvar=False)
     idx = range(len(s))
@@ -59,7 +60,7 @@ def target_a(x):
     return vcv, lam
 
 
-def target_b(x):
+def _target_b(x):
     # diagonal, common variance shrinkage estimator.  From Ledoit & Wolf, "A
     # well conditioned estimator for large dimension covariance matrices."
     # //Journal of Multivariate Analysis//, 88(2004):365-411
@@ -86,7 +87,7 @@ def target_b(x):
     return vcv, lam
 
 
-def target_c(x):
+def _target_c(x):
     # common variance and covariance shrinkage estimator.
     s = np.cov(x, rowvar=False)
     idx = range(len(s))
@@ -115,7 +116,7 @@ def target_c(x):
     return vcv, lam
 
 
-def target_d(x):
+def _target_d(x):
     # diagonal, unequal variance shrinkage estimator.  From Shafer & Strimmer,
     # "A shrinkage approach to large-scale covariance matrix estimation and
     # implications for Functional Genomics." //Statistical Applications in
@@ -140,7 +141,7 @@ def target_d(x):
     return vcv, lam
 
 
-def target_e(x):
+def _target_e(x):
     # perfect positive correlation shrinkage estimator.  From Ledoit & Wolf,
     # "Improved estimation of the covariance matrix of stock returns with an
     # application to portfolio selection," //Journal of Empirical Finance//,
@@ -167,7 +168,7 @@ def target_e(x):
     return vcv, lam
 
 
-def target_f(x):
+def _target_f(x):
     # constant correlation shrinkage estimator.  From Ledoit & Wolf,
     # "Honey, I shrunk the sample covariance matrix"
     # //Portfolio Management//, 30(2004): 110-119
@@ -200,20 +201,46 @@ def target_f(x):
     return vcv, lam
 
 
-def shrink(a):
-    # shrinkage cov estimator.
-    # 'a' is a numpy array, with vars in cols & obs in rows
-    #
-    # First, try constant correlation shrinkage estimator, from Ledoit & Wolf,
-    # "Honey, I shrunk the sample covariance matrix"
-    # //Portfolio Management//, 30(2004): 110-119
-    #
-    # If that result is not positive definite, return the (guaranteed P.D.)
-    # diagonal, unequal variance shrinkage estimate.  From Shafer & Strimmer,
-    # "A shrinkage approach to large-scale covariance matrix estimation and
-    # implications for Functional Genomics." //Statistical Applications in
-    # Genetics and Molecular Biology//, vol 4(2005), issue 1.
-    sig = target_f(a)[0]
+def shrink(a: conversions.ArrayLike,
+           target: str ) -> np.ndarray:
+    """
+    Covariance shrinkage estimator.
+
+    Parameters
+    ----------
+    a : np.ndarray
+        Data array with variables in columns and observations in rows.
+    target : str
+        Shrinkage target, one of: 'A', 'B', 'C', 'D', 'E', 'F'.  These
+        correspond to different shrinkage estimation methods as defined in
+        Shafer & Strimmer, "A shrinkage approach to large-scale covariance
+        matrix estimation and implications for Functional Genomics."
+        //Statistical Applications in Genetics and Molecular Biology//,
+        vol 4(2005), issue 1.
+
+    Returns
+    -------
+    np.ndarray
+        The estimated covariance matrix.
+
+    Raises
+    ------
+    ValueError
+        If target is not one of: 'A', 'B', 'C', 'D', 'E', 'F'.
+    """
+    if target not in ['A', 'B', 'C', 'D', 'E', 'F']:
+        raise ValueError("target must be one of: A, B, C, D, E, F") 
+
+    a_np = conversions.alToArray(a)
+
+    target_map = {'A': _target_a,
+                  'B': _target_b,
+                  'C': _target_c,
+                  'D': _target_d,
+                  'E': _target_e,
+                  'F': _target_f}
+
+    sig = target_map[target](a_np)[0]
     if np.all(np.linalg.eigvals(sig) > 0):
         return sig
     else:
@@ -222,7 +249,7 @@ def shrink(a):
 
 if __name__ == '__main__':
 
-    targets = [target_a, target_b, target_c, target_d, target_f]
+    targets = [_target_a, _target_b, _target_c, _target_d, _target_f]
 
     def calc_all_norms(seed, mu, r, n):
         np.random.seed(seed)
