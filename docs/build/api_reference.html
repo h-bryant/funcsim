@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>API Reference &#8212; funcsim 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <script src="_static/documentation_options.js?v=01f34227"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Overview" href="overview.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">adtest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_sorted</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecdfgof.html#adtest"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Anderson-Darling test for goodness of fit to a distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>VectorLike</em>) – Sample data vector.</p></li>
+<li><p><strong>dist</strong> (<em>str</em><em> or </em><em>frozen distribution object</em>) – Scipy distribution name or frozen distribution object.</p></li>
+<li><p><strong>args</strong> (<em>tuple</em><em>, </em><em>optional</em>) – Parameters for the distribution if it is not a string.</p></li>
+<li><p><strong>assume_sorted</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, assumes that <cite>data</cite> is already sorted.  Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A named tuple with the test statistic and p-value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>GofResult</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">cclayton</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">draw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nvars</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#cclayton"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate joint uniform draws from a Clayton copula.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>draw</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator yielding independent standard uniform random numbers.</p></li>
+<li><p><strong>nvars</strong> (<em>int</em>) – Number of variables (dimension), must be &gt;= 2.</p></li>
+<li><p><strong>theta</strong> (<em>float</em>) – Copula parameter, must be &gt; 0.0.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A 1-D NumPy array of length nvars with joint uniform draws from
+the Clayton copula.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If theta is not a float or theta &lt;= 0.0.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>See SAS documentation for the Clayton copula construction.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">cgauss</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">draw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#cgauss"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate joint uniform draws from a Gaussian copula.</p>
+<p>Given a correlation matrix <cite>rho</cite>, this function generates a vector of joint
+uniform random variables (copula samples) using the Gaussian copula
+construction. The random number generator <cite>draw</cite> should yield independent
+standard uniform random numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>draw</strong> (<em>generator</em>) – A generator that yields independent standard uniform random numbers.</p></li>
+<li><p><strong>rho</strong> (<em>ArrayLike</em>) – Correlation matrix (K x K) for the Gaussian copula.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A 1-D NumPy array of length K containing joint uniform draws from the
+Gaussian copula.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The function first generates a joint normal random vector with correlation
+structure <cite>rho</cite>, then applies the standard normal CDF to each component to
+obtain standard uniform draws reflecting the Gaussian copula dependence
+structure.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">cgumbel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">draw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nvars</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#cgumbel"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate joint uniform draws from a Gumbel copula.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>draw</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator yielding independent standard uniform random numbers.</p></li>
+<li><p><strong>nvars</strong> (<em>int</em>) – Number of variables (dimension), must be &gt;= 2.</p></li>
+<li><p><strong>theta</strong> (<em>float</em>) – Copula parameter, must be &gt; 1.0.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A 1-D NumPy array of length nvars with joint uniform draws from
+the Gumbel copula.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If theta is not a float or theta &lt;= 1.0.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>See SAS documentation for the Gumbel copula construction.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">cstudent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">draw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#cstudent"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate joint uniform draws from a Student’s t copula.</p>
+<p>Given a correlation matrix <cite>rho</cite> and degrees of freedom <cite>nu</cite>, this
+function generates a vector of joint uniform random variables (copula
+samples) using the Student’s t copula construction. The random number
+generator <cite>draw</cite> should yield independent standard uniform random
+numbers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>draw</strong> (<em>generator</em>) – A generator that yields independent standard uniform random numbers.</p></li>
+<li><p><strong>rho</strong> (<em>ArrayLike</em>) – Correlation matrix (K x K) for the Student’s t copula.</p></li>
+<li><p><strong>nu</strong> (<em>float</em>) – Degrees of freedom for the Student’s t distribution.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A 1-D NumPy array of length K containing joint uniform draws from
+the Student’s t copula.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The function generates a joint normal random vector with correlation
+structure <cite>rho</cite>, scales it by a chi-squared random variable, and then
+applies the Student’s t CDF to each component to obtain uniform
+marginals.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">cvmtest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_sorted</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecdfgof.html#cvmtest"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Cramer-von Mises test for goodness of fit to a distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>VectorLike</em>) – Sample data vector.</p></li>
+<li><p><strong>dist</strong> (<em>str</em><em> or </em><em>frozen distribution object</em>) – Scipy distribution name or frozen distribution object.</p></li>
+<li><p><strong>args</strong> (<em>tuple</em><em>, </em><em>optional</em>) – Parameters for the distribution if it is not a string.</p></li>
+<li><p><strong>assume_sorted</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, assumes that <cite>data</cite> is already sorted.  Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A named tuple with the test statistic and p-value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>GofResult</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">edf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/edf.html#edf"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Create an empirical distribution function (EDF) from a data sample.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>sample</strong> (<em>VectorLike</em>) – 1-D data sample (list, np.array, pd.Series, or 1-D xr.DataArray).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A function that computes the EDF at a given value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Callable[[float], float]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scipydist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distfit.html#fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">kde</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'scott'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kde.html#kde"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Create a 1-D kernel density estimator (KDE) object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sample</strong> (<em>VectorLike</em>) – 1-D data sample (list, tuple, np.ndarray, xr.DataArray, or pd.Series).</p></li>
+<li><p><strong>bw</strong> (<em>str</em><em>, </em><em>optional</em>) – Bandwidth selection method, ‘scott’, ‘silverman’, or a float.
+Default is ‘scott’.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>An instance of the Kde class.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Kde</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">kdemv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'scott'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#kdemv"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Create a multivariate KDE object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>ArrayLike</em>) – Input data array of shape (n_samples, n_features).</p></li>
+<li><p><strong>bw</strong> (<em>str</em><em>, </em><em>optional</em>) – Bandwidth selection method, ‘scott’ or ‘silverman’.
+Default is ‘scott’.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>An instance of the MvKde class.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>MvKde</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">kstest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_sorted</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecdfgof.html#kstest"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Kolmogorov-Smirnov test for goodness of fit to a distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>VectorLike</em>) – Sample data vector.</p></li>
+<li><p><strong>dist</strong> (<em>str</em><em> or </em><em>frozen distribution object</em>) – Scipy distribution name or frozen distribution object.</p></li>
+<li><p><strong>args</strong> (<em>tuple</em><em>, </em><em>optional</em>) – Parameters for the distribution if it is not a string.</p></li>
+<li><p><strong>assume_sorted</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, assumes that <cite>data</cite> is already sorted.  Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A named tuple with the test statistic and p-value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>GofResult</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">normal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">draw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#normal"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate joint normal random draws.</p>
+<p>Given a covariance matrix <cite>sigma</cite>, this function generates a vector of
+joint normal random variables using the provided random number generator
+<cite>draw</cite>. If <cite>mu</cite> is provided, it is used as the mean vector; otherwise,
+the mean is assumed to be zero.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>draw</strong> (<em>generator</em>) – A generator that yields independent standard uniform random numbers.</p></li>
+<li><p><strong>sigma</strong> (<em>ArrayLike</em>) – Covariance matrix (K x K) for the joint normal distribution.</p></li>
+<li><p><strong>mu</strong> (<em>vector_like</em><em>, </em><em>optional</em>) – Mean vector (length K) for the joint normal distribution.
+If None, the mean is zero.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A 1-D NumPy array of length K containing a sample from the specified
+joint normal distribution.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The function transforms standard uniform draws into standard normal draws
+using the inverse CDF, then applies the Cholesky decomposition of the
+covariance matrix to induce the desired correlation structure.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">recdyn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stepf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nsteps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ntrials</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stdnorm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'lh'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/core.html#recdyn"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Recursive dynamic stochastic simulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>stepf</strong> (<em>function</em>) – Function that performs a single step through time.  Should take ‘draw’
+as a first argument, where ‘draw’ will be a generator that emits
+standard uniform draws (or standard normal draws, if <cite>stdnorm</cite> is True)
+that will be provided by <code class="docutils literal notranslate"><span class="pre">recdyn</span></code>.  Should take ‘data’ as a
+second argument, where this will be a type of array that is also
+provided by <code class="docutils literal notranslate"><span class="pre">recdyn.</span></code> This function should return a dict with variable
+names (as strings) as keys and values for those variables
+(as floats) as values.</p></li>
+<li><p><strong>data0</strong> (<em>xarray.DataArray</em>) – Initial and/or historical data relevant to the simulation.
+Should have dimensions ‘variables’ and ‘steps’.  Any lagged values
+needed by <cite>stepf</cite> must be in <cite>data0</cite>.  The ‘steps’ dimension should
+have either an integer index or a pandas Period index.</p></li>
+<li><p><strong>nsteps</strong> (<em>int</em>) – The number of steps to perform in each trial.</p></li>
+<li><p><strong>ntrials</strong> (<em>int</em>) – The number of trials to perform.</p></li>
+<li><p><strong>multi</strong> (<em>bool</em><em>, </em><em>optional</em>) – Use multiple processes/cores for the simulation. Default is False.</p></li>
+<li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – Seed for pseudo-random number generation. Default is 6.</p></li>
+<li><p><strong>stdnorm</strong> (<em>book</em><em>, </em><em>optional</em>) – If False, <code class="docutils literal notranslate"><span class="pre">next(draw)</span></code> within <cite>trialf</cite> will return standard uniform
+random draws. If True, <code class="docutils literal notranslate"><span class="pre">next(draw)</span></code> will return standard normal draws.
+Default is False.</p></li>
+<li><p><strong>sampling</strong> (<em>{'lh'</em><em>, </em><em>'mc'}</em><em>, </em><em>optional</em>) – If ‘lh’, Latin Hypercube sampling is employed.  If ‘mc’, simple
+Monte Carlo sampling is employed.  Default is ‘lh’.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>3-D xarray.DataArray with dimensions ‘trials’, ‘variables’, and ‘steps’.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.DataArray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">shrink</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/shrinkage.html#shrink"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Covariance shrinkage estimator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>ArrayLike</em>) – Data array with variables in columns and observations in rows.</p></li>
+<li><p><strong>target</strong> (<em>str</em>) – Shrinkage target, one of: ‘A’, ‘B’, ‘C’, ‘D’, ‘E’, ‘F’.  These
+correspond to different shrinkage estimation methods as defined in
+Shafer &amp; Strimmer, “A shrinkage approach to large-scale covariance
+matrix estimation and implications for Functional Genomics.”
+//Statistical Applications in Genetics and Molecular Biology//,
+vol 4(2005), issue 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The estimated covariance matrix.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If target is not one of: ‘A’, ‘B’, ‘C’, ‘D’, ‘E’, ‘F’.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">static</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trialf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ntrials</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stdnorm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'lh'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/core.html#static"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Static stochastic simulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>trialf</strong> (<em>function</em>) – Function that performs a single trial.  Should take ‘draw’ as an
+argument, where ‘draw’ will be a generator that emits standard uniform
+draws (or standard normal draws if <cite>stdnorm</cite> is True)
+that will be provided by <code class="docutils literal notranslate"><span class="pre">static</span></code>.  This function should return
+a dict with variable names (as strings) as keys and values for those
+variables (as floats) as values.</p></li>
+<li><p><strong>ntrials</strong> (<em>int</em>) – The number of trials to perform.</p></li>
+<li><p><strong>multi</strong> (<em>bool</em><em>, </em><em>optional</em>) – Use multiple processes/cores for the simulation. Default is False.</p></li>
+<li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – Seed for pseudo-random number generation. Default is 6.</p></li>
+<li><p><strong>stdnorm</strong> (<em>book</em><em>, </em><em>optional</em>) – If False, <code class="docutils literal notranslate"><span class="pre">next(draw)</span></code> within <cite>trialf</cite> will return standard uniform
+random draws. If True, <code class="docutils literal notranslate"><span class="pre">next(draw)</span></code> will return standard normal draws.
+Default is False.</p></li>
+<li><p><strong>sampling</strong> (<em>{'lh'</em><em>, </em><em>'mc'}</em><em>, </em><em>optional</em>) – If ‘lh’, Latin Hypercube sampling is employed.  If ‘mc’, simple
+Monte Carlo sampling is employed.  Default is ‘lh’.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>2-D xarray.DataArray with dimensions ‘trials’ and ‘variables’.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.DataArray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">funcsim</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="overview.html" title="previous chapter">Overview</a></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2017-2025, Henry Bryant.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/api_reference.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

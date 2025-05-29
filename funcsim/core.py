@@ -125,8 +125,9 @@ def static(trialf: Callable[[Generator[int, float, None]], dict[str, float]],
     ----------
     trialf : function
         Function that performs a single trial.  Should take 'draw' as an
-        argument, where 'draw' will be a generator that emits random draws
-        that will be provided by ``static``.  This fucntion should return
+        argument, where 'draw' will be a generator that emits standard uniform
+        draws (or standard normal draws if `stdnorm` is True)
+        that will be provided by ``static``.  This function should return
         a dict with variable names (as strings) as keys and values for those
         variables (as floats) as values.
     ntrials : int
@@ -194,10 +195,11 @@ def recdyn(stepf: Callable[[Generator[int, float, None], rdarrays.RDdata],
     ----------
     stepf : function
         Function that performs a single step through time.  Should take 'draw'
-        as a first argument, where 'draw' will be a generator that emits random
-        draws that will be provided by ``recdyn``.  Should take 'data' as a
+        as a first argument, where 'draw' will be a generator that emits
+        standard uniform draws (or standard normal draws, if `stdnorm` is True)
+        that will be provided by ``recdyn``.  Should take 'data' as a
         second argument, where this will be a type of array that is also
-        provided by ``recdyn.`` This fucntion should return a dict with variable
+        provided by ``recdyn.`` This function should return a dict with variable
         names (as strings) as keys and values for those variables
         (as floats) as values.
     data0 : xarray.DataArray

@@ -93,7 +93,7 @@ def normal(draw: Generator[float, None, None],
     ----------
     draw : generator
         A generator that yields independent standard uniform random numbers.
-    sigma : array_like
+    sigma : ArrayLike
         Covariance matrix (K x K) for the joint normal distribution.
     mu : vector_like, optional
         Mean vector (length K) for the joint normal distribution.
@@ -136,7 +136,7 @@ def cgauss(draw: Generator[float, None, None],
     ----------
     draw : generator
         A generator that yields independent standard uniform random numbers.
-    rho : array_like
+    rho : ArrayLike
         Correlation matrix (K x K) for the Gaussian copula.
 
     Returns
@@ -173,7 +173,7 @@ def cstudent(draw: Generator[float, None, None],
     ----------
     draw : generator
         A generator that yields independent standard uniform random numbers.
-    rho : array_like
+    rho : ArrayLike
         Correlation matrix (K x K) for the Student's t copula.
     nu : float
         Degrees of freedom for the Student's t distribution.
@@ -296,7 +296,7 @@ class MvKde():
 
         Parameters
         ----------
-        data : array_like
+        data : ArrayLike
             Input data array of shape (n_samples, n_features).
         bw : str, optional
             Bandwidth selection method, 'scott' or 'silverman'.
@@ -358,7 +358,7 @@ def kdemv(data: conversions.ArrayLike,
 
     Parameters
     ----------
-    data : np.ndarray
+    data : ArrayLike
         Input data array of shape (n_samples, n_features).
     bw : str, optional
         Bandwidth selection method, 'scott' or 'silverman'.
@@ -369,4 +369,5 @@ def kdemv(data: conversions.ArrayLike,
     MvKde
         An instance of the MvKde class.
     """
-    return MvKde(data, bw)
+    data_np = conversions.alToArray(data)
+    return MvKde(data_np, bw)

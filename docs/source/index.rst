@@ -8,12 +8,6 @@ funcsim documentation
    :caption: Contents:
 
    overview.rst
+   api_reference.rst
 
 
-API Reference
--------------
-
-.. automodule:: funcsim
-   :members: static
-   :undoc-members:
-   :show-inheritance:

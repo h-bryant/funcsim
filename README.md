@@ -8,16 +8,15 @@ Features:
 - painless multi-core simulations
 - highly flexible, and as simple as possible (but no more)
 - functional paradigm
-- python 2 and 3 compatible
 
 Developed using:
-- python 3.5.3
-- numpy 1.13.1
-- pandas 0.20.3
-- xarray 0.9.6
+- python 3.9.6
+- numpy 2.0.2
+- scipy 1.13.1
+- pandas 2.2.3
+- xarray 2024.7.0
 
 Additionally, to run the demos, run tests, and build docs:
-- scipy 1.0.0
 - pytest 3.3.0
 - sphinx 1.6.5
 

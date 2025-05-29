@@ -201,14 +201,14 @@ def _target_f(x):
     return vcv, lam
 
 
-def shrink(a: conversions.ArrayLike,
+def shrink(data: conversions.ArrayLike,
            target: str ) -> np.ndarray:
     """
     Covariance shrinkage estimator.
 
     Parameters
     ----------
-    a : np.ndarray
+    data : ArrayLike
         Data array with variables in columns and observations in rows.
     target : str
         Shrinkage target, one of: 'A', 'B', 'C', 'D', 'E', 'F'.  These
@@ -231,7 +231,7 @@ def shrink(a: conversions.ArrayLike,
     if target not in ['A', 'B', 'C', 'D', 'E', 'F']:
         raise ValueError("target must be one of: A, B, C, D, E, F") 
 
-    a_np = conversions.alToArray(a)
+    a_np = conversions.alToArray(data)
 
     target_map = {'A': _target_a,
                   'B': _target_b,

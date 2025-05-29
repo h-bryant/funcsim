@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ecdfgof &#8212; funcsim 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=12dfc556" />
+    <script src="../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for ecdfgof</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Goodness-of-fit tests based on the empirical distribution function.</span>
+
+<span class="sd">Interface is similar to `scipy.stats.kstest()`, but you may choose or provide</span>
+<span class="sd">a statistic calculation routine and a matching distribution.</span>
+
+<span class="sd">Three concrete tests are provided:</span>
+<span class="sd">* `ks_test()` -- Kolmogorov-Smirnov supremum statistic; almost the same as</span>
+<span class="sd">  `scipy.stats.kstest()` with `alternative=&#39;two-sided&#39;`, but with (hopefully)</span>
+<span class="sd">  somewhat more precise p-value calculation;</span>
+<span class="sd">* `cvm_test()` -- Cramer-von Mises L2 statistic, with a rather crude estimation</span>
+<span class="sd">  of the statistic distribution (but seemingly the best available);</span>
+<span class="sd">* `ad_test()` -- Anderson-Darling statistic with a fair approximation of its</span>
+<span class="sd">  distribution; unlike the &quot;composite&quot; `scipy.stats.anderson()` this one needs</span>
+<span class="sd">  a fully specified hypothesized distribution.</span>
+
+<span class="sd">Example::</span>
+
+<span class="sd">    &gt;&gt;&gt; from scipy.stats import uniform</span>
+<span class="sd">    &gt;&gt;&gt; from skgof import ks_test</span>
+
+<span class="sd">    &gt;&gt;&gt; ks_test((1, 2, 3), uniform(0, 4))</span>
+<span class="sd">    GofResult(statistic=0.25, pvalue=0.97222...)</span>
+
+<span class="sd">The result is accurate -- if we assume that the samples were drawn from the</span>
+<span class="sd">specified distribution, then P(D &lt;= 1/4) = 2/9 * (2 * 3/4 - 1)^3 = .97(2).</span>
+<span class="sd">In general, for sample counts less than 150 you may expect good precision</span>
+<span class="sd">with `ks_test()`, and a fair one above that.</span>
+
+<span class="sd">Lectures 2 and 3 of http://www.win.tue.nl/~rmcastro/AppStat2013/ list formulas</span>
+<span class="sd">for all three statistics. Their distributions are split into separate modules</span>
+<span class="sd">as calculating each is a small research story -- see `ksdist`, `cvmdist`, and</span>
+<span class="sd">`addist` for details and further references.</span>
+
+<span class="sd">Original Work (scikit-gof) Copyright (c) 2015 Wojciech Ruszczewski &lt;scipy@wr.waw.pl&gt;</span>
+
+<span class="sd">Modified Work Copyright (c) 2020 h-bryant</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">division</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">arange</span><span class="p">,</span> <span class="n">log</span><span class="p">,</span> <span class="n">sort</span><span class="p">,</span> <span class="n">clip</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">six</span><span class="w"> </span><span class="kn">import</span> <span class="n">string_types</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">distributions</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">conversions</span>
+<span class="c1"># from .addist import ad_unif</span>
+<span class="c1"># from .cvmdist import cvm_unif</span>
+<span class="c1"># from .ksdist import ks_unif</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">addist</span><span class="w"> </span><span class="kn">import</span> <span class="n">ad_unif</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cvmdist</span><span class="w"> </span><span class="kn">import</span> <span class="n">cvm_unif</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ksdist</span><span class="w"> </span><span class="kn">import</span> <span class="n">ks_unif</span>
+
+<span class="n">GofResult</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;GofResult&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;statistic&#39;</span><span class="p">,</span> <span class="s1">&#39;pvalue&#39;</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">ks_stat</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates the Kolmogorov-Smirnov statistic for sorted values from U(0, 1).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">uniform</span> <span class="o">=</span> <span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">samples</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">samples</span>
+    <span class="n">d_plus</span> <span class="o">=</span> <span class="p">(</span><span class="n">uniform</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+    <span class="n">d_minus</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span> <span class="o">-</span> <span class="n">uniform</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">d_plus</span><span class="p">,</span> <span class="n">d_minus</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">cvm_stat</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates the Cramer-von Mises statistic for sorted values from U(0, 1).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">samples2</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">minuends</span> <span class="o">=</span> <span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">samples2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">samples2</span>
+    <span class="k">return</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">6</span> <span class="o">*</span> <span class="n">samples2</span><span class="p">)</span> <span class="o">+</span> <span class="p">((</span><span class="n">minuends</span> <span class="o">-</span> <span class="n">data</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">ad_stat</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates the Anderson-Darling statistic for sorted values from U(0, 1).</span>
+
+<span class="sd">    The statistic is not defined if any of the values is exactly 0 or 1. You</span>
+<span class="sd">    will get infinity as a result and a divide-by-zero warning for such values.</span>
+<span class="sd">    The warning can be silenced or raised using numpy.errstate(divide=...).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">data_edit</span> <span class="o">=</span> <span class="n">clip</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="mf">0.0001</span><span class="p">,</span> <span class="mf">0.9999</span><span class="p">)</span>
+    <span class="n">factors</span> <span class="o">=</span> <span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">samples</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="o">-</span><span class="n">samples</span> <span class="o">-</span> <span class="p">(</span><span class="n">factors</span> <span class="o">*</span>
+                       <span class="n">log</span><span class="p">(</span><span class="n">data_edit</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">data_edit</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="n">samples</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">simple_test</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dist</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(),</span> <span class="n">stat</span><span class="o">=</span><span class="n">ad_stat</span><span class="p">,</span> <span class="n">pdist</span><span class="o">=</span><span class="n">ad_unif</span><span class="p">,</span>
+                <span class="n">assume_sorted</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Tests goodness of fit of data to dist using a distribution-free statistic.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">string_types</span><span class="p">):</span>
+        <span class="c1"># Auto-generating samples from a named distribution is not supported.</span>
+        <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;Data should be an array or list of values.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="n">string_types</span><span class="p">):</span>
+        <span class="n">dist</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">distributions</span><span class="p">,</span> <span class="n">dist</span><span class="p">)(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="p">:</span>
+        <span class="n">dist</span> <span class="o">=</span> <span class="n">dist</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">assume_sorted</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">sort</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">statistic</span> <span class="o">=</span> <span class="n">stat</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+    <span class="n">pvalue</span> <span class="o">=</span> <span class="n">pdist</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span><span class="o">.</span><span class="n">sf</span><span class="p">(</span><span class="n">statistic</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">GofResult</span><span class="p">(</span><span class="n">statistic</span><span class="p">,</span> <span class="n">pvalue</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="kstest">
+<a class="viewcode-back" href="../api_reference.html#funcsim.kstest">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">kstest</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">VectorLike</span><span class="p">,</span>
+           <span class="n">dist</span><span class="p">,</span>
+           <span class="n">args</span><span class="o">=</span><span class="p">(),</span>
+           <span class="n">assume_sorted</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Kolmogorov-Smirnov test for goodness of fit to a distribution.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : VectorLike</span>
+<span class="sd">        Sample data vector.</span>
+<span class="sd">    dist : str or frozen distribution object</span>
+<span class="sd">        Scipy distribution name or frozen distribution object.</span>
+<span class="sd">    args : tuple, optional</span>
+<span class="sd">        Parameters for the distribution if it is not a string.</span>
+<span class="sd">    assume_sorted : bool, optional</span>
+<span class="sd">        If True, assumes that `data` is already sorted.  Defaults to False.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    GofResult</span>
+<span class="sd">        A named tuple with the test statistic and p-value.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data_np</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">vlToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">simple_test</span><span class="p">(</span><span class="n">data_np</span><span class="p">,</span> <span class="n">dist</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="n">ks_stat</span><span class="p">,</span> <span class="n">pdist</span><span class="o">=</span><span class="n">ks_unif</span><span class="p">,</span>
+                       <span class="n">assume_sorted</span><span class="o">=</span><span class="n">assume_sorted</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="cvmtest">
+<a class="viewcode-back" href="../api_reference.html#funcsim.cvmtest">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">cvmtest</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">VectorLike</span><span class="p">,</span>
+            <span class="n">dist</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">(),</span>
+            <span class="n">assume_sorted</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Cramer-von Mises test for goodness of fit to a distribution.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : VectorLike</span>
+<span class="sd">        Sample data vector.</span>
+<span class="sd">    dist : str or frozen distribution object</span>
+<span class="sd">        Scipy distribution name or frozen distribution object.</span>
+<span class="sd">    args : tuple, optional</span>
+<span class="sd">        Parameters for the distribution if it is not a string.</span>
+<span class="sd">    assume_sorted : bool, optional</span>
+<span class="sd">        If True, assumes that `data` is already sorted.  Defaults to False.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    GofResult</span>
+<span class="sd">        A named tuple with the test statistic and p-value.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data_np</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">vlToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">simple_test</span><span class="p">(</span><span class="n">data_np</span><span class="p">,</span> <span class="n">dist</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="n">cvm_stat</span><span class="p">,</span> <span class="n">pdist</span><span class="o">=</span><span class="n">cvm_unif</span><span class="p">,</span>
+                       <span class="n">assume_sorted</span><span class="o">=</span><span class="n">assume_sorted</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="adtest">
+<a class="viewcode-back" href="../api_reference.html#funcsim.adtest">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">adtest</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">VectorLike</span><span class="p">,</span>    
+           <span class="n">dist</span><span class="p">,</span>
+           <span class="n">args</span><span class="o">=</span><span class="p">(),</span>
+           <span class="n">assume_sorted</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Anderson-Darling test for goodness of fit to a distribution.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : VectorLike</span>
+<span class="sd">        Sample data vector.</span>
+<span class="sd">    dist : str or frozen distribution object</span>
+<span class="sd">        Scipy distribution name or frozen distribution object.</span>
+<span class="sd">    args : tuple, optional</span>
+<span class="sd">        Parameters for the distribution if it is not a string.</span>
+<span class="sd">    assume_sorted : bool, optional</span>
+<span class="sd">        If True, assumes that `data` is already sorted.  Defaults to False.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    GofResult</span>
+<span class="sd">        A named tuple with the test statistic and p-value.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data_np</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">vlToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">simple_test</span><span class="p">(</span><span class="n">data_np</span><span class="p">,</span> <span class="n">dist</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">stat</span><span class="o">=</span><span class="n">ad_stat</span><span class="p">,</span> <span class="n">pdist</span><span class="o">=</span><span class="n">ad_unif</span><span class="p">,</span>
+                       <span class="n">assume_sorted</span><span class="o">=</span><span class="n">assume_sorted</span><span class="p">)</span> </div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">funcsim</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api_reference.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2017-2025, Henry Bryant.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

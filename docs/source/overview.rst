@@ -1,10 +1,10 @@
 Overview
 ========
 
-The basic idea is that all an end user can run a simulation after
+Tool that allows an end user can run a simulation after
 simply writing a specially-crafted function that performs a single
 trial (for a static simulation) or that takes one step
-through time or space (for a recursive-dynamic simulation).
+through time (for a recursive-dynamic simulation).
 
 
 Simple static simulation example
@@ -65,15 +65,13 @@ The ``data`` argument here reflects historical observations. It is a
         # take one step through time
 
         # value of "p" in the previous period
-        plag = fs.recall(data, "p", lag=1)
+        plag = data.recall("p", lag=1)
 
         # do some kind of work
         pnew = 0.25 + 0.9 * plag + stats.norm.ppf(next(draw))
 
-        # chronicle the new value of "p" in the historical record
-        datanew = fs.chron(data, {"p": pnew})
-
-        return datanew
+        # return new value(s) for this step/time period
+        return {"p": pnew}
 
 After specifying a ``DataArray`` containing historical data (here, called
 ``data0``), the simulation is invoked thusly:
