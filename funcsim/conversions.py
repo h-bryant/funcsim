@@ -14,6 +14,12 @@ VectorLike = Union[
     xr.DataArray         # 1‑D xarray DataArray
 ]
 
+ArrayLike = Union[
+    NDArray[Any],        # np.NDArray of any dtype (runtime shape not enforced)
+    pd.DataFrame,        # 2‑D pandas Series
+    xr.DataArray         # 2‑D xarray DataArray
+]
+
 
 def vlValidate(vl: VectorLike) -> bool:
     """
@@ -83,3 +89,55 @@ def vlToArray(vl: VectorLike) -> NDArray:
     else:
         a = np.asarray(vl)
     return a.flatten()  # Ensure the array is 1-D
+
+
+def alValidate(al: ArrayLike) -> bool:
+    """
+    Validate if the input is a 2-D array-like object.
+
+    Parameters
+    ----------
+    al : ArrayLike
+        The object to validate.
+
+    Returns
+    -------
+    bool
+        True if the input is a array-like object, False otherwise.
+    """
+    if isinstance(al, np.ndarray):
+        a = np.asarray(al)
+    elif isinstance(al, xr.DataArray):
+        a = np.asarray(al)
+    elif isinstance(al, pd.DataFrame):  
+        a = np.asarray(al)
+    else:
+        return False
+    if a.ndim != 2:
+        return False
+    return True
+
+
+def alToArray(al: ArrayLike) -> NDArray:
+    """
+    Convert an array-like object to a 2-D NumPy array.
+
+    Parameters
+    ----------
+    al : ArrayLike
+        The array-like object to convert.
+
+    Returns
+    -------
+    NDArray
+        The converted 2-D NumPy array.
+    """
+    if not alValidate(al):
+        raise ValueError("argument passed is not an array-like object")
+    if isinstance(al, pd.DataFrame):
+        a = al.to_numpy()
+    elif isinstance(al, xr.DataArray):
+        a = al.values
+    else:  # Assume it's a NumPy array
+        a = np.asarray(al)
+    return a

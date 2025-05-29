@@ -1,6 +1,8 @@
 import math
 import numpy as np
 from scipy import stats
+from typing import Generator, Optional
+import conversions
 
 
 def _memoize(f):
@@ -27,14 +29,10 @@ def _makeA(sigma):
 
 def _checkcov(cov, name):
     # sanity check a covariace matrix.  Use "name" in any error/exception msg
-    if type(cov) != np.ndarray:
-        raise ValueError("%s must be of type numpy.ndarray" % name)
-    if len(cov.shape) != 2:
-        raise ValueError("%s must be two-dimensional" % name)
     if not np.allclose(cov, cov.T):
-        raise ValueError("%s must be symmetrical" % name)
+        raise ValueError(f"{name} must be symmetrical")
     if not np.all(np.linalg.eigvals(cov) > 0):
-        raise ValueError("%s must be positive definite" % name)
+        raise ValueError(f"{name} must be positive definite")
     return cov
 
 
@@ -79,10 +77,42 @@ def _skew_stable_draw(draw, alpha, beta, gamma, delta):
     return z * gamma + delta + beta * gamma * omega
 
 
-def normal(draw, sigma, mu=None):
-    # perform joint normal draws.  "sigma" should be a covariance matrix as
-    # a numpy.array
-    A = _makeA(_checkcov(sigma, "sigma"))
+def normal(draw: Generator[float, None, None],
+           sigma: conversions.ArrayLike,
+           mu: Optional[conversions.VectorLike] = None
+          ) -> np.ndarray:    
+    """
+    Generate joint normal random draws.
+
+    Given a covariance matrix `sigma`, this function generates a vector of
+    joint normal random variables using the provided random number generator
+    `draw`. If `mu` is provided, it is used as the mean vector; otherwise,
+    the mean is assumed to be zero.
+
+    Parameters
+    ----------
+    draw : generator
+        A generator that yields independent standard uniform random numbers.
+    sigma : array_like
+        Covariance matrix (K x K) for the joint normal distribution.
+    mu : vector_like, optional
+        Mean vector (length K) for the joint normal distribution.
+        If None, the mean is zero.
+
+    Returns
+    -------
+    ndarray
+        A 1-D NumPy array of length K containing a sample from the specified
+        joint normal distribution.
+
+    Notes
+    -----
+    The function transforms standard uniform draws into standard normal draws
+    using the inverse CDF, then applies the Cholesky decomposition of the
+    covariance matrix to induce the desired correlation structure.
+    """
+    A_prelim = conversions.alToArray(sigma)
+    A = _makeA(_checkcov(A_prelim, "sigma"))
     K = len(A)  # number of variables
     prod = np.dot(A, stats.norm.ppf([next(draw) for i in range(K)]))
     if mu is None:
@@ -91,29 +121,113 @@ def normal(draw, sigma, mu=None):
         return mu + prod
 
 
-def cgauss(draw, rho):
-    # joint u draws from a Gaussian copula.
-    # "rho" should be a correlation matrix as a numpy.array
-    return stats.norm.cdf(normal(draw, _checkcov(rho, "rho")))
+def cgauss(draw: Generator[float, None, None],
+           rho: conversions.ArrayLike
+          ) -> np.ndarray:
+    """
+    Generate joint uniform draws from a Gaussian copula.
+
+    Given a correlation matrix `rho`, this function generates a vector of joint
+    uniform random variables (copula samples) using the Gaussian copula
+    construction. The random number generator `draw` should yield independent
+    standard uniform random numbers.
+
+    Parameters
+    ----------
+    draw : generator
+        A generator that yields independent standard uniform random numbers.
+    rho : array_like
+        Correlation matrix (K x K) for the Gaussian copula.
+
+    Returns
+    -------
+    ndarray
+        A 1-D NumPy array of length K containing joint uniform draws from the
+        Gaussian copula.
+
+    Notes
+    -----
+    The function first generates a joint normal random vector with correlation
+    structure `rho`, then applies the standard normal CDF to each component to
+    obtain standard uniform draws reflecting the Gaussian copula dependence
+    structure.
+    """
+    rho_prelim = conversions.alToArray(rho)
+    return stats.norm.cdf(normal(draw, _checkcov(rho_prelim, "rho")))
 
 
-def cstudent(draw, rho, nu):
-    # joint u draws from a Student's t copula.
-    # "rho" is a correlation  matrix
-    # "nu" is the degrees-of-freedom parameter
+def cstudent(draw: Generator[float, None, None],
+             rho: conversions.ArrayLike,
+             nu: float
+            ) -> np.ndarray:
+    """
+    Generate joint uniform draws from a Student's t copula.
+
+    Given a correlation matrix `rho` and degrees of freedom `nu`, this
+    function generates a vector of joint uniform random variables (copula
+    samples) using the Student's t copula construction. The random number
+    generator `draw` should yield independent standard uniform random
+    numbers.
+
+    Parameters
+    ----------
+    draw : generator
+        A generator that yields independent standard uniform random numbers.
+    rho : array_like
+        Correlation matrix (K x K) for the Student's t copula.
+    nu : float
+        Degrees of freedom for the Student's t distribution.
+
+    Returns
+    -------
+    ndarray
+        A 1-D NumPy array of length K containing joint uniform draws from
+        the Student's t copula.
+
+    Notes
+    -----
+    The function generates a joint normal random vector with correlation
+    structure `rho`, scales it by a chi-squared random variable, and then
+    applies the Student's t CDF to each component to obtain uniform
+    marginals.
+    """
     x = normal(draw, rho)
     chi2 = stats.chi2.ppf(next(draw), df=nu)
     mult = (nu / chi2)**0.5
     return stats.t.cdf(mult * x, df=nu)
 
 
-def cclayton(draw, nvars, theta):
-    # joint u draws from a clayton copula
-    # "nvars" is an integer >= 2
-    # "theta" is a float > 0.0
-    #
-    # see: https://support.sas.com/documentation/cdl/en/etsug/63939/HTML/default/viewer.htm#etsug_copula_sect017.htm
+def cclayton(draw: Generator[float, None, None],
+             nvars: int,
+             theta: float
+            ) -> np.ndarray:
+    """
+    Generate joint uniform draws from a Clayton copula.
 
+    Parameters
+    ----------
+    draw : Generator[float, None, None]
+        A generator yielding independent standard uniform random numbers.
+    nvars : int
+        Number of variables (dimension), must be >= 2.
+    theta : float
+        Copula parameter, must be > 0.0.
+
+    Returns
+    -------
+    np.ndarray
+        A 1-D NumPy array of length nvars with joint uniform draws from
+        the Clayton copula.
+
+    Raises
+    ------
+    ValueError
+        If theta is not a float or theta <= 0.0.
+
+    Notes
+    -----
+    See SAS documentation for the Clayton copula construction.
+    """
     if type(theta) != float:
         raise ValueError('"theta" must be a float')
     if theta <= 0.0:
@@ -126,13 +240,37 @@ def cclayton(draw, nvars, theta):
     return np.array([Ftilde(-math.log(next(draw))/v) for i in range(nvars)])
 
 
-def cgumbel(draw, nvars, theta):
-    # joint u draws from a gumbel copula
-    # "nvars" is an integer >= 2
-    # "theta" is a float > 0.0
-    #
-    # see: https://support.sas.com/documentation/cdl/en/etsug/63939/HTML/default/viewer.htm#etsug_copula_sect017.htm
+def cgumbel(draw: Generator[float, None, None],
+            nvars: int,
+            theta: float
+           ) -> np.ndarray:
+    """
+    Generate joint uniform draws from a Gumbel copula.
 
+    Parameters
+    ----------
+    draw : Generator[float, None, None]
+        A generator yielding independent standard uniform random numbers.
+    nvars : int
+        Number of variables (dimension), must be >= 2.
+    theta : float
+        Copula parameter, must be > 1.0.
+
+    Returns
+    -------
+    np.ndarray
+        A 1-D NumPy array of length nvars with joint uniform draws from
+        the Gumbel copula.
+
+    Raises
+    ------
+    ValueError
+        If theta is not a float or theta <= 1.0.
+
+    Notes
+    -----
+    See SAS documentation for the Gumbel copula construction.
+    """
     if type(theta) != float:
         raise ValueError('"theta" must be a float')
     if theta <= 1.0:
@@ -149,10 +287,26 @@ def cgumbel(draw, nvars, theta):
 
 class MvKde():
 
-    def __init__(self, data, bw='scott'):
-        # sample should be a numpy array
+    def __init__(self,
+                 data: conversions.ArrayLike,
+                 bw: str = 'scott'
+                ) -> None:
+        """
+        Initialize a multivariate KDE object.
 
-        self._data = data
+        Parameters
+        ----------
+        data : array_like
+            Input data array of shape (n_samples, n_features).
+        bw : str, optional
+            Bandwidth selection method, 'scott' or 'silverman'.
+            Default is 'scott'.
+
+        Returns
+        -------
+        None
+        """
+        self._data = conversions.alToArray(data)
         (self._M, self._K) = self._data.shape
 
         # sample standard deviations
@@ -171,9 +325,22 @@ class MvKde():
         else:
             self._bw = bw
 
-    def sample(self, draw):
-        # random draw from the KDE
+    def sample(self,
+               draw: Generator[float, None, None]
+              ) -> np.ndarray:
+        """
+        Generate a random sample from the multivariate KDE.
 
+        Parameters
+        ----------
+        draw : Generator[float, None, None]
+            A generator yielding independent standard uniform random numbers.
+
+        Returns
+        -------
+        np.ndarray
+            A 1-D NumPy array representing a sample from the KDE.
+        """
         # hist obs about which we will sample
         m = _rand_int(next(draw), self._M)
 
@@ -183,5 +350,23 @@ class MvKde():
         return normal(draw, self._bw, mu)
 
 
-def fitkdemv(data, bw='scott'):
+def kdemv(data: conversions.ArrayLike,
+          bw: str = 'scott'
+         ) -> MvKde:
+    """
+    Create a multivariate KDE object.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        Input data array of shape (n_samples, n_features).
+    bw : str, optional
+        Bandwidth selection method, 'scott' or 'silverman'.
+        Default is 'scott'.
+
+    Returns
+    -------
+    MvKde
+        An instance of the MvKde class.
+    """
     return MvKde(data, bw)
