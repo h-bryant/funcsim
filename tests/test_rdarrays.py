@@ -5,6 +5,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              "../"))
 import rdarrays as rd
+import conversions
 
 
 def test_rda():
@@ -17,15 +18,15 @@ def test_rda():
 
     varNames = x.indexes['variables']
     namePos = {nm: i for i, nm in enumerate(varNames)}
-    a = x.to_masked_array()
+    a = np.array(x.values)
 
-    # steps index inclusing all steps
+    # steps index including all steps
     if a.shape[0] > 0:
         stepLabels = list(x.indexes['steps'])
         for i in range(len(steps)):
             stepLabels.append(stepLabels[-1] + 1)
     else:
-        stepLabels = list(range(steps))
+        stepLabels = list(range(len(steps)))
 
     d = rd.RDdata(x, steps=3, namePositions=namePos)
 

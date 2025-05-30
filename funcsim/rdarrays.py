@@ -21,13 +21,11 @@ class RDdata():
         self._varNames = set(namePositions.keys())
 
         # set up values container for all variables & time steps
-        # self._a = np.empty((len(self._namePos.keys()), self._totSteps))
-        self._a = np.full((len(self._namePos.keys()), self._totSteps),
-                          np.nan, dtype=float)
-        self._a[:, 0:self._histSteps] = a.transpose()
+        self._a = np.full(shape=(len(self._namePos.keys()), self._totSteps),
+                          fill_value=np.nan, dtype=float)
+        self._a[:, 0:self._histSteps] = np.copy(a).transpose()
 
         self._currStep = 0
-        print(self._a)
 
     def incrStep(self):
         self._currStep += 1
