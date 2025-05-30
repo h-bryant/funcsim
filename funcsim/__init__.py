@@ -12,6 +12,7 @@ from dependence import cgumbel
 from dependence import cclayton
 from dependence import kdemv
 from dependence import covtocorr
+from dependence import spearman
 
 from shrinkage import shrink
 from nearby import nearestpd

@@ -1,7 +1,7 @@
 import math
 import numpy as np
 from scipy import stats
-from typing import Generator, Optional
+from typing import Generator, Optional, Tuple
 import conversions
 
 
@@ -406,3 +406,51 @@ def covtocorr(cov: conversions.ArrayLike) -> np.ndarray:
     N = cov.shape[0]
     sinv = np.identity(N) * np.sqrt(1.0 / np.diag(cov))
     return sinv.dot(cov).dot(sinv)
+
+
+def spearman(array: conversions.ArrayLike) -> Tuple[float, Tuple[float, float]]:
+    """
+    Calculate Spearman's rank correlation coefficient and its 95% confidence
+    interval.
+
+    This function computes Spearman's rho for two variables and returns the
+    correlation coefficient along with the lower and upper bounds of the 95%
+    confidence interval.
+
+    Parameters
+    ----------
+    array : ArrayLike
+        Input data as an (N, 2) array-like object, where N is the number of
+        observations and each column represents a variable.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - rho : float
+            Spearman's rank correlation coefficient.
+        - ci : tuple of float
+            Lower and upper bounds of the 95% confidence interval.
+
+    Raises
+    ------
+    AssertionError
+        If the input array does not have shape (N, 2).
+
+    Notes
+    -----
+    The confidence interval is computed using Fisher's z-transformation.
+    """
+    a = conversions.alToArray(array)
+    assert len(a.shape) == 2, "a must have exacly two dimensions"
+    assert a.shape[1] == 2, "a must have exactly two columns"
+
+    rho_s = stats.spearmanr(a)[0]
+
+    N = a.shape[0]
+    stderr = 1.0 / math.sqrt(N - 3)
+    delta = 1.96 * stderr
+    lower = math.tanh(math.atanh(rho_s) - delta)
+    upper = math.tanh(math.atanh(rho_s) + delta)
+
+    return (rho_s, (lower, upper))
