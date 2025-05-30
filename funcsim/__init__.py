@@ -26,3 +26,5 @@ from ecdfgof import cvmtest
 
 from distfit import fit
 from distfit import compare
+
+from utests import utests
