@@ -13,6 +13,7 @@ from dependence import cclayton
 from dependence import kdemv
 
 from shrinkage import shrink
+from nearby import nearestpd
 
 from edf import edf
 
