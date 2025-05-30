@@ -371,3 +371,38 @@ def kdemv(data: conversions.ArrayLike,
     """
     data_np = conversions.alToArray(data)
     return MvKde(data_np, bw)
+
+
+def covtocorr(cov: conversions.ArrayLike) -> np.ndarray:
+    """
+    Convert a covariance matrix to a correlation matrix.
+
+    This function takes a symmetric, positive definite covariance matrix
+    and returns the corresponding correlation matrix.
+
+    Parameters
+    ----------
+    cov : ArrayLike
+        Covariance matrix (square, symmetric).
+
+    Returns
+    -------
+    np.ndarray
+        The corresponding correlation matrix.
+
+    Raises
+    ------
+    ValueError
+        If the input is not a valid covariance matrix.
+
+    Notes
+    -----
+    The correlation matrix is computed by normalizing the covariance
+    matrix by the standard deviations of each variable.
+    """
+    cov_np = conversions.alToArray(cov)
+    _checkcov(cov_np, "covariance matrix")    
+
+    N = cov.shape[0]
+    sinv = np.identity(N) * np.sqrt(1.0 / np.diag(cov))
+    return sinv.dot(cov).dot(sinv)

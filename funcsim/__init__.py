@@ -11,6 +11,7 @@ from dependence import cstudent
 from dependence import cgumbel
 from dependence import cclayton
 from dependence import kdemv
+from dependence import covtocorr
 
 from shrinkage import shrink
 from nearby import nearestpd
