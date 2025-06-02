@@ -39,7 +39,7 @@ def _checkcov(cov, name):
 def _rand_int(u, M):
     # given a standard uniform draw "u", select a
     # random integer from a length "M" sequece: 0, 1, ..., M-1
-    return min(math.floor((M)*u), M)
+    return int(min(math.floor((M)*u), M))
 
 
 def _skew_stable_draw(draw, alpha, beta, gamma, delta):
