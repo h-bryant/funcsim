@@ -34,7 +34,7 @@
             
   <section id="overview">
 <h1>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h1>
-<p>Tool that allows an end user can run a simulation after
+<p>This is a tool that allows an end user to run a simulation after
 simply writing a specially-crafted function that performs a single
 trial (for a static simulation) or that takes one step
 through time (for a recursive-dynamic simulation).</p>
@@ -44,7 +44,7 @@ through time (for a recursive-dynamic simulation).</p>
 following form:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># function to perform one trial</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">trial</span><span class="p">(</span><span class="n">draw</span><span class="p">):</span>
-    <span class="c1"># &#39;draw&#39; argument is required and must be the only argument</span>
+    <span class="c1"># &#39;draw&#39; argument is required and must be the first argumnet</span>
 
     <span class="c1"># independent draws from U(0, 1)</span>
     <span class="n">u1</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">)</span>
@@ -59,30 +59,31 @@ following form:</p>
 </pre></div>
 </div>
 <p>Any number of independent uniform draws can be taken.</p>
-<p>Then a simulation is performed by invoking the <code class="docutils literal notranslate"><span class="pre">static</span></code> function:</p>
+<p>Then a simulation is performed by invoking the <code class="docutils literal notranslate"><span class="pre">simulate</span></code> function:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">funcsim</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">fs</span>
 
-<span class="n">da</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">static</span><span class="p">(</span><span class="n">trialf</span><span class="o">=</span><span class="n">trial</span><span class="p">,</span> <span class="n">ntrials</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+<span class="n">da</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="n">trial</span><span class="p">,</span> <span class="n">ntrials</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Here, the value passed as the <code class="docutils literal notranslate"><span class="pre">ntrials</span></code> argument is the number of
-trials that will be performed.  The returned object is a
-2-dimensional <a class="reference external" href="http://xarray.pydata.org/">xarray</a>
-<code class="docutils literal notranslate"><span class="pre">DataArray</span></code> instance, with a first dimension named <code class="docutils literal notranslate"><span class="pre">trials</span></code>
-and a second dimension named <code class="docutils literal notranslate"><span class="pre">variables</span></code>.</p>
+trials that will be performed.
+The output is a 3-dimensional <code class="docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> instance, with dimensions
+named <code class="docutils literal notranslate"><span class="pre">trials</span></code>, <code class="docutils literal notranslate"><span class="pre">variables</span></code>, and <code class="docutils literal notranslate"><span class="pre">steps</span></code>.
+For this simple static simulation, the <code class="docutils literal notranslate"><span class="pre">steps</span></code> dimension is unimportant,
+as the simulation does not reflect movement through time.</p>
 </section>
 <section id="simple-recursive-dynamic-example">
 <h2>Simple recursive-dynamic example<a class="headerlink" href="#simple-recursive-dynamic-example" title="Link to this heading">¶</a></h2>
-<p>For problems that reflect movement through time or space,
+<p>For problems that reflect movement through time,
 a recursive-dynamic simulation is appropriate.  The user specifies a
-function describing one step forward, such as the one below.
-The <code class="docutils literal notranslate"><span class="pre">data</span></code> argument here reflects historical observations. It is a
-2-dimensional <code class="docutils literal notranslate"><span class="pre">DataArray</span></code> instance, with a first dimension named
-<code class="docutils literal notranslate"><span class="pre">steps</span></code> and a second dimension named <code class="docutils literal notranslate"><span class="pre">variables</span></code>.</p>
+function describing one step forward, as in the example below.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">stats</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">draw</span><span class="p">):</span>
-    <span class="c1"># take one step through time</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="n">draw</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="c1"># Function to take one step through time.</span>
+    <span class="c1"># The &#39;draw&#39; argument is first and is</span>
+    <span class="c1"># required as with the static simulation.  The &#39;data&#39; argument is needed</span>
+    <span class="c1"># if &#39;f&#39; refers to lagged values of some sort, as in the example below).</span>
 
     <span class="c1"># value of &quot;p&quot; in the previous period</span>
     <span class="n">plag</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">recall</span><span class="p">(</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">lag</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -94,13 +95,19 @@ The <code class="docutils literal notranslate"><span class="pre">data</span></co
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;p&quot;</span><span class="p">:</span> <span class="n">pnew</span><span class="p">}</span>
 </pre></div>
 </div>
-<p>After specifying a <code class="docutils literal notranslate"><span class="pre">DataArray</span></code> containing historical data (here, called
-<code class="docutils literal notranslate"><span class="pre">data0</span></code>), the simulation is invoked thusly:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">out</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">recdyn</span><span class="p">(</span><span class="n">stepf</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">data0</span><span class="o">=</span><span class="n">data0</span><span class="p">,</span> <span class="n">nsteps</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">ntrials</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+<p>The <code class="docutils literal notranslate"><span class="pre">step</span></code> function above is relying on lagged values of the variable <code class="docutils literal notranslate"><span class="pre">p</span></code>.
+To accommodate this, we specify a 2-D <code class="docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> containing historical
+data (here, called <code class="docutils literal notranslate"><span class="pre">myhist</span></code>), with a first dimension named
+<code class="docutils literal notranslate"><span class="pre">steps</span></code> and a second dimension named <code class="docutils literal notranslate"><span class="pre">variables</span></code>, that we will pass to
+<code class="docutils literal notranslate"><span class="pre">simulate</span></code> via an argument named <code class="docutils literal notranslate"><span class="pre">hist0</span></code>.
+Then, a simulation reflecting 10 time steps can be performed thusly:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">out</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">recdyn</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">hist0</span><span class="o">=</span><span class="n">myhist</span><span class="p">,</span> <span class="n">nsteps</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>The output is a 3-dimensional <code class="docutils literal notranslate"><span class="pre">DataArray</span></code> instance, with dimensions named
-<code class="docutils literal notranslate"><span class="pre">trials</span></code>, <code class="docutils literal notranslate"><span class="pre">variables</span></code>, and <code class="docutils literal notranslate"><span class="pre">steps</span></code>.</p>
+<p>The output is again a 3-dimensional <code class="docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> instance, with
+dimensions named <code class="docutils literal notranslate"><span class="pre">trials</span></code>, <code class="docutils literal notranslate"><span class="pre">variables</span></code>, and <code class="docutils literal notranslate"><span class="pre">steps</span></code>.
+However, it will now reflect multiple <code class="docutils literal notranslate"><span class="pre">steps</span></code>: ten simulated time steps plus
+however many historical observations were reflected in <code class="docutils literal notranslate"><span class="pre">data0</span></code>.</p>
 </section>
 </section>
 

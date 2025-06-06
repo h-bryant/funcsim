@@ -70,13 +70,14 @@ class RDdata():
                 raise MissingValue(f'In the 1st time step in the '
                                    f'simulation, no (non-NaN) value for the '
                                    f'variable "{varname}" with {lag} lag(s) is '
-                                   f'available. Be sure that your "data0" '
+                                   f'available. Be sure that you passed a '
+                                   f'a "data0" array to "simulate" and that it '
                                    f'contains this value.')
             else:
                 raise MissingValue(f'In time step {self._currStep} in the '
                                    f'simulation, no value for the variable '
                                    f'"{varname}" with {lag} lag(s) is '
-                                   f'available. Be sure that your "stepf" is '
+                                   f'available. Be sure that your "f" is '
                                    f'including non-NaN values for this '
                                    f'variable in the dictionary it returns.')
         return ret

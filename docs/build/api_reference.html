@@ -312,45 +312,6 @@ covariance matrix to induce the desired correlation structure.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">recdyn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stepf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nsteps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ntrials</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stdnorm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'lh'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/core.html#recdyn"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Recursive dynamic stochastic simulation.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>stepf</strong> (<em>function</em>) – Function that performs a single step through time.  Should take ‘draw’
-as a first argument, where ‘draw’ will be a generator that emits
-standard uniform draws (or standard normal draws, if <cite>stdnorm</cite> is True)
-that will be provided by <code class="docutils literal notranslate"><span class="pre">recdyn</span></code>.  Should take ‘data’ as a
-second argument, where this will be a type of array that is also
-provided by <code class="docutils literal notranslate"><span class="pre">recdyn.</span></code> This function should return a dict with variable
-names (as strings) as keys and values for those variables
-(as floats) as values.</p></li>
-<li><p><strong>data0</strong> (<em>xarray.DataArray</em>) – Initial and/or historical data relevant to the simulation.
-Should have dimensions ‘variables’ and ‘steps’.  Any lagged values
-needed by <cite>stepf</cite> must be in <cite>data0</cite>.  The ‘steps’ dimension should
-have either an integer index or a pandas Period index.</p></li>
-<li><p><strong>nsteps</strong> (<em>int</em>) – The number of steps to perform in each trial.</p></li>
-<li><p><strong>ntrials</strong> (<em>int</em>) – The number of trials to perform.</p></li>
-<li><p><strong>multi</strong> (<em>bool</em><em>, </em><em>optional</em>) – Use multiple processes/cores for the simulation. Default is False.</p></li>
-<li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – Seed for pseudo-random number generation. Default is 6.</p></li>
-<li><p><strong>stdnorm</strong> (<em>book</em><em>, </em><em>optional</em>) – If False, <code class="docutils literal notranslate"><span class="pre">next(draw)</span></code> within <cite>trialf</cite> will return standard uniform
-random draws. If True, <code class="docutils literal notranslate"><span class="pre">next(draw)</span></code> will return standard normal draws.
-Default is False.</p></li>
-<li><p><strong>sampling</strong> (<em>{'lh'</em><em>, </em><em>'mc'}</em><em>, </em><em>optional</em>) – If ‘lh’, Latin Hypercube sampling is employed.  If ‘mc’, simple
-Monte Carlo sampling is employed.  Default is ‘lh’.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>3-D xarray.DataArray with dimensions ‘trials’, ‘variables’, and ‘steps’.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>xarray.DataArray</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py">
 <span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">shrink</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/shrinkage.html#shrink"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Covariance shrinkage estimator.</p>
 <dl class="field-list simple">
@@ -379,18 +340,27 @@ vol 4(2005), issue 1.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">static</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trialf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ntrials</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stdnorm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'lh'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/core.html#static"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Static stochastic simulation.</p>
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">simulate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ntrials</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nsteps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hist0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stdnorm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'lh'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/core.html#simulate"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Stochastic simulation.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>trialf</strong> (<em>function</em>) – Function that performs a single trial.  Should take ‘draw’ as an
-argument, where ‘draw’ will be a generator that emits standard uniform
-draws (or standard normal draws if <cite>stdnorm</cite> is True)
-that will be provided by <code class="docutils literal notranslate"><span class="pre">static</span></code>.  This function should return
+<li><p><strong>f</strong> (<em>function</em>) – Function that performs a single trial in a static simulation or a s
+single step through time in a recursive dynamic simulation.  Should take
+‘draw’ as a first argument in either case, where ‘draw’ will be a
+generator that emits standard uniform draws (or standard normal draws,
+if <cite>stdnorm</cite> is True) that will be provided by <code class="docutils literal notranslate"><span class="pre">simulate</span></code>.
+In the case of a recursive dynamic simulation that employs past values,
+f should take ‘data’ as a second argument, where this will be a type of
+array that is also provided by <code class="docutils literal notranslate"><span class="pre">simulate.</span></code> This function should return
 a dict with variable names (as strings) as keys and values for those
 variables (as floats) as values.</p></li>
-<li><p><strong>ntrials</strong> (<em>int</em>) – The number of trials to perform.</p></li>
+<li><p><strong>ntrials</strong> (<em>int</em><em>, </em><em>optional</em>) – The number of trials to perform.  Default is 500.</p></li>
+<li><p><strong>nsteps</strong> (<em>int</em><em>, </em><em>optional</em>) – The number of steps to perform in each trial.  Default is 1.</p></li>
+<li><p><strong>hist0</strong> (<em>xarray.DataArray</em><em>, </em><em>optional</em>) – Initial and/or historical data relevant to the simulation.
+Should have dimensions ‘variables’ and ‘steps’.  Any lagged values
+needed (recalled) by <cite>f</cite> must be in <cite>hist0</cite>.  The ‘steps’ dimension
+should have either an integer index or a pandas PeriodIndex.</p></li>
 <li><p><strong>multi</strong> (<em>bool</em><em>, </em><em>optional</em>) – Use multiple processes/cores for the simulation. Default is False.</p></li>
 <li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – Seed for pseudo-random number generation. Default is 6.</p></li>
 <li><p><strong>stdnorm</strong> (<em>book</em><em>, </em><em>optional</em>) – If False, <code class="docutils literal notranslate"><span class="pre">next(draw)</span></code> within <cite>trialf</cite> will return standard uniform
@@ -401,7 +371,7 @@ Monte Carlo sampling is employed.  Default is ‘lh’.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>2-D xarray.DataArray with dimensions ‘trials’ and ‘variables’.</p>
+<dd class="field-even"><p>3-D xarray.DataArray with dimensions ‘trials’, ‘variables’, and ‘steps’.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>xarray.DataArray</p>

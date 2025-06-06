@@ -14,7 +14,7 @@ def trial(draw):
 
 
 def test_0():
-    out = fs.static(trialf=trial, ntrials=500)
+    out = fs.simulate(f=trial, ntrials=500)
     means = out.mean(dim='trials')
     meanEps = float(means.loc['eps'])
     meanB = float(means.loc['b'])

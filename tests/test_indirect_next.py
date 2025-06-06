@@ -24,5 +24,5 @@ def trial(draw):
 
 
 def test_0():
-    out = fs.static(trialf=trial, ntrials=15)
+    out = fs.simulate(f=trial, ntrials=15)
     assert isinstance(out, xr.DataArray)

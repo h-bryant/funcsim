@@ -26,7 +26,7 @@ def step(draw, data):
     return {"p": pNew, "c": cNew}
 
 
-def data0():
+def hist0():
     # set up existing/historical data
     steps = [0, 1, 2]
     variables = ["p", "c"]
@@ -37,7 +37,7 @@ def data0():
 
 
 def test_0():  # basic
-    out = fs.recdyn(stepf=step, data0=data0(), nsteps=10, ntrials=500)
+    out = fs.simulate(f=step, hist0=hist0(), nsteps=10, ntrials=500)
     assert type(out) == xr.DataArray
     print(out)
     print(out[:, 0, 10].mean())
@@ -45,18 +45,18 @@ def test_0():  # basic
 
 
 def test_1():  # use multi
-    out = fs.recdyn(stepf=step, data0=data0(), nsteps=10,
+    out = fs.simulate(f=step, hist0=hist0(), nsteps=10,
                     ntrials=500, multi=True)
     assert type(out) == xr.DataArray
     assert abs(float(out[:, 0, 10].mean()) - 1.0234) < 0.01
 
 
 def test_2():  # alternative seed
-    out = fs.recdyn(stepf=step, data0=data0(), nsteps=10, ntrials=500, seed=123)
+    out = fs.simulate(f=step, hist0=hist0(), nsteps=10, ntrials=500, seed=123)
     assert type(out) == xr.DataArray
     assert abs(float(out[:, 0, 10].mean()) - 1.0234) < 0.01
 
 
 def test_3():  # many steps (check that recursion does not bust stack)
-    out = fs.recdyn(stepf=step, data0=data0(), nsteps=2000, ntrials=10)
+    out = fs.simulate(f=step, hist0=hist0(), nsteps=2000, ntrials=10)
     assert type(out) == xr.DataArray

@@ -1,7 +1,7 @@
 Overview
 ========
 
-Tool that allows an end user can run a simulation after
+This is a tool that allows an end user to run a simulation after
 simply writing a specially-crafted function that performs a single
 trial (for a static simulation) or that takes one step
 through time (for a recursive-dynamic simulation).
@@ -17,7 +17,7 @@ following form:
 
      # function to perform one trial
      def trial(draw):
-         # 'draw' argument is required and must be the only argument
+         # 'draw' argument is required and must be the first argumnet
 
          # independent draws from U(0, 1)
          u1 = next(draw)
@@ -32,37 +32,38 @@ following form:
 
 Any number of independent uniform draws can be taken.
 
-Then a simulation is performed by invoking the ``static`` function:
+Then a simulation is performed by invoking the ``simulate`` function:
 
 .. code-block:: python
 
     import funcsim as fs
   
-    da = fs.static(trialf=trial, ntrials=500)
+    da = fs.simulate(f=trial, ntrials=500)
 
 Here, the value passed as the ``ntrials`` argument is the number of
-trials that will be performed.  The returned object is a
-2-dimensional `xarray <http://xarray.pydata.org/>`_
-``DataArray`` instance, with a first dimension named ``trials``
-and a second dimension named ``variables``.
+trials that will be performed.  
+The output is a 3-dimensional ``xarray.DataArray`` instance, with dimensions
+named ``trials``, ``variables``, and ``steps``.
+For this simple static simulation, the ``steps`` dimension is unimportant,
+as the simulation does not reflect movement through time.
 
 
 Simple recursive-dynamic example
 --------------------------------
 
-For problems that reflect movement through time or space,
+For problems that reflect movement through time,
 a recursive-dynamic simulation is appropriate.  The user specifies a
-function describing one step forward, such as the one below.
-The ``data`` argument here reflects historical observations. It is a 
-2-dimensional ``DataArray`` instance, with a first dimension named 
-``steps`` and a second dimension named ``variables``.
+function describing one step forward, as in the example below.
 
 .. code-block:: python
 
     from scipy import stats
 
-    def step(data, draw):
-        # take one step through time
+    def step(draw, data):
+        # Function to take one step through time. 
+        # The 'draw' argument is first and is
+        # required as with the static simulation.  The 'data' argument is needed
+        # if 'f' refers to lagged values of some sort, as in the example below).
 
         # value of "p" in the previous period
         plag = data.recall("p", lag=1)
@@ -73,12 +74,20 @@ The ``data`` argument here reflects historical observations. It is a
         # return new value(s) for this step/time period
         return {"p": pnew}
 
-After specifying a ``DataArray`` containing historical data (here, called
-``data0``), the simulation is invoked thusly:
+The ``step`` function above is relying on lagged values of the variable ``p``.
+To accommodate this, we specify a 2-D ``xarray.DataArray`` containing historical
+data (here, called ``myhist``), with a first dimension named 
+``steps`` and a second dimension named ``variables``, that we will pass to
+``simulate`` via an argument named ``hist0``.
+Then, a simulation reflecting 10 time steps can be performed thusly:
+
 
 .. code-block:: python
 
-    out = fs.recdyn(stepf=step, data0=data0, nsteps=10, ntrials=500)
+    out = fs.recdyn(f=step, hist0=myhist, nsteps=10)
 
-The output is a 3-dimensional ``DataArray`` instance, with dimensions named
-``trials``, ``variables``, and ``steps``.
+
+The output is again a 3-dimensional ``xarray.DataArray`` instance, with
+dimensions named ``trials``, ``variables``, and ``steps``.
+However, it will now reflect multiple ``steps``: ten simulated time steps plus
+however many historical observations were reflected in ``data0``.

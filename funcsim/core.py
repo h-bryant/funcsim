@@ -7,50 +7,66 @@ import multicore
 import rdarrays
 from scipy import stats
 from collections.abc import Callable, Generator
+from typing import Optional
+import inspect
 
 
-def _checkdata0(data0):
-    # check that user's data0 seems sane.  Return list of variable names
-    # in data0 order.
+def _get_arg_count(func):
+    sig = inspect.signature(func)
+    params = sig.parameters.values()
 
-    if isinstance(data0, xr.DataArray) is False:
-        raise ValueError('"data0" must be an xarray.DataArray')
+    # Count only parameters that are positional or keyword
+    # (excluding *args and **kwargs)
+    return sum(
+        1 for p in params
+        if p.kind in (inspect.Parameter.POSITIONAL_ONLY,
+                      inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                      inspect.Parameter.KEYWORD_ONLY)
+    )
 
-    # check that data0 has the right dimension names 
-    data0Coords = data0.coords
-    if not len(data0Coords) == 2:
-        raise ValueError('"data0" must have exactly two dimensions')
-    if not ("variables" in data0Coords.keys() and
-            "steps" in data0Coords.keys()):
-        raise ValueError('"data0" must have dimensions "variables" and "steps"')
+
+def _checkhist0(hist0):
+    # check that user's hist0 seems sane.  Return list of variable names
+    # in hist0 order.
+
+    if isinstance(hist0, xr.DataArray) is False:
+        raise ValueError('"hist0" must be an xarray.DataArray')
+
+    # check that hist0 has the right dimension names 
+    hist0Coords = hist0.coords
+    if not len(hist0Coords) == 2:
+        raise ValueError('"hist0" must have exactly two dimensions')
+    if not ("variables" in hist0Coords.keys() and
+            "steps" in hist0Coords.keys()):
+        raise ValueError('"hist0" must have dimensions "variables" and "steps"')
     
     # Check for an appropriate index for the 'variables' dimension
-    stepsCoords = data0Coords["steps"]
+    stepsCoords = hist0Coords["steps"]
     if not (np.issubdtype(stepsCoords.dtype, np.integer) or
             isinstance(stepsCoords.to_index(), pd.PeriodIndex)):
-        raise ValueError('"data0" must have either an integer index or a '
+        raise ValueError('"hist0" must have either an integer index or a '
                          'pandas PeriodIndex for the "steps" dimension')
 
-    return list(data0Coords["variables"])
+    return list(hist0Coords["variables"])
 
 
-def _checkf(f, data0=None):
+def _checkf(f, data0):
     # Count number of times 'f', and any code 'f' invokes, calls 'next(draw)'
     # If 'data0' is None, infer that 'f' is the 'trial' func for a cross-sec sim
     # If 'data0' is a xr.DataArray, infer that 'f' is 'step' for rec. dyn. sim
     # Also, check that f returns something that makes sense.
     fakeugen = _countgen()
-    if data0 is None:
-        out = f(fakeugen)
-        if type(out) != dict:
-            raise ValueError('"trialf" function must return a dict')
-    else:
-        out = f(fakeugen, data0)
-        if type(out) != dict:
-            raise ValueError('"stepf" function must return a dict')
+
+    # check that 'f' returns a dict
+    out = f(fakeugen, data0)
+    if type(out) != dict:
+        raise ValueError('"f" function must return a dict')
 
     # check that the dict returned by 'f' has variable names as keys
     varnames = list(out.keys())
+    if sum(1 if type(k) is str else 0 for k in varnames) < len(varnames):
+        raise ValueError('The keys of the dictionary returned by "f" must be '
+                         'variable names as strings')
 
     calls = int(round((next(fakeugen) - 0.5) * 10**4))
     return calls, varnames
@@ -111,106 +127,42 @@ def _extendIndex(idx, nNewSteps):
     return newIdx
 
 
-def static(trialf: Callable[[Generator[int, float, None]], dict[str, float]],
-           ntrials: int,
-           multi: bool = False,
-           seed: int = 6,
-           stdnorm: bool = False,
-           sampling: str = 'lh'
-           ) -> xr.DataArray:
+def simulate(f: Callable[[Generator[int, float, None],
+                          Optional[rdarrays.RDdata]],
+                       dict[str, float]],
+             ntrials: Optional[int] = 500,
+             nsteps: Optional[int] = 1,
+             hist0: Optional[xr.DataArray] = None,
+             multi: Optional[bool] = False,
+             seed: Optional[int] = 6,
+             stdnorm: Optional[bool] = False,
+             sampling: Optional[str] = 'lh'
+             ) -> xr.DataArray:
     """
-    Static stochastic simulation.
+    Stochastic simulation.
 
     Parameters
     ----------
-    trialf : function
-        Function that performs a single trial.  Should take 'draw' as an
-        argument, where 'draw' will be a generator that emits standard uniform
-        draws (or standard normal draws if `stdnorm` is True)
-        that will be provided by ``static``.  This function should return
+    f : function
+        Function that performs a single trial in a static simulation or a s
+        single step through time in a recursive dynamic simulation.  Should take
+        'draw' as a first argument in either case, where 'draw' will be a
+        generator that emits standard uniform draws (or standard normal draws,
+        if `stdnorm` is True) that will be provided by ``simulate``.
+        In the case of a recursive dynamic simulation that employs past values,
+        f should take 'data' as a second argument, where this will be a type of
+        array that is also provided by ``simulate.`` This function should return
         a dict with variable names (as strings) as keys and values for those
         variables (as floats) as values.
-    ntrials : int
-        The number of trials to perform.
-    multi : bool, optional
-        Use multiple processes/cores for the simulation. Default is False.
-    seed : int, optional
-        Seed for pseudo-random number generation. Default is 6.
-    stdnorm : book, optional
-        If False, ``next(draw)`` within `trialf` will return standard uniform
-        random draws. If True, ``next(draw)`` will return standard normal draws.
-        Default is False.
-    sampling : {'lh', 'mc'}, optional
-        If 'lh', Latin Hypercube sampling is employed.  If 'mc', simple
-        Monte Carlo sampling is employed.  Default is 'lh'.
-
-    Returns
-    -------
-    xarray.DataArray
-        2-D xarray.DataArray with dimensions 'trials' and 'variables'.
-
-    """
-    # infer number of random vars reflected in 'trial' fucntion
-    rvs, _ = _checkf(trialf)
-
-    # draws for all RVs, w/ sampling stratified across trials
-    if rvs > 0:
-        np.random.seed(seed)
-        if sampling == 'lh':
-            u = _lhs(rvs, ntrials)  # np.array, dimensions rvs x trials
-        elif sampling == 'mc':
-            u = _mcs(rvs, ntrials)  # monte carlo, not latin hypercube
-        else:
-            raise ValueError('sampling must be "lh" or "mc"')
-        w = stats.norm.ppf(u) if stdnorm is True else u
-
-    def tryl(r):
-        # closure that binds to 'trial' a 'u' generator for trial number 'r'
-        # and coerces the output of 'trial' into an xarray.DataArray
-        wgen = _makewgen(w, r) if rvs > 0 else None
-        return xr.DataArray(pd.Series(trialf(wgen)), dims=['variables'])
-
-    # create and return a 2-D DataArray with new dimension 'trials'
-    if multi is True:
-        out = multicore.parmap(tryl, range(ntrials))
-    else:
-        out = [tryl(r) for r in range(ntrials)]
-    return xr.concat(out, pd.Index(list(range(ntrials)), name='trials'))
-
-
-def recdyn(stepf: Callable[[Generator[int, float, None], rdarrays.RDdata],
-                           dict[str, float]],
-           data0: xr.DataArray,
-           nsteps: int,
-           ntrials: int,
-           multi: bool = False,
-           seed: int = 6,
-           stdnorm: bool = False,
-           sampling: str = 'lh'
-           ) -> xr.DataArray:
-    """
-    Recursive dynamic stochastic simulation.
-
-    Parameters
-    ----------
-    stepf : function
-        Function that performs a single step through time.  Should take 'draw'
-        as a first argument, where 'draw' will be a generator that emits
-        standard uniform draws (or standard normal draws, if `stdnorm` is True)
-        that will be provided by ``recdyn``.  Should take 'data' as a
-        second argument, where this will be a type of array that is also
-        provided by ``recdyn.`` This function should return a dict with variable
-        names (as strings) as keys and values for those variables
-        (as floats) as values.
-    data0 : xarray.DataArray
+    ntrials : int, optional
+        The number of trials to perform.  Default is 500.
+    nsteps : int, optional
+        The number of steps to perform in each trial.  Default is 1.
+    hist0 : xarray.DataArray, optional
         Initial and/or historical data relevant to the simulation.
         Should have dimensions 'variables' and 'steps'.  Any lagged values
-        needed by `stepf` must be in `data0`.  The 'steps' dimension should
-        have either an integer index or a pandas Period index.
-    nsteps : int
-        The number of steps to perform in each trial.
-    ntrials : int
-        The number of trials to perform.
+        needed (recalled) by `f` must be in `hist0`.  The 'steps' dimension
+        should have either an integer index or a pandas PeriodIndex.
     multi : bool, optional
         Use multiple processes/cores for the simulation. Default is False.
     seed : int, optional
@@ -228,25 +180,48 @@ def recdyn(stepf: Callable[[Generator[int, float, None], rdarrays.RDdata],
     xarray.DataArray
         3-D xarray.DataArray with dimensions 'trials', 'variables', and 'steps'.
     """
+    if hist0 is not None:
+        _checkhist0(hist0)
 
-    _checkdata0(data0)
+        # check that we know how to cope with the types for the 'steps' index
+        sidx = hist0.indexes['steps']
+        if len(sidx) > 0:
+            if not type(sidx[0]) in [pd.Period, np.int64]:
+                raise ValueError("'hist0' should have either an integer index"
+                                 " or a pandas.PeriodIndex for the 'steps' "
+                                 "dimension.")
+    else:
+        sidx = []
+        # create an empty hist0.
+        variables = np.array([], dtype=str)
+        steps = np.array([], dtype=int)
+        hist0 = xr.DataArray(
+            data=np.empty((0, 0)),
+            dims=("steps", "variables"),
+            coords={"steps": steps, "variables": variables}
+        )
 
-    # check for 'stepf'
-    if not isinstance(stepf, Callable):
-        raise ValueError('"stepf" must be a callable function')
+    # check for 'f'
+    if not isinstance(f, Callable):
+        raise ValueError('"f" must be a callable function')
 
-    # check that we know how to cope with the types for the 'steps' index
-    sidx = data0.indexes['steps']
-    if len(sidx) > 0:
-        assert type(sidx[0]) in [pd.Period, np.int64]
-
+    # infer number of arguments in 'f'.  If it takes only a single arg, wrap it
+    # in an outer func that takes "hist" as a second arg
+    numb_f_args = _get_arg_count(f)
+    if numb_f_args == 1:
+        stepf = lambda draw, hist: f(draw)
+    elif numb_f_args == 2:
+        stepf = f
+    else:
+        raise ValueError('"f" should take two arguments at most')
+     
     # indexes for the final output xr.DataArray
-    varNames = data0.indexes['variables']
+    varNames = hist0.indexes['variables']
     namePositionsPrelim = {nm: i for i, nm in enumerate(varNames)}
     stepLabels = _extendIndex(sidx, nsteps)
 
     # create example data object in which data for one trail can accumulate
-    dataPrelim = rdarrays.RDdata(data0.to_masked_array(),
+    dataPrelim = rdarrays.RDdata(hist0.to_masked_array(),
                                  nsteps, namePositionsPrelim)
 
     # infer number of random vars reflected in 'step' fucntion
@@ -254,23 +229,22 @@ def recdyn(stepf: Callable[[Generator[int, float, None], rdarrays.RDdata],
     rvs, stepfNames = _checkf(stepf, copy(dataPrelim))
 
     # specify that the data objects that accumulate data for each trial
-    # will reflect the union of the variables in 'data0' and the variables
+    # will reflect the union of the variables in 'hist0' and the variables
     # returned by 'step'
     # breakpoint()
     varNamesList = list(varNames)
     if stepfNames == varNamesList:
         finalNames = varNamesList
-        finalData0 = data0
+        finalHist0 = hist0
     else:
         finalNames = list(set(varNamesList).union(set(stepfNames)))
-        finalData0 = data0.copy()
-        finalData0 = finalData0.reindex(
-            variables=finalNames, fill_value=np.nan)
+        finalHist0 = hist0.copy()
+        finalHist0 = finalHist0.reindex(variables=finalNames, fill_value=np.nan)
 
     # create a DataArray to hold the data for one trial
     # create example data object in which data for one trail can accumulate
     namePositions = {nm: i for i, nm in enumerate(finalNames)}
-    data = rdarrays.RDdata(finalData0.to_masked_array(), nsteps, namePositions)
+    data = rdarrays.RDdata(finalHist0.to_masked_array(), nsteps, namePositions)
 
     # draws for all RVs in all time steps, w/ sampling stratified across trials
     if rvs > 0:
@@ -292,7 +266,6 @@ def recdyn(stepf: Callable[[Generator[int, float, None], rdarrays.RDdata],
             # step 's' of trial 'r'
             dataWorking.append(stepf(wgen, dataWorking))
         return dataWorking
-
 
     # create and return 3-D output DataArray, with new dimension 'trials'
     if multi is True:

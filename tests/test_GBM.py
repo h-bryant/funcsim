@@ -60,11 +60,11 @@ def step_with_missing_var(draw, data):
     pNew = gbm(s0=pLag1, dt=1.0 / 12.0, mu=0.05, sig=0.10, eps=eps)
     cNew = max(0.0, pNew - 1.0)
 
-    # return new values for this step, but missing one variable (c.f. data0)
+    # return new values for this step, but missing one variable (c.f. hist0)
     return {"p": pNew, "c": cNew}
 
 
-def data0():
+def hist0():
     # set up existing/historical data
     steps = [0, 1, 2]
     variables = ["p", "c"]
@@ -75,38 +75,38 @@ def data0():
 
 
 def test_00():  # basic
-    # vars in data0 and stepf match
-    out = fs.recdyn(stepf=step, data0=data0(), nsteps=10, ntrials=500)
+    # vars in hist0 and f match
+    out = fs.simulate(f=step, hist0=hist0(), nsteps=10, ntrials=500)
     assert type(out) == xr.DataArray
     value = float(out.sel(steps=12, variables="c").mean())
     assert abs(value - 0.05) < 0.01
 
 
 def test_01():  # basic
-    # extra var returned by stepf (compared to contents of data0)
-    out = fs.recdyn(stepf=step_with_missing_var, data0=data0(), nsteps=10, ntrials=500)
+    # extra var returned by f (compared to contents of hist0)
+    out = fs.simulate(f=step_with_missing_var, hist0=hist0(), nsteps=10, ntrials=500)
     assert type(out) == xr.DataArray
     value = float(out.sel(steps=12, variables="c").mean())
     assert abs(value - 0.05) < 0.01
 
 
 def test_02():  # basic
-    # missing var returned by stepf (compared to contents of data0)
-    out = fs.recdyn(stepf=step_with_extra_var, data0=data0(), nsteps=10, ntrials=500)
+    # missing var returned by f (compared to contents of hist0)
+    out = fs.simulate(f=step_with_extra_var, hist0=hist0(), nsteps=10, ntrials=500)
     assert type(out) == xr.DataArray
     value = float(out.sel(steps=12, variables="c").mean())
     assert abs(value - 0.05) < 0.01
 
 
 def test_2():  # alternative seed
-    out = fs.recdyn(stepf=step, data0=data0(), nsteps=10, ntrials=500, seed=123)
+    out = fs.simulate(f=step, hist0=hist0(), nsteps=10, ntrials=500, seed=123)
     assert type(out) == xr.DataArray
     value = float(out.sel(steps=12, variables="c").mean())
     assert abs(value - 0.05) < 0.01
 
 
 def test_3():  # many steps (check that recursion does not bust stack)
-    out = fs.recdyn(stepf=step, data0=data0(), nsteps=2000, ntrials=10)
+    out = fs.simulate(f=step, hist0=hist0(), nsteps=2000, ntrials=10)
     assert type(out) == xr.DataArray
     value = float(out.sel(steps=12, variables="c").mean())
     assert abs(value - 0.05) < 0.01
