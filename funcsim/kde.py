@@ -162,7 +162,8 @@ class Kde():
 def kde(sample: conversions.VectorLike,
         bw: str = "scott") -> Kde:
     """
-    Create a 1-D kernel density estimator (KDE) object.
+    Create an instance of a ``Kde`` object (a 1-D kernel density estimator
+    (KDE) object).
 
     Parameters
     ----------

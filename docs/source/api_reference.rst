@@ -1,8 +1,10 @@
 API Reference
--------------
+=============
 
-.. automodule:: funcsim
-   :no-index:
-   :members: simulate, edf, fit, kde, kdemv, normal, cgauss, cstudent, cgumbel, cclayton, kstest, adtest, cvmtest, shrink
-   :undoc-members:
-   :show-inheritance:
+.. toctree::
+   :maxdepth: 2
+   :caption: API Reference
+
+   api_simulation
+   api_stattools
+   api_cpt

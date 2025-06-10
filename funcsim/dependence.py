@@ -354,7 +354,7 @@ def kdemv(data: conversions.ArrayLike,
           bw: str = 'scott'
          ) -> MvKde:
     """
-    Create a multivariate KDE object.
+    Create an instance of a ``MvKde`` object (a multivariate KDE object).
 
     Parameters
     ----------
@@ -425,12 +425,10 @@ def spearman(array: conversions.ArrayLike) -> Tuple[float, Tuple[float, float]]:
 
     Returns
     -------
-    tuple
-        A tuple containing:
-        - rho : float
-            Spearman's rank correlation coefficient.
-        - ci : tuple of float
-            Lower and upper bounds of the 95% confidence interval.
+    tuple of (float, tuple of float)
+        A tuple (rho, ci), where rho is Spearman's rank correlation coefficient,
+        and ci is a tuple of (lower, upper) bounds for the 95% confidence
+        interval.
 
     Raises
     ------
@@ -442,12 +440,15 @@ def spearman(array: conversions.ArrayLike) -> Tuple[float, Tuple[float, float]]:
     The confidence interval is computed using Fisher's z-transformation.
     """
     a = conversions.alToArray(array)
-    assert len(a.shape) == 2, "a must have exacly two dimensions"
+    assert len(a.shape) == 2, "a must have exactly two dimensions"
     assert a.shape[1] == 2, "a must have exactly two columns"
 
     rho_s = stats.spearmanr(a)[0]
 
     N = a.shape[0]
+    if N <= 3:
+        raise ValueError("At least 4 observations are required for confidence interval.")
+
     stderr = 1.0 / math.sqrt(N - 3)
     delta = 1.96 * stderr
     lower = math.tanh(math.atanh(rho_s) - delta)
