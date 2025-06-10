@@ -60,14 +60,13 @@ function describing one step forward, as in the example below.
     from scipy import stats
 
     def step(draw, hist):
-        # Function to take one step through time. 
-        # The 'draw' argument is first and is
-        # required as with the static simulation.  The 'hist' argument is
-        # needed if 'f' refers to lagged values of some sort, as in this
-        # example.
+        # Function to take one step through time. The 'draw' argument
+        # is first and is required as with the static simulation.
+        # The 'hist' argument is needed if 'f' refers to lagged values of
+        # some sort, as in this example.
 
         # value of "p" in the previous period
-        plag = data.recall("p", lag=1)
+        plag = hist.recall("p", lag=1)
 
         # do some kind of work
         pnew = 0.25 + 0.9 * plag + stats.norm.ppf(next(draw))
