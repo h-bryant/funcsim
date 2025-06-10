@@ -58,6 +58,39 @@
 
 <dl class="py function">
 <dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">compare</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lowerLimit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upperLimit</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distfit.html#compare"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Compare fits of univariate distributions for a continuous random variable.</p>
+<p>This function fits all candidate distributions with the specified support
+(lower and/or upper limit) to the provided data. It returns a formatted
+string summarizing the Bayesian Information Criterion (BIC), Akaike
+Information Criterion (AIC), and goodness-of-fit p-values for each
+distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>array-like</em>) – The data to fit, as a one-dimensional array or sequence.</p></li>
+<li><p><strong>lowerLimit</strong> (<em>bool</em>) – If True, only distributions with a lower bound are considered.  If
+False, only distributiuons without a lower bound are considered.</p></li>
+<li><p><strong>upperLimit</strong> (<em>bool</em>) – If True, only distributions with an upper bound are considered. If
+False, only distributions without an upper bound are considered.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A formatted string summarizing the fit statistics for each candidate
+distribution, sorted by BIC (best to worst).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>For reliable results, at least 50 observations are recommended. The summary
+includes BIC, AIC, Kolmogorov-Smirnov p-value, and Anderson-Darling
+p-value for each distribution.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
 <span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">covtocorr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cov</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#covtocorr"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Convert a covariance matrix to a correlation matrix.</p>
 <p>This function takes a symmetric, positive definite covariance matrix
@@ -122,8 +155,47 @@ matrix by the standard deviations of each variable.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scipydist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distfit.html#fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scipydist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distName</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distfit.html#fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Fit a univariate distribution for a continuous random variable.</p>
+<p>This function fits a given scipy.stats univariate distribution to the
+provided data using maximum likelihood estimation. It returns a named
+tuple containing information criteria, goodness-of-fit p-values, the
+frozen distribution, and the distribution name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>VectorLike</em>) – The data to fit, as a one-dimensional array or similar.</p></li>
+<li><p><strong>scipydist</strong> (<em>scipy.stats.rv_continuous</em>) – The scipy.stats distribution object to fit (e.g., stats.norm).</p></li>
+<li><p><strong>distName</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the distribution. If None, the distribution’s name is used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A Named tuple with fields:</p>
+<dl class="simple">
+<dt>bic<span class="classifier">float</span></dt><dd><p>Bayesian Information Criterion for the fit.</p>
+</dd>
+<dt>aic<span class="classifier">float</span></dt><dd><p>Akaike Information Criterion for the fit.</p>
+</dd>
+<dt>ad_pval<span class="classifier">float</span></dt><dd><p>Anderson-Darling test p-value.</p>
+</dd>
+<dt>ks_pval<span class="classifier">float</span></dt><dd><p>Kolmogorov-Smirnov test p-value.</p>
+</dd>
+<dt>dist<span class="classifier">scipy.stats.rv_continuous</span></dt><dd><p>The frozen fitted distribution object.</p>
+</dd>
+<dt>distName<span class="classifier">str</span></dt><dd><p>Name of the fitted distribution.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>FitResult</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The function uses maximum likelihood estimation for parameter fitting.
+Goodness-of-fit is assessed using Anderson-Darling and Kolmogorov-Smirnov
+tests.</p>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py">

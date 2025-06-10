@@ -1,5 +1,5 @@
 Cumulative Prospect Theory
-=========================
+==========================
 
 .. automodule:: funcsim
    :no-index:

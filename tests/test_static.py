@@ -20,17 +20,15 @@ def trial(draw):
 
 def test_0():
     out = fs.simulate(f=trial, ntrials=500)
-    means = out.mean(dim='trials')
-    meanEps = float(means.loc['eps'])
-    meanB = float(means.loc['b'])
+    meanEps = float(out.sel(steps=0, variables="eps").mean())
+    meanB = float(out.sel(steps=0, variables="b").mean())
     assert abs(meanEps) < 0.01
     assert abs(meanB - 0.35) < 0.01
 
 
 def test_1():
     out = fs.simulate(f=trial, ntrials=500, sampling='mc')
-    means = out.mean(dim='trials')
-    meanEps = float(means.loc['eps'])
-    meanB = float(means.loc['b'])
+    meanEps = float(out.sel(steps=0, variables="eps").mean())
+    meanB = float(out.sel(steps=0, variables="b").mean())
     assert abs(meanEps) < 0.03
     assert abs(meanB - 0.35) < 0.03

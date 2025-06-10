@@ -322,9 +322,12 @@ def cpt(utilFunc: Callable,
     Returns
     -------
     CptResult
-        Named tuple with fields:
-        - ExpectedValue : float
-        - CertaintyEquiv : float
+        A named tuple with fields:
+
+        ExpectedValue : float
+            The expected CPT value.
+        CertaintyEquiv : float
+            The certainty equivalent of the gamble.
 
     Raises
     ------
@@ -433,9 +436,12 @@ def cptBV(outcomes: Iterable,
     Returns
     -------
     CptResult
-        Named tuple with fields:
-        - ExpectedValue : float            
-        - CertaintyEquiv : float
+        A named tuple with fields:
+
+        ExpectedValue : float
+            The expected CPT value.
+        CertaintyEquiv : float
+            The certainty equivalent of the gamble.
 
     Notes
     -----

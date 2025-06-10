@@ -32,147 +32,186 @@
   <h1>Source code for distfit</h1><div class="highlight"><pre>
 <span></span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">namedtuple</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">stats</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats._distn_infrastructure</span><span class="w"> </span><span class="kn">import</span> <span class="n">rv_continuous</span><span class="p">,</span> <span class="n">rv_discrete</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="c1"># import warnings</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">ecdfgof</span><span class="w"> </span><span class="kn">import</span> <span class="n">adtest</span><span class="p">,</span> <span class="n">kstest</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">conversions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
 
-<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
+<span class="c1"># warnings.filterwarnings(&quot;ignore&quot;)</span>
 
 
-<span class="n">_long</span> <span class="o">=</span> <span class="p">[</span>
-         <span class="p">(</span><span class="s2">&quot;alpha&quot;</span><span class="p">,</span>              <span class="n">stats</span><span class="o">.</span><span class="n">alpha</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;anglit&quot;</span><span class="p">,</span>             <span class="n">stats</span><span class="o">.</span><span class="n">anglit</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;arcsine&quot;</span><span class="p">,</span>            <span class="n">stats</span><span class="o">.</span><span class="n">arcsine</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;argus&quot;</span><span class="p">,</span>              <span class="n">stats</span><span class="o">.</span><span class="n">argus</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;beta&quot;</span><span class="p">,</span>               <span class="n">stats</span><span class="o">.</span><span class="n">beta</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;betaprime&quot;</span><span class="p">,</span>          <span class="n">stats</span><span class="o">.</span><span class="n">betaprime</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;bradford&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">bradford</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;burr&quot;</span><span class="p">,</span>               <span class="n">stats</span><span class="o">.</span><span class="n">burr</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;burr12&quot;</span><span class="p">,</span>             <span class="n">stats</span><span class="o">.</span><span class="n">burr12</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;cauchy&quot;</span><span class="p">,</span>             <span class="n">stats</span><span class="o">.</span><span class="n">cauchy</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;chi&quot;</span><span class="p">,</span>                <span class="n">stats</span><span class="o">.</span><span class="n">chi</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;chi2&quot;</span><span class="p">,</span>               <span class="n">stats</span><span class="o">.</span><span class="n">chi2</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;cosine&quot;</span><span class="p">,</span>             <span class="n">stats</span><span class="o">.</span><span class="n">cosine</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;crystalball&quot;</span><span class="p">,</span>        <span class="n">stats</span><span class="o">.</span><span class="n">crystalball</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;dgamma&quot;</span><span class="p">,</span>             <span class="n">stats</span><span class="o">.</span><span class="n">dgamma</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;dweibull&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">dweibull</span><span class="p">),</span>
-         <span class="c1"># (&quot;erlang&quot;,             stats.erlang),</span>
-         <span class="p">(</span><span class="s2">&quot;expon&quot;</span><span class="p">,</span>              <span class="n">stats</span><span class="o">.</span><span class="n">expon</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;exponnorm&quot;</span><span class="p">,</span>          <span class="n">stats</span><span class="o">.</span><span class="n">exponnorm</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;exponweib&quot;</span><span class="p">,</span>          <span class="n">stats</span><span class="o">.</span><span class="n">exponweib</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;exponpow&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">exponpow</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;f&quot;</span><span class="p">,</span>                  <span class="n">stats</span><span class="o">.</span><span class="n">f</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;fatiguelife&quot;</span><span class="p">,</span>        <span class="n">stats</span><span class="o">.</span><span class="n">fatiguelife</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;fisk&quot;</span><span class="p">,</span>               <span class="n">stats</span><span class="o">.</span><span class="n">fisk</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;foldcauchy&quot;</span><span class="p">,</span>         <span class="n">stats</span><span class="o">.</span><span class="n">foldcauchy</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;foldnorm&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">foldnorm</span><span class="p">),</span>
-         <span class="c1"># (&quot;frechet_r&quot;,          stats.frechet_r),</span>
-         <span class="c1"># (&quot;frechet_l&quot;,          stats.frechet_l),</span>
-         <span class="p">(</span><span class="s2">&quot;genlogistic&quot;</span><span class="p">,</span>        <span class="n">stats</span><span class="o">.</span><span class="n">genlogistic</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;gennorm&quot;</span><span class="p">,</span>            <span class="n">stats</span><span class="o">.</span><span class="n">gennorm</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;genpareto&quot;</span><span class="p">,</span>          <span class="n">stats</span><span class="o">.</span><span class="n">genpareto</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;genexpon&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">genexpon</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;genextreme&quot;</span><span class="p">,</span>         <span class="n">stats</span><span class="o">.</span><span class="n">genextreme</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;gausshyper&quot;</span><span class="p">,</span>         <span class="n">stats</span><span class="o">.</span><span class="n">gausshyper</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;gamma&quot;</span><span class="p">,</span>              <span class="n">stats</span><span class="o">.</span><span class="n">gamma</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;gengamma&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">gengamma</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;genhalflogistic&quot;</span><span class="p">,</span>    <span class="n">stats</span><span class="o">.</span><span class="n">genhalflogistic</span><span class="p">),</span>
-         <span class="c1"># (&quot;gilbrat&quot;,            stats.gilbrat),</span>
-         <span class="p">(</span><span class="s2">&quot;gompertz&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">gompertz</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;gumbel_r&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">gumbel_r</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;gumbel_l&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">gumbel_l</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;halfcauchy&quot;</span><span class="p">,</span>         <span class="n">stats</span><span class="o">.</span><span class="n">halfcauchy</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;halflogistic&quot;</span><span class="p">,</span>       <span class="n">stats</span><span class="o">.</span><span class="n">halflogistic</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;halfnorm&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">halfnorm</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;halfgennorm&quot;</span><span class="p">,</span>        <span class="n">stats</span><span class="o">.</span><span class="n">halfgennorm</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;hypsecant&quot;</span><span class="p">,</span>          <span class="n">stats</span><span class="o">.</span><span class="n">hypsecant</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;invgamma&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">invgamma</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;invgauss&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">invgauss</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;invweibull&quot;</span><span class="p">,</span>         <span class="n">stats</span><span class="o">.</span><span class="n">invweibull</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;johnsonsb&quot;</span><span class="p">,</span>          <span class="n">stats</span><span class="o">.</span><span class="n">johnsonsb</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;johnsonsu&quot;</span><span class="p">,</span>          <span class="n">stats</span><span class="o">.</span><span class="n">johnsonsu</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;kappa4&quot;</span><span class="p">,</span>             <span class="n">stats</span><span class="o">.</span><span class="n">kappa4</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;kappa3&quot;</span><span class="p">,</span>             <span class="n">stats</span><span class="o">.</span><span class="n">kappa3</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;ksone&quot;</span><span class="p">,</span>              <span class="n">stats</span><span class="o">.</span><span class="n">ksone</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;kstwobign&quot;</span><span class="p">,</span>          <span class="n">stats</span><span class="o">.</span><span class="n">kstwobign</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;laplace&quot;</span><span class="p">,</span>            <span class="n">stats</span><span class="o">.</span><span class="n">laplace</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;levy&quot;</span><span class="p">,</span>               <span class="n">stats</span><span class="o">.</span><span class="n">levy</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;levy_l&quot;</span><span class="p">,</span>             <span class="n">stats</span><span class="o">.</span><span class="n">levy_l</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;levy_stable&quot;</span><span class="p">,</span>        <span class="n">stats</span><span class="o">.</span><span class="n">levy_stable</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;logistic&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">logistic</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;loggamma&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">loggamma</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;loglaplace&quot;</span><span class="p">,</span>         <span class="n">stats</span><span class="o">.</span><span class="n">loglaplace</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;lognorm&quot;</span><span class="p">,</span>            <span class="n">stats</span><span class="o">.</span><span class="n">lognorm</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;lomax&quot;</span><span class="p">,</span>              <span class="n">stats</span><span class="o">.</span><span class="n">lomax</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;maxwell&quot;</span><span class="p">,</span>            <span class="n">stats</span><span class="o">.</span><span class="n">maxwell</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;mielke&quot;</span><span class="p">,</span>             <span class="n">stats</span><span class="o">.</span><span class="n">mielke</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;moyal&quot;</span><span class="p">,</span>              <span class="n">stats</span><span class="o">.</span><span class="n">moyal</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;nakagami&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">nakagami</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;ncx2&quot;</span><span class="p">,</span>               <span class="n">stats</span><span class="o">.</span><span class="n">ncx2</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;ncf&quot;</span><span class="p">,</span>                <span class="n">stats</span><span class="o">.</span><span class="n">ncf</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;nct&quot;</span><span class="p">,</span>                <span class="n">stats</span><span class="o">.</span><span class="n">nct</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;norm&quot;</span><span class="p">,</span>               <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;norminvgauss&quot;</span><span class="p">,</span>       <span class="n">stats</span><span class="o">.</span><span class="n">norminvgauss</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;pareto&quot;</span><span class="p">,</span>             <span class="n">stats</span><span class="o">.</span><span class="n">pareto</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;pearson3&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">pearson3</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;powerlaw&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">powerlaw</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;powerlognorm&quot;</span><span class="p">,</span>       <span class="n">stats</span><span class="o">.</span><span class="n">powerlognorm</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;powernorm&quot;</span><span class="p">,</span>          <span class="n">stats</span><span class="o">.</span><span class="n">powernorm</span><span class="p">),</span>
-         <span class="c1"># (&quot;rdist&quot;,              stats.rdist),</span>
-         <span class="c1"># (&quot;reciprocal&quot;,         stats.reciprocal),</span>
-         <span class="p">(</span><span class="s2">&quot;rayleigh&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">rayleigh</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;rice&quot;</span><span class="p">,</span>               <span class="n">stats</span><span class="o">.</span><span class="n">rice</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;recipinvgauss&quot;</span><span class="p">,</span>      <span class="n">stats</span><span class="o">.</span><span class="n">recipinvgauss</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;semicircular&quot;</span><span class="p">,</span>       <span class="n">stats</span><span class="o">.</span><span class="n">semicircular</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;skewnorm&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">skewnorm</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;t&quot;</span><span class="p">,</span>                  <span class="n">stats</span><span class="o">.</span><span class="n">t</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;trapz&quot;</span><span class="p">,</span>              <span class="n">stats</span><span class="o">.</span><span class="n">trapz</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;triang&quot;</span><span class="p">,</span>             <span class="n">stats</span><span class="o">.</span><span class="n">triang</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;truncexpon&quot;</span><span class="p">,</span>         <span class="n">stats</span><span class="o">.</span><span class="n">truncexpon</span><span class="p">),</span>
-         <span class="c1"># (&quot;truncnorm&quot;,          stats.truncnorm),</span>
-         <span class="p">(</span><span class="s2">&quot;tukeylambda&quot;</span><span class="p">,</span>        <span class="n">stats</span><span class="o">.</span><span class="n">tukeylambda</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;uniform&quot;</span><span class="p">,</span>            <span class="n">stats</span><span class="o">.</span><span class="n">uniform</span><span class="p">),</span>
-         <span class="c1"># (&quot;vonmises&quot;,           stats.vonmises),</span>
-         <span class="p">(</span><span class="s2">&quot;vonmises_line&quot;</span><span class="p">,</span>      <span class="n">stats</span><span class="o">.</span><span class="n">vonmises_line</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;wald&quot;</span><span class="p">,</span>               <span class="n">stats</span><span class="o">.</span><span class="n">wald</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;weibull_min&quot;</span><span class="p">,</span>        <span class="n">stats</span><span class="o">.</span><span class="n">weibull_min</span><span class="p">),</span>
-         <span class="p">(</span><span class="s2">&quot;weibull_max&quot;</span><span class="p">,</span>        <span class="n">stats</span><span class="o">.</span><span class="n">weibull_max</span><span class="p">),</span>
-         <span class="c1"># (&quot;wrapcauchy&quot;,         stats.wrapcauchy),</span>
-        <span class="p">]</span>
+<span class="c1"># &quot;name&quot;,&quot;scipy_name&quot;,&quot;lower_limit&quot;,&quot;upper_limit</span>
+<span class="n">candidates</span> <span class="o">=</span> <span class="p">[</span>
+	<span class="p">(</span><span class="s2">&quot;alpha&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;anglit&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">anglit</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;arcsine&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">arcsine</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;argus&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">argus</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Beta&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">beta</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Beta Prime&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">betaprime</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Bradford&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">bradford</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Burr&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">burr</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Burr Type XII&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">burr12</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Cauchy&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">cauchy</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Chi&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">chi</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Chi^2&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">chi2</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Cosine&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">cosine</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Crystal Ball&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">crystalball</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Double Gamma&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">dgamma</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="c1"># (&quot;Double Pareto Lognormal&quot;,stats.dpareto_lognorm,True,False),</span>
+	<span class="p">(</span><span class="s2">&quot;Double Weibull&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">dweibull</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Erlang&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">erlang</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Exponential&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">expon</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Exponentially Modified Normal&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">exponnorm</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Exponentiated Weibull&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">exponweib</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Exponential Power&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">exponpow</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;F&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">f</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Fatigue Life&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">fatiguelife</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Fisk&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">fisk</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Folded Cauchy&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">foldcauchy</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Folded Normal&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">foldnorm</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Generalized Logistic&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">genlogistic</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Generalized Normal&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">gennorm</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Generalized Pareto&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">genpareto</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Generalized Pareto&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">genpareto</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Generalized Exponential&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">genexpon</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Generalized Extreme Value&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">genextreme</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Generalized Extreme Value&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">genextreme</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Generalized Extreme Value&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">genextreme</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Gauss Hypergeometric&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">gausshyper</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Gamma&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">gamma</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Generalized Gamma&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">gengamma</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Generalized Half-Logistic&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">genhalflogistic</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Generalized Hyperbolic&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">genhyperbolic</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Generalized Inverse Gaussian&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">geninvgauss</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Gibrat&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">gibrat</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Gompertz&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">gompertz</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Gumbel Right-skewed&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">gumbel_r</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Gumbel Left-skewed&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">gumbel_l</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Half-Cauchy&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">halfcauchy</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Half-Logistic&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">halflogistic</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Half-Normal&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">halfnorm</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Half Generalized Normal&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">halfgennorm</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Hyperbolic Secant&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">hypsecant</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Inverse Gamma&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">invgamma</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Inverse Gaussian&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">invgauss</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Inverse Weibull&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">invweibull</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="c1"># (&quot;Irwin-Hall&quot;,stats.irwinhall,True,True),</span>
+	<span class="p">(</span><span class="s2">&quot;Jones and Faddy Skew-T&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">jf_skew_t</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Johnson&#39;s S_B&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">johnsonsb</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Johnson&#39;s S_U&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">johnsonsu</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Four-parameter Kappa&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">kappa4</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Three-Parameter Kappa Distribution&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">kappa3</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Kolmogorov-Smirnov one-sided test stat dist&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">ksone</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Kolmogorov-Smirnov two-sided test stat dist&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">kstwo</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Limiting dist of scaled K-S two-sided test stat&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">kstwobign</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="c1"># (&quot;Landau&quot;,stats.landau,False,False),</span>
+	<span class="p">(</span><span class="s2">&quot;Laplace&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">laplace</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Asymmetric Laplace&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">laplace_asymmetric</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Lévy&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">levy</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Left-skewed Lévy&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">levy_l</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Lévy stable&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">levy_stable</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Logistic&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">logistic</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Log-gamma&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">loggamma</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Log-Laplace&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">loglaplace</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Log-normal&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">lognorm</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Log-uniform&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">loguniform</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Lomax&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">lomax</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Maxwell&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">maxwell</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Mielke&#39;s Beta-Kappa&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">mielke</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Moyal&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">moyal</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Nakagami&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">nakagami</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Noncentral chi^2&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">ncx2</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Noncentral F&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">ncf</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Noncentral Student’s t&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">nct</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Normal&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Normal inverse Gaussian&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">norminvgauss</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Pareto&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">pareto</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Pearson Type III&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">pearson3</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Power-function&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">powerlaw</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Power log-normal&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">powerlognorm</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Power normal&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">powernorm</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;symmetric beta&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">rdist</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Rayleigh&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">rayleigh</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Relativistic Breit–Wigner&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">rel_breitwigner</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Rice&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">rice</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Reciprocal inverse Gaussian&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">recipinvgauss</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Semicircular&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">semicircular</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Skewed Cauchy&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">skewcauchy</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Skew-normal&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">skewnorm</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Studentized range&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">studentized_range</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Student&#39;s t&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">t</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Trapezoidal&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">trapezoid</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Triangular&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">triang</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Truncated exponential&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">truncexpon</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Truncated normal&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">truncnorm</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Truncated Pareto&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">truncpareto</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Truncated Weibull minimum&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">truncweibull_min</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Tukey lambda&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">tukeylambda</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Uniform&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">uniform</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Von Mises&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">vonmises</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Von Mises&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">vonmises_line</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Wald&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">wald</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Weibull Minimum Extreme Value&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">weibull_min</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">False</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Weibull Maximum Extreme Value&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">weibull_max</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+	<span class="p">(</span><span class="s2">&quot;Wrapped Cauchy&quot;</span><span class="p">,</span><span class="n">stats</span><span class="o">.</span><span class="n">wrapcauchy</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="kc">True</span><span class="p">),</span>
+<span class="p">]</span>
 
-<span class="n">_short</span> <span class="o">=</span> <span class="p">[</span>
-          <span class="p">(</span><span class="s2">&quot;alpha&quot;</span><span class="p">,</span>              <span class="n">stats</span><span class="o">.</span><span class="n">alpha</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;beta&quot;</span><span class="p">,</span>               <span class="n">stats</span><span class="o">.</span><span class="n">beta</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;cauchy&quot;</span><span class="p">,</span>             <span class="n">stats</span><span class="o">.</span><span class="n">cauchy</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;chi2&quot;</span><span class="p">,</span>               <span class="n">stats</span><span class="o">.</span><span class="n">chi2</span><span class="p">),</span>
-          <span class="c1"># (&quot;cosine&quot;,             stats.cosine),</span>
-          <span class="p">(</span><span class="s2">&quot;expon&quot;</span><span class="p">,</span>              <span class="n">stats</span><span class="o">.</span><span class="n">expon</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;exponnorm&quot;</span><span class="p">,</span>          <span class="n">stats</span><span class="o">.</span><span class="n">exponnorm</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;f&quot;</span><span class="p">,</span>                  <span class="n">stats</span><span class="o">.</span><span class="n">f</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;gamma&quot;</span><span class="p">,</span>              <span class="n">stats</span><span class="o">.</span><span class="n">gamma</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;laplace&quot;</span><span class="p">,</span>            <span class="n">stats</span><span class="o">.</span><span class="n">laplace</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;levy&quot;</span><span class="p">,</span>               <span class="n">stats</span><span class="o">.</span><span class="n">levy</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;levy_stable&quot;</span><span class="p">,</span>        <span class="n">stats</span><span class="o">.</span><span class="n">levy_stable</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;logistic&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">logistic</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;loggamma&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">loggamma</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;loglaplace&quot;</span><span class="p">,</span>         <span class="n">stats</span><span class="o">.</span><span class="n">loglaplace</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;lognorm&quot;</span><span class="p">,</span>            <span class="n">stats</span><span class="o">.</span><span class="n">lognorm</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;norm&quot;</span><span class="p">,</span>               <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;pareto&quot;</span><span class="p">,</span>             <span class="n">stats</span><span class="o">.</span><span class="n">pareto</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;powerlaw&quot;</span><span class="p">,</span>           <span class="n">stats</span><span class="o">.</span><span class="n">powerlaw</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;t&quot;</span><span class="p">,</span>                  <span class="n">stats</span><span class="o">.</span><span class="n">t</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;triang&quot;</span><span class="p">,</span>             <span class="n">stats</span><span class="o">.</span><span class="n">triang</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;uniform&quot;</span><span class="p">,</span>            <span class="n">stats</span><span class="o">.</span><span class="n">uniform</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;weibull_min&quot;</span><span class="p">,</span>        <span class="n">stats</span><span class="o">.</span><span class="n">weibull_min</span><span class="p">),</span>
-          <span class="p">(</span><span class="s2">&quot;weibull_max&quot;</span><span class="p">,</span>        <span class="n">stats</span><span class="o">.</span><span class="n">weibull_max</span><span class="p">),</span>
-         <span class="p">]</span>
+
+<span class="c1"># container for &quot;fit&quot; results</span>
+<span class="n">FitResult</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;FitResult&quot;</span><span class="p">,</span> <span class="s2">&quot;bic aic ad_pval ks_pval dist distName&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="fit">
 <a class="viewcode-back" href="../api_stattools.html#funcsim.fit">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">scipydist</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">VectorLike</span><span class="p">,</span>
+        <span class="n">scipydist</span><span class="p">:</span> <span class="n">rv_continuous</span><span class="p">,</span>
+        <span class="n">distName</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FitResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fit a univariate distribution for a continuous random variable.</span>
 
+<span class="sd">    This function fits a given scipy.stats univariate distribution to the</span>
+<span class="sd">    provided data using maximum likelihood estimation. It returns a named</span>
+<span class="sd">    tuple containing information criteria, goodness-of-fit p-values, the</span>
+<span class="sd">    frozen distribution, and the distribution name.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : VectorLike</span>
+<span class="sd">        The data to fit, as a one-dimensional array or similar.</span>
+<span class="sd">    scipydist : scipy.stats.rv_continuous</span>
+<span class="sd">        The scipy.stats distribution object to fit (e.g., stats.norm).</span>
+<span class="sd">    distName : str, optional</span>
+<span class="sd">        Name of the distribution. If None, the distribution&#39;s name is used.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    FitResult</span>
+<span class="sd">    	A Named tuple with fields:</span>
+
+<span class="sd">        bic : float</span>
+<span class="sd">            Bayesian Information Criterion for the fit.</span>
+<span class="sd">        aic : float</span>
+<span class="sd">            Akaike Information Criterion for the fit.</span>
+<span class="sd">        ad_pval : float</span>
+<span class="sd">            Anderson-Darling test p-value.</span>
+<span class="sd">        ks_pval : float</span>
+<span class="sd">            Kolmogorov-Smirnov test p-value.</span>
+<span class="sd">        dist : scipy.stats.rv_continuous</span>
+<span class="sd">            The frozen fitted distribution object.</span>
+<span class="sd">        distName : str</span>
+<span class="sd">            Name of the fitted distribution.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The function uses maximum likelihood estimation for parameter fitting.</span>
+<span class="sd">    Goodness-of-fit is assessed using Anderson-Darling and Kolmogorov-Smirnov</span>
+<span class="sd">    tests.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># fit distribution using maximum likelihood</span>
     <span class="n">params</span> <span class="o">=</span> <span class="n">scipydist</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
@@ -188,38 +227,78 @@
     <span class="n">ad_pval</span> <span class="o">=</span> <span class="n">adtest</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dist</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># Anderson-Darling</span>
     <span class="n">ks_pval</span> <span class="o">=</span> <span class="n">kstest</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dist</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># Kolmogorov-Smirnov</span>
 
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;bic&quot;</span><span class="p">:</span> <span class="n">bic</span><span class="p">,</span> <span class="s2">&quot;aic&quot;</span><span class="p">:</span> <span class="n">aic</span><span class="p">,</span> <span class="s2">&quot;ad_pval&quot;</span><span class="p">:</span> <span class="n">ad_pval</span><span class="p">,</span>
-            <span class="s2">&quot;ks_pval&quot;</span><span class="p">:</span> <span class="n">ks_pval</span><span class="p">,</span> <span class="s2">&quot;dist&quot;</span><span class="p">:</span> <span class="n">dist</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+    <span class="k">return</span> <span class="n">FitResult</span><span class="p">(</span><span class="n">bic</span><span class="o">=</span><span class="n">bic</span><span class="p">,</span> <span class="n">aic</span><span class="o">=</span><span class="n">aic</span><span class="p">,</span> <span class="n">ad_pval</span><span class="o">=</span><span class="n">ad_pval</span><span class="p">,</span> <span class="n">ks_pval</span><span class="o">=</span><span class="n">ks_pval</span><span class="p">,</span>
+                     <span class="n">dist</span><span class="o">=</span><span class="n">dist</span><span class="p">,</span> <span class="n">distName</span><span class="o">=</span><span class="n">distName</span><span class="p">)</span></div>
 
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_fit_all</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dist_list</span><span class="p">):</span>
     <span class="n">results</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">dist_list</span><span class="p">))</span>
-    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;bic&quot;</span><span class="p">])</span>  <span class="c1"># lowest BIC to highest</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="n">r</span><span class="o">.</span><span class="n">bic</span><span class="p">)</span>  <span class="c1"># lowest BIC to highest</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_fstr</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
-    <span class="k">return</span> <span class="p">(</span><span class="s2">&quot;</span><span class="si">%.3f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">rjust</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_fstr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">nchars</span><span class="o">=</span><span class="mi">8</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="s2">&quot;</span><span class="si">%.3f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">rjust</span><span class="p">(</span><span class="n">nchars</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_result_line</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">header</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;   distribution,      BIC,      AIC,   KS p-val,   AD p-val</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="s2">&quot;                                    distribution,&quot;</span>
+                <span class="s2">&quot;      BIC,      AIC, KS p-val, AD p-val</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">,   </span><span class="si">%s</span><span class="s2">,   </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span>
-                <span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">rjust</span><span class="p">(</span><span class="mi">15</span><span class="p">),</span> <span class="n">_fstr</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;bic&quot;</span><span class="p">]),</span> <span class="n">_fstr</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;aic&quot;</span><span class="p">]),</span>
-                 <span class="n">_fstr</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;ks_pval&quot;</span><span class="p">]),</span> <span class="n">_fstr</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;ad_pval&quot;</span><span class="p">])))</span>
+                <span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">distName</span><span class="o">.</span><span class="n">rjust</span><span class="p">(</span><span class="mi">48</span><span class="p">),</span> <span class="n">_fstr</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">bic</span><span class="p">),</span> <span class="n">_fstr</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">aic</span><span class="p">),</span>
+                 <span class="n">_fstr</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">ks_pval</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">_fstr</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">ad_pval</span><span class="p">,</span> <span class="mi">6</span><span class="p">)))</span>
 
+    
+<div class="viewcode-block" id="compare">
+<a class="viewcode-back" href="../api_stattools.html#funcsim.compare">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">compare</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">VectorLike</span><span class="p">,</span>
+            <span class="n">lowerLimit</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+            <span class="n">upperLimit</span><span class="p">:</span> <span class="nb">bool</span>
+            <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compare fits of univariate distributions for a continuous random variable.</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">compare</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">long</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">:</span>
+<span class="sd">    This function fits all candidate distributions with the specified support</span>
+<span class="sd">    (lower and/or upper limit) to the provided data. It returns a formatted</span>
+<span class="sd">    string summarizing the Bayesian Information Criterion (BIC), Akaike</span>
+<span class="sd">    Information Criterion (AIC), and goodness-of-fit p-values for each</span>
+<span class="sd">    distribution.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : array-like</span>
+<span class="sd">        The data to fit, as a one-dimensional array or sequence.</span>
+<span class="sd">    lowerLimit : bool</span>
+<span class="sd">        If True, only distributions with a lower bound are considered.  If</span>
+<span class="sd">        False, only distributiuons without a lower bound are considered.</span>
+<span class="sd">    upperLimit : bool</span>
+<span class="sd">        If True, only distributions with an upper bound are considered. If</span>
+<span class="sd">        False, only distributions without an upper bound are considered.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        A formatted string summarizing the fit statistics for each candidate</span>
+<span class="sd">        distribution, sorted by BIC (best to worst).</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    For reliable results, at least 50 observations are recommended. The summary</span>
+<span class="sd">    includes BIC, AIC, Kolmogorov-Smirnov p-value, and Anderson-Darling</span>
+<span class="sd">    p-value for each distribution.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">50</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;WARNING: using &#39;compare&#39; with only </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s2"> observations &quot;</span>
               <span class="sa">f</span><span class="s2">&quot;can produce unreliable results. Interpret &quot;</span>
               <span class="sa">f</span><span class="s2">&quot;with caution.&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
-    <span class="n">dist_list</span> <span class="o">=</span> <span class="n">_long</span> <span class="k">if</span> <span class="n">long</span> <span class="ow">is</span> <span class="kc">True</span> <span class="k">else</span> <span class="n">_short</span>
+    <span class="n">dist_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">candidates</span> <span class="k">if</span> <span class="n">d</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">lowerLimit</span> <span class="ow">and</span>
+                 <span class="n">d</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="n">upperLimit</span><span class="p">]</span>
     <span class="n">results</span> <span class="o">=</span> <span class="n">_fit_all</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dist_list</span><span class="p">)</span>
     <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">_result_line</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">True</span><span class="p">)]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">_result_line</span><span class="p">,</span> <span class="n">results</span><span class="p">))</span>
-    <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span></div>
+
 </pre></div>
 
           </div>
