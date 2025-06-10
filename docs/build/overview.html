@@ -79,11 +79,12 @@ a recursive-dynamic simulation is appropriate.  The user specifies a
 function describing one step forward, as in the example below.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">stats</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="n">draw</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="n">draw</span><span class="p">,</span> <span class="n">hist</span><span class="p">):</span>
     <span class="c1"># Function to take one step through time.</span>
     <span class="c1"># The &#39;draw&#39; argument is first and is</span>
-    <span class="c1"># required as with the static simulation.  The &#39;data&#39; argument is needed</span>
-    <span class="c1"># if &#39;f&#39; refers to lagged values of some sort, as in the example below).</span>
+    <span class="c1"># required as with the static simulation.  The &#39;hist&#39; argument is</span>
+    <span class="c1"># needed if &#39;f&#39; refers to lagged values of some sort, as in this</span>
+    <span class="c1"># example.</span>
 
     <span class="c1"># value of &quot;p&quot; in the previous period</span>
     <span class="n">plag</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">recall</span><span class="p">(</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">lag</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
