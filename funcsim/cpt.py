@@ -5,6 +5,8 @@ import itertools
 from collections import namedtuple
 from typing import Optional, Callable, Iterable
 import scipy
+import conversions
+import types
 
 
 class InferenceError(Exception):
@@ -283,7 +285,7 @@ CptResult = namedtuple("CptResult", "ExpectedValue CertaintyEquiv")
 def cpt(utilFunc: Callable,
         weightFuncGains: Callable,
         weightFuncLosses: Callable,
-        outcomes: Iterable[float],
+        outcomes: conversions.VectorLike,
         refOutcome: float,
         probabilities: Optional[Iterable[float]] = None,
         precision: float = 1.0
@@ -306,7 +308,7 @@ def cpt(utilFunc: Callable,
         ``weightPrelec1``, and ``weightPrelec2``.
     weightFuncLosses : Callable
         Probability weighting function for losses.
-    outcomes : Iterable
+    outcomes : VectorLike
         Sequence of possible stochastic outcomes.
     refOutcome : float
         Reference point for gains and losses.
@@ -345,8 +347,13 @@ def cpt(utilFunc: Callable,
         if min(probabilities) < 0.0:
             raise ValueError('probabilities must be non-negative')
 
+    # outcomes as a list
+    if isinstance(outcomes, types.GeneratorType):
+        outcomesList = list(outcomes)
+    else:
+        outcomesList = list(conversions.vlToArray(outcomes))
+
     # assume all outcomes are equally likely if no probabilities were passed
-    outcomesList = list(outcomes)  # in case a generator was passed
     probs_orig = probabilities if probabilities is not None \
         else len(outcomesList) * [1.0 / float(len(outcomesList))]
 

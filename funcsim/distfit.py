@@ -178,6 +178,9 @@ def fit(data: conversions.VectorLike,
     Goodness-of-fit is assessed using Anderson-Darling and Kolmogorov-Smirnov
     tests.
     """
+
+    dataA = conversions.vlToArray(data)
+
     # fit distribution using maximum likelihood
     params = scipydist.fit(data)
 
@@ -185,13 +188,13 @@ def fit(data: conversions.VectorLike,
     dist = scipydist(*params)
 
     # calculate log likelihood function and info criteria
-    loglike = dist.logpdf(data).sum()
-    bic = np.log(len(data)) * len(params) - 2.0 * loglike  # Schwarz
+    loglike = dist.logpdf(dataA).sum()
+    bic = np.log(len(dataA)) * len(params) - 2.0 * loglike  # Schwarz
     aic = 2.0 * len(params) - 2.0 * loglike                # Akaike
 
     # p-values for GOF tests
-    ad_pval = adtest(data, dist)[1]  # Anderson-Darling
-    ks_pval = kstest(data, dist)[1]  # Kolmogorov-Smirnov
+    ad_pval = adtest(dataA, dist)[1]  # Anderson-Darling
+    ks_pval = kstest(dataA, dist)[1]  # Kolmogorov-Smirnov
 
     return FitResult(bic=bic, aic=aic, ad_pval=ad_pval, ks_pval=ks_pval,
                      dist=dist, distName=distName)
@@ -252,12 +255,14 @@ def compare(data: conversions.VectorLike,
     includes BIC, AIC, Kolmogorov-Smirnov p-value, and Anderson-Darling
     p-value for each distribution.
     """
-    if len(data) < 50:
-        print(f"WARNING: using 'compare' with only {len(data)} observations "
+    dataA = conversions.vlToArray(data)
+    
+    if len(dataA) < 50:
+        print(f"WARNING: using 'compare' with only {len(dataA)} observations "
               f"can produce unreliable results. Interpret "
               f"with caution.", file=sys.stderr)
     dist_list = [d for d in candidates if d[2] == lowerLimit and
                  d[3] == upperLimit]
-    results = _fit_all(data, dist_list)
+    results = _fit_all(dataA, dist_list)
     lines = [_result_line(None, header=True)] + list(map(_result_line, results))
     return "".join(lines)
