@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+import xarray as xr
 import conversions
 
 
@@ -9,6 +11,19 @@ def is_positive_definite(A):
         return True
     except np.linalg.LinAlgError:
         return False
+
+
+def repackage(orig, newA):
+    # return new array with a type and any indexing that
+    # match 'orig', but data from 'newA'
+    if isinstance(orig, pd.DataFrame):
+        df = pd.DataFrame(data=newA, index=orig.index, columns=orig.columns)
+        return df
+    elif isinstance(orig, xr.DataArray):
+        da = data.copy(data=newA)
+        return da
+    else:
+        return newA
 
 
 def nearestpd(array):
@@ -26,8 +41,9 @@ def nearestpd(array):
 
     Returns
     -------
-    np.ndarray
-        The nearest symmetric positive definite matrix.
+    ArrayLike
+        The nearest symmetric positive definite matrix, with a type matching
+        the passed array.
 
     References
     ----------
@@ -39,12 +55,11 @@ def nearestpd(array):
     -----
     This is a Python/Numpy port of John D'Errico's `nearestSPD` MATLAB code.
     """
-    # ...existing code...
     # convert to numpy array
     A = conversions.alToArray(array)
 
     if is_positive_definite(A):
-        return A
+        return array
 
     # original matrix was not positive definite; try Higham's 1st method
     B = (A + A.T) / 2
@@ -55,7 +70,7 @@ def nearestpd(array):
     A3 = (A2 + A2.T) / 2
 
     if is_positive_definite(A3):
-        return A3
+        return repackage(array, A3)
 
     # matrix is still not positive definite; try Higham's 2nd method
     spacing = np.spacing(np.linalg.norm(A))
@@ -74,4 +89,4 @@ def nearestpd(array):
         mineig = np.min(np.real(np.linalg.eigvals(A3)))
         A3 += Id * (-mineig * k ** 2 + spacing)
         k += 1
-    return A3
+    return repackage(array, A3)
