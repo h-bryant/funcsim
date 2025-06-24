@@ -4,8 +4,8 @@ from collections import namedtuple
 import scipy.stats as stats
 from scipy.stats._distn_infrastructure import rv_continuous, rv_discrete
 import numpy as np
-# import warnings
-from ecdfgof import adtest, kstest
+import warnings
+from ecdfgof import adtest, cvmtest
 import conversions
 from typing import Optional
 
@@ -130,7 +130,8 @@ candidates = [
 
 
 # container for "fit" results
-FitResult = namedtuple("FitResult", "bic aic ad_pval ks_pval dist distName")
+FitResult = namedtuple("FitResult",
+                       "bic aic ad_pval cvm_pval dist distName warnings")
 
 
 def fit(data: conversions.VectorLike,
@@ -165,8 +166,8 @@ def fit(data: conversions.VectorLike,
             Akaike Information Criterion for the fit.
         ad_pval : float
             Anderson-Darling test p-value.
-        ks_pval : float
-            Kolmogorov-Smirnov test p-value.
+        cvm_pval : float
+            Cramer-von Mises test p-value.
         dist : scipy.stats.rv_continuous
             The frozen fitted distribution object.
         distName : str
@@ -181,23 +182,27 @@ def fit(data: conversions.VectorLike,
 
     dataA = conversions.vlToArray(data)
 
-    # fit distribution using maximum likelihood
-    params = scipydist.fit(data)
+    with warnings.catch_warnings(record=True) as w:
+        # warnings.simplefilter("always", category=RuntimeWarning)
+        warnings.simplefilter("always")
 
-    # create a "frozen" distribution object
-    dist = scipydist(*params)
+        # fit distribution using maximum likelihood
+        params = scipydist.fit(data)
 
-    # calculate log likelihood function and info criteria
-    loglike = dist.logpdf(dataA).sum()
-    bic = np.log(len(dataA)) * len(params) - 2.0 * loglike  # Schwarz
-    aic = 2.0 * len(params) - 2.0 * loglike                # Akaike
+	    # create a "frozen" distribution object
+        dist = scipydist(*params)
 
-    # p-values for GOF tests
-    ad_pval = adtest(dataA, dist)[1]  # Anderson-Darling
-    ks_pval = kstest(dataA, dist)[1]  # Kolmogorov-Smirnov
+        # calculate log likelihood function and info criteria
+        loglike = dist.logpdf(dataA).sum()
+        bic = np.log(len(dataA)) * len(params) - 2.0 * loglike  # Schwarz
+        aic = 2.0 * len(params) - 2.0 * loglike                # Akaike
+        
+		# p-values for GOF tests
+        ad_pval = adtest(dataA, dist)[1]  # Anderson-Darling
+        cvm_pval = cvmtest(dataA, dist)[1]  # Cramer-von Mises
 
-    return FitResult(bic=bic, aic=aic, ad_pval=ad_pval, ks_pval=ks_pval,
-                     dist=dist, distName=distName)
+    return FitResult(bic=bic, aic=aic, ad_pval=ad_pval, cvm_pval=cvm_pval,
+                     dist=dist, distName=distName, warnings=w)
 
 
 def _fit_all(data, dist_list):
@@ -212,11 +217,11 @@ def _fstr(value, nchars=8):
 def _result_line(r, header=False):
     if header is True:
         return ("                                    distribution,"
-                "      BIC,      AIC, KS p-val, AD p-val\n")
+                "      BIC,      AIC, AD_p-val, CvM_p-val\n")
     else:
         return ("%s, %s, %s,   %s,   %s\n" %
                 (r.distName.rjust(48), _fstr(r.bic), _fstr(r.aic),
-                 _fstr(r.ks_pval, 6), _fstr(r.ad_pval, 6)))
+                 _fstr(r.ad_pval, 6), _fstr(r.cvm_pval, 7)))
 
     
 def compare(data: conversions.VectorLike,
@@ -252,7 +257,7 @@ def compare(data: conversions.VectorLike,
     Notes
     -----
     For reliable results, at least 50 observations are recommended. The summary
-    includes BIC, AIC, Kolmogorov-Smirnov p-value, and Anderson-Darling
+    includes BIC, AIC, Cramer-von Mises p-value, and Anderson-Darling
     p-value for each distribution.
     """
     dataA = conversions.vlToArray(data)
@@ -264,5 +269,7 @@ def compare(data: conversions.VectorLike,
     dist_list = [d for d in candidates if d[2] == lowerLimit and
                  d[3] == upperLimit]
     results = _fit_all(dataA, dist_list)
-    lines = [_result_line(None, header=True)] + list(map(_result_line, results))
+    results_edit = [r for r in results if len(r.warnings) == 0]    
+    lines = [_result_line(None, header=True)] + \
+        list(map(_result_line, results_edit))
     return "".join(lines)
