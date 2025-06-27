@@ -7,9 +7,10 @@
 
     <title>Statistical Tools &#8212; funcsim 0.1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
-    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
     <script src="_static/documentation_options.js?v=01f34227"></script>
-    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -85,7 +86,7 @@ distribution, sorted by BIC (best to worst).</p>
 </dl>
 <p class="rubric">Notes</p>
 <p>For reliable results, at least 50 observations are recommended. The summary
-includes BIC, AIC, Kolmogorov-Smirnov p-value, and Anderson-Darling
+includes BIC, AIC, Cramer-von Mises p-value, and Anderson-Darling
 p-value for each distribution.</p>
 </dd></dl>
 
@@ -178,7 +179,7 @@ frozen distribution, and the distribution name.</p>
 </dd>
 <dt>ad_pval<span class="classifier">float</span></dt><dd><p>Anderson-Darling test p-value.</p>
 </dd>
-<dt>ks_pval<span class="classifier">float</span></dt><dd><p>Kolmogorov-Smirnov test p-value.</p>
+<dt>cvm_pval<span class="classifier">float</span></dt><dd><p>Cramer-von Mises test p-value.</p>
 </dd>
 <dt>dist<span class="classifier">scipy.stats.rv_continuous</span></dt><dd><p>The frozen fitted distribution object.</p>
 </dd>
@@ -221,6 +222,27 @@ tests.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">screen</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/screen.html#screen"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Screen a time series for non-i.i.d. properties using several tests.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>series</strong> (<em>VectorLike</em>) – Input time series data (array-like or pandas Series).</p></li>
+<li><p><strong>alpha</strong> (<em>float</em><em>, </em><em>optional</em>) – Significance level for hypothesis tests (default is 0.05).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A formatted string summarizing the results of stationarity,
+heteroskedasticity, autocorrelation, and randomness tests.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
 <span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">shrink</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/shrinkage.html#shrink"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Covariance shrinkage estimator.</p>
 <dl class="field-list simple">
@@ -236,10 +258,10 @@ vol 4(2005), issue 1.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The estimated covariance matrix.</p>
+<dd class="field-even"><p>The estimated covariance matrix, with a type matching the data array</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>np.ndarray</p>
+<dd class="field-odd"><p>ArrayLike</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>ValueError</strong> – If target is not one of: ‘A’, ‘B’, ‘C’, ‘D’, ‘E’, ‘F’.</p>
@@ -294,7 +316,16 @@ interval.</p>
 
 
 
-<h3>Navigation</h3>
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
@@ -317,16 +348,6 @@ interval.</p>
   </ul></li>
 </ul>
 </div>
-<search id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</search>
-<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
 
@@ -343,8 +364,8 @@ interval.</p>
       &#169;2017-2025, Henry Bryant.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.7</a>
-      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
       <a href="_sources/api_stattools.rst.txt"
