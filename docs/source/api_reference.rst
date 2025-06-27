@@ -7,4 +7,5 @@ API Reference
 
    api_simulation
    api_stattools
+   api_eut
    api_cpt

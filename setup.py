@@ -20,7 +20,6 @@ setuptools.setup(
         'pandas>=2.2.0',
         'scipy>=1.15.0',
         'xarray>=2025.4.0'
-        'statsmodels>=0.14.0',
     ],
     extras_require={
         "plot": ["plotly>=6.0.0"],
