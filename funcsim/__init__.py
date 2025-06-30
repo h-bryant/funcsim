@@ -24,6 +24,8 @@ from ecdfgof import kstest
 from ecdfgof import adtest
 from ecdfgof import cvmtest
 
+from shapiro import swtest
+
 from distfit import fit
 from distfit import compare
 
