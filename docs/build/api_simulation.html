@@ -153,6 +153,34 @@ marginals.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">imanconover</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spear</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vectors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imanconover.html#imanconover"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Induce a Spearman correlation using the Iman &amp; Conover (1980) method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>spear</strong> (<em>ArrayLike</em>) – Desired Spearman correlation matrix (must be symetric and
+positive definite).</p></li>
+<li><p><strong>vectors</strong> (<em>list</em><em> of </em><em>VectorLike</em>) – List of vectors, each representing draws for one variable.</p></li>
+<li><p><strong>names</strong> (<em>list</em><em> of </em><em>str</em><em>, </em><em>optional</em>) – Column names for the output DataFrame. Defaults to v1, v2, …</p></li>
+<li><p><strong>index</strong> (<em>pandas.Index</em><em>, </em><em>optional</em>) – Index for the output DataFrame. Defaults to a range index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>DataFrame with the same shape as the input vectors, with induced
+Spearman correlation structure.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+<p class="rubric">References</p>
+<p>Iman, R. L., &amp; Conover, W. J. (1980). Small sample sensitivity analysis
+techniques for computer models, with an application to risk assessment.
+Communications in Statistics - Theory and Methods, 9(17), 1749–1842.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
 <span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">kde</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'scott'</span></span></em><span class="sig-paren">)</span></dt>
 <dd><p>Create an instance of a <code class="docutils literal notranslate"><span class="pre">Kde</span></code> object (a 1-D kernel density estimator
 (KDE) object).</p>

@@ -13,6 +13,8 @@ from dependence import kdemv
 from dependence import covtocorr
 from dependence import spearman
 
+from imanconover import imanconover
+
 from shrinkage import shrink
 from nearby import nearestpd
 

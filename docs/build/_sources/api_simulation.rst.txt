@@ -3,7 +3,7 @@ Simulation
 
 .. automodule:: funcsim
    :no-index:
-   :members: simulate, kde, kdemv, normal, cgauss, cstudent, cgumbel, cclayton
+   :members: simulate, kde, kdemv, normal, cgauss, cstudent, cgumbel, cclayton, imanconover
    :undoc-members:
    :show-inheritance:
 
