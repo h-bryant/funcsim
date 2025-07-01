@@ -141,3 +141,38 @@ def alToArray(al: ArrayLike) -> NDArray:
     else:  # Assume it's a NumPy array
         a = np.asarray(al)
     return a
+
+
+def vlCoords(vl: VectorLike) -> pd.Index:
+    """
+    Get or create coordinates for a vector-like object.
+
+    Parameters
+    ----------
+    vl : VectorLike
+        The vector-like object to convert.
+
+    Returns
+    -------
+    List[str]
+        A list of coordinates corresponding to the vector-like object.
+    """
+    if not vlValidate(vl):
+        raise ValueError("argument passed is not a vector-like object")
+    if isinstance(vl, (list, tuple)):
+        return pd.Index(list(range(max(shape(vl)))))
+    if isinstance(vl, (np.ndarray)):
+        if vl.ndim == 1:
+            return pd.Index(list(range(len(vl))))
+        if vl.ndim == 2:
+            if vl.shape[0] == 1:
+                return pd.Index(list(range(vl.shape[1])))
+            if vl.shape[1] == 1:
+                return pd.Index(list(range(vl.shape[0])))
+    if isinstance(vl, pd.Series):
+        return vl.index
+    if isinstance(vl, xr.DataArray):
+        dim_size_to_name = dict(zip(vl.shape, vl.dims))
+        longest_dim = max(dim_size_to_name.keys())
+        ret = vl.coords[dim_size_to_name[longest_dim]]
+        return pd.Index(ret)

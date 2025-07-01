@@ -3,7 +3,7 @@ import pandas as pd
 import xarray as xr
 import pytest
 
-from funcsim.conversions import vlValidate, vlToArray
+from funcsim.conversions import vlValidate, vlToArray, vlCoords
 
 def test_vlValidate_list():
     assert vlValidate([1, 2, 3]) is True
@@ -79,3 +79,53 @@ def test_vlToArray_2d_array_row():
 def test_vlToArray_invalid():
     with pytest.raises(ValueError):
         vlToArray(np.array([[1, 2], [3, 4]]))
+
+def test_vlCoords_0():
+    a = np.array([1, 2, 3])
+    c = vlCoords(a)
+    assert isinstance(c, pd.Index)
+    assert c.equals(pd.Index([0, 1, 2]))
+
+def test_vlCoords_1():
+    a = np.array([1, 2, 3])
+    s = pd.Series(a)
+    c = vlCoords(s)
+    assert isinstance(c, pd.Index)
+    assert c.equals(pd.Index([0, 1, 2]))
+
+def test_vlCoords_2():
+    a = np.array([1, 2, 3])
+    da = xr.DataArray(a)
+    c = vlCoords(da)
+    assert isinstance(c, pd.Index)
+    assert c.equals(pd.Index([0, 1, 2]))
+
+def test_vlCoords_3():
+    a = np.array([1, 2, 3])
+    idx = pd.Index([0, 1, 2])
+    da = xr.DataArray(a, coords=[idx], dims=["dim_0"])
+    c = vlCoords(da)
+    assert isinstance(c, pd.Index)
+    assert c.equals(idx)
+
+def test_vlCoords_4():
+    a = np.array([[1, 2, 3]])
+    idx = pd.Index([0, 1, 2])
+    da = xr.DataArray(a, coords={"dim_0": [0], "dim_1": idx})
+    c = vlCoords(da)
+    assert isinstance(c, pd.Index)
+    assert c.equals(idx)
+
+def test_vlCoords_5():
+    a = np.array([[1, 2, 3]])
+    c = vlCoords(a)
+    assert isinstance(c, pd.Index)
+    idx = pd.Index([0, 1, 2])
+    assert c.equals(idx)
+
+def test_vlCoords_6():
+    a = np.array([[1], [2], [3]])
+    c = vlCoords(a)
+    assert isinstance(c, pd.Index)
+    idx = pd.Index([0, 1, 2])
+    assert c.equals(idx)
