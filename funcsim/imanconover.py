@@ -44,7 +44,8 @@ def _arrange(example, values):
 def imanconover(spear: conversions.ArrayLike,
                 vectors: List[conversions.VectorLike],
                 names: List[str] = [],
-                index: Optional[pd.Index] = None):
+                )-> pd.DataFrame:
+
     """
     Induce a Spearman correlation using the Iman & Conover (1980) method.
 
@@ -57,14 +58,12 @@ def imanconover(spear: conversions.ArrayLike,
         List of vectors, each representing draws for one variable.
     names : list of str, optional
         Column names for the output DataFrame. Defaults to v1, v2, ...
-    index : pandas.Index, optional
-        Index for the output DataFrame. Defaults to a range index.
 
     Returns
     -------
     pandas.DataFrame
-        DataFrame with the same shape as the input vectors, with induced
-        Spearman correlation structure.
+        DataFrame with one column for each vector/variable, where the
+        data refelct the desired Spearman correlation structure.
 
     References
     ----------
@@ -84,9 +83,6 @@ def imanconover(spear: conversions.ArrayLike,
     for v in vectors:
         if len(v) != N:
             raise ValueError("All vectors must have the same length.")
-    if index is not None and len(index) != N:
-        raise ValueError("The index length must match the length"
-                         "of the vectors.")
 
     # IC step 2
     L = np.linalg.cholesky(spear)
@@ -106,6 +102,14 @@ def imanconover(spear: conversions.ArrayLike,
     # pack into a DataFrame
     if names == []:
         names = [f"v{i+1}" for i in range(K)]
-    if index is None:
-        index = pd.RangeIndex(N)
+    index = conversions.vlCoords(vectors[0])
     return pd.DataFrame(array, columns=names, index=index)
+
+
+if __name__ == "__main__":
+    # usage example
+    v1 = stats.norm(4.0, 0.2).rvs(30)
+    v2 = stats.norm(0.0, 3.2).rvs(30)
+    rho_s = np.array([[1.0, 0.89], [0.89, 1.0]])
+    ic = imanconover(rho_s, [v1, v2])
+    print(ic)
