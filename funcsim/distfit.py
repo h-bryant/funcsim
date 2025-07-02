@@ -9,7 +9,11 @@ from ecdfgof import adtest, cvmtest
 import conversions
 from typing import Optional
 
-# warnings.filterwarnings("ignore")
+
+def custom_warning_format(message, category, filename, lineno, file=None, line=None):
+    print(f"{category.__name__}: {message}")
+
+warnings.showwarning = custom_warning_format
 
 
 # "name","scipy_name","lower_limit","upper_limit
@@ -263,13 +267,20 @@ def compare(data: conversions.VectorLike,
     dataA = conversions.vlToArray(data)
     
     if len(dataA) < 50:
-        print(f"WARNING: using 'compare' with only {len(dataA)} observations "
-              f"can produce unreliable results. Interpret "
-              f"with caution.", file=sys.stderr)
+        msg = (f"using 'compare' with only {len(dataA)} observations "
+               f"can produce unreliable results. Interpret "
+               f"with caution.")
+        warnings.warn(msg, UserWarning)
     dist_list = [d for d in candidates if d[2] == lowerLimit and
                  d[3] == upperLimit]
     results = _fit_all(dataA, dist_list)
-    results_edit = [r for r in results if len(r.warnings) == 0]    
+    results_edit = [r for r in results if len(r.warnings) == 0]
+    for r in results:
+        if len(r.warnings) > 0:
+            msg = (f"encountered a problem "
+				   f"while fitting the {r.distName} distribution. "
+                   f"It will not be included in the results.")
+            warnings.warn(msg, UserWarning)
     lines = [_result_line(None, header=True)] + \
         list(map(_result_line, results_edit))
     return "".join(lines)
