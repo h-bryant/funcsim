@@ -3,6 +3,7 @@ import numpy as np
 from scipy import stats
 from typing import Generator, Optional, Tuple
 import conversions
+import nearby
 
 
 def _memoize(f):
@@ -286,26 +287,22 @@ def cgumbel(draw: Generator[float, None, None],
 
 
 class MvKde():
+    """
+    A multivariate KDE distribution object.
 
+    Parameters
+    ----------
+    data : ArrayLike
+        Input data array of with variables in columns and observations
+        in rows.
+    bw : str, optional
+        Bandwidth selection method, 'scott' or 'silverman'.
+        Default is 'scott'.    
+    """
     def __init__(self,
                  data: conversions.ArrayLike,
                  bw: str = 'scott'
                 ) -> None:
-        """
-        Initialize a multivariate KDE object.
-
-        Parameters
-        ----------
-        data : ArrayLike
-            Input data array of shape (n_samples, n_features).
-        bw : str, optional
-            Bandwidth selection method, 'scott' or 'silverman'.
-            Default is 'scott'.
-
-        Returns
-        -------
-        None
-        """
         self._data = conversions.alToArray(data)
         (self._M, self._K) = self._data.shape
 
@@ -326,14 +323,14 @@ class MvKde():
             self._bw = bw
 
     def sample(self,
-               draw: Generator[float, None, None]
+               ugen: Generator[float, None, None]
               ) -> np.ndarray:
         """
-        Generate a random sample from the multivariate KDE.
+        Generate a random sample from the multivariate distribution.
 
         Parameters
         ----------
-        draw : Generator[float, None, None]
+        ugen : Generator[float, None, None]
             A generator yielding independent standard uniform random numbers.
 
         Returns
@@ -350,27 +347,57 @@ class MvKde():
         return normal(draw, self._bw, mu)
 
 
-def kdemv(data: conversions.ArrayLike,
-          bw: str = 'scott'
-         ) -> MvKde:
+class MvNorm():
     """
-    Create an instance of a ``MvKde`` object (a multivariate KDE object).
+    A multivariate normal distribution object. A vector of means
+    and a covariance matrix are computed from the input data.  If the sample
+    covariance matrix is not positive definite, the Higham
+    method is used to calculate the nearest positive definite matrix.
 
     Parameters
     ----------
     data : ArrayLike
-        Input data array of shape (n_samples, n_features).
-    bw : str, optional
-        Bandwidth selection method, 'scott' or 'silverman'.
-        Default is 'scott'.
-
-    Returns
-    -------
-    MvKde
-        An instance of the MvKde class.
+        Input data array of with variables in columns and observations
+        in rows.
     """
-    data_np = conversions.alToArray(data)
-    return MvKde(data_np, bw)
+
+    def __init__(self,
+                 data: conversions.ArrayLike,
+                ) -> None:
+        self._data = conversions.alToArray(data)
+        (self._M, self._K) = self._data.shape
+
+        # fit mean and covariance
+        self._mu = self._data.mean(axis=0)
+
+        # compute covariance matrix
+        self._sigma = np.cov(self._data, rowvar=False)
+        # ensure covariance matrix is positive definite
+        if not np.all(np.linalg.eigvals(self._sigma) > 0):
+            # use the Higam method to ensure positive definiteness
+            self._sigma = nearby.nearestpd(self._data)
+
+        # get cholesky decomposition of covariance matrix
+        self._A = np.linalg.cholesky(self._sigma)
+
+    def sample(self,
+               ugen: Generator[float, None, None]
+              ) -> np.ndarray:
+        """
+        Generate a random sample from the multivariate distribution.
+
+        Parameters
+        ----------
+        ugen : Generator[float, None, None]
+            A generator yielding independent standard uniform random numbers.
+
+        Returns
+        -------
+        np.ndarray
+            A 1-D NumPy array representing a sample from the KDE.
+        """
+        uvec = [next(ugen) for i in range(self._K)]
+        return self._mu + np.dot(self._A, stats.norm.ppf(uvec))
 
 
 def covtocorr(cov: conversions.ArrayLike) -> np.ndarray:

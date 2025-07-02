@@ -9,9 +9,11 @@ from dependence import cgauss
 from dependence import cstudent
 from dependence import cgumbel
 from dependence import cclayton
-from dependence import kdemv
 from dependence import covtocorr
 from dependence import spearman
+
+from dependence import MvNorm
+from dependence import MvKde
 
 from imanconover import imanconover
 
@@ -20,7 +22,7 @@ from nearby import nearestpd
 
 from edf import edf
 
-from kde import kde
+from kde import Kde
 
 from ecdfgof import kstest
 from ecdfgof import adtest

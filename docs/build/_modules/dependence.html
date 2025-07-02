@@ -36,6 +36,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">stats</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Generator</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">conversions</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">nearby</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_memoize</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
@@ -333,27 +334,25 @@
 
 
 
+<div class="viewcode-block" id="MvKde">
+<a class="viewcode-back" href="../api_simulation.html#funcsim.MvKde">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">MvKde</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A multivariate KDE distribution object.</span>
 
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : ArrayLike</span>
+<span class="sd">        Input data array of with variables in columns and observations</span>
+<span class="sd">        in rows.</span>
+<span class="sd">    bw : str, optional</span>
+<span class="sd">        Bandwidth selection method, &#39;scott&#39; or &#39;silverman&#39;.</span>
+<span class="sd">        Default is &#39;scott&#39;.    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
                  <span class="n">bw</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;scott&#39;</span>
                 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize a multivariate KDE object.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        data : ArrayLike</span>
-<span class="sd">            Input data array of shape (n_samples, n_features).</span>
-<span class="sd">        bw : str, optional</span>
-<span class="sd">            Bandwidth selection method, &#39;scott&#39; or &#39;silverman&#39;.</span>
-<span class="sd">            Default is &#39;scott&#39;.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        None</span>
-<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
         <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">shape</span>
 
@@ -373,15 +372,17 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span> <span class="o">=</span> <span class="n">bw</span>
 
+<div class="viewcode-block" id="MvKde.sample">
+<a class="viewcode-back" href="../api_simulation.html#funcsim.MvKde.sample">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-               <span class="n">draw</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+               <span class="n">ugen</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
               <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Generate a random sample from the multivariate KDE.</span>
+<span class="sd">        Generate a random sample from the multivariate distribution.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        draw : Generator[float, None, None]</span>
+<span class="sd">        ugen : Generator[float, None, None]</span>
 <span class="sd">            A generator yielding independent standard uniform random numbers.</span>
 
 <span class="sd">        Returns</span>
@@ -395,32 +396,67 @@
         <span class="c1"># means for this sample</span>
         <span class="n">mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
 
-        <span class="k">return</span> <span class="n">normal</span><span class="p">(</span><span class="n">draw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">normal</span><span class="p">(</span><span class="n">draw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span></div>
+</div>
 
 
-<div class="viewcode-block" id="kdemv">
-<a class="viewcode-back" href="../api_simulation.html#funcsim.kdemv">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">kdemv</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
-          <span class="n">bw</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;scott&#39;</span>
-         <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MvKde</span><span class="p">:</span>
+
+<div class="viewcode-block" id="MvNorm">
+<a class="viewcode-back" href="../api_simulation.html#funcsim.MvNorm">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MvNorm</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Create an instance of a ``MvKde`` object (a multivariate KDE object).</span>
+<span class="sd">    A multivariate normal distribution object. A vector of means</span>
+<span class="sd">    and a covariance matrix are computed from the input data.  If the sample</span>
+<span class="sd">    covariance matrix is not positive definite, the Higham</span>
+<span class="sd">    method is used to calculate the nearest positive definite matrix.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    data : ArrayLike</span>
-<span class="sd">        Input data array of shape (n_samples, n_features).</span>
-<span class="sd">    bw : str, optional</span>
-<span class="sd">        Bandwidth selection method, &#39;scott&#39; or &#39;silverman&#39;.</span>
-<span class="sd">        Default is &#39;scott&#39;.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    MvKde</span>
-<span class="sd">        An instance of the MvKde class.</span>
+<span class="sd">        Input data array of with variables in columns and observations</span>
+<span class="sd">        in rows.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">data_np</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">MvKde</span><span class="p">(</span><span class="n">data_np</span><span class="p">,</span> <span class="n">bw</span><span class="p">)</span></div>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
+                <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># fit mean and covariance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># compute covariance matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">,</span> <span class="n">rowvar</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="c1"># ensure covariance matrix is positive definite</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvals</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="c1"># use the Higam method to ensure positive definiteness</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span> <span class="o">=</span> <span class="n">nearby</span><span class="o">.</span><span class="n">nearestpd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span>
+
+        <span class="c1"># get cholesky decomposition of covariance matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MvNorm.sample">
+<a class="viewcode-back" href="../api_simulation.html#funcsim.MvNorm.sample">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+               <span class="n">ugen</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+              <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate a random sample from the multivariate distribution.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ugen : Generator[float, None, None]</span>
+<span class="sd">            A generator yielding independent standard uniform random numbers.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        np.ndarray</span>
+<span class="sd">            A 1-D NumPy array representing a sample from the KDE.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">uvec</span> <span class="o">=</span> <span class="p">[</span><span class="nb">next</span><span class="p">(</span><span class="n">ugen</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mu</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_A</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="n">uvec</span><span class="p">))</span></div>
+</div>
 
 
 

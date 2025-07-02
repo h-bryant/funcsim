@@ -35,6 +35,143 @@
             
   <section id="simulation">
 <h1>Simulation<a class="headerlink" href="#simulation" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">Kde</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'scott'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kde.html#Kde"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A univariate kernel density estimator (KDE) object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sample</strong> (<em>VectorLike</em>) – 1-D data sample (list, tuple, np.ndarray, xr.DataArray, or pd.Series).</p></li>
+<li><p><strong>bw</strong> (<em>str</em><em>, </em><em>optional</em>) – Bandwidth selection method, ‘scott’, ‘silverman’.
+Default is ‘scott’.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">cdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kde.html#Kde.cdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Cumulative distribution function of the KDE at value v.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>v</strong> (<em>float</em>) – Value at which to evaluate the CDF.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The estimated cumulative probability at v.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">pdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kde.html#Kde.pdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Probability density function of the KDE at value v.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>v</strong> (<em>float</em>) – Value at which to evaluate the PDF.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The estimated probability density at v.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">ppf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">u</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kde.html#Kde.ppf"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Numerical percent point function (inverse CDF) for the KDE.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>u</strong> (<em>float</em>) – Probability value in the range [0.0, 1.0].</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The value x such that CDF(x) = u.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If u is not in [0.0, 1.0] or optimization fails.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">MvKde</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'scott'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#MvKde"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A multivariate KDE distribution object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>ArrayLike</em>) – Input data array of with variables in columns and observations
+in rows.</p></li>
+<li><p><strong>bw</strong> (<em>str</em><em>, </em><em>optional</em>) – Bandwidth selection method, ‘scott’ or ‘silverman’.
+Default is ‘scott’.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#MvKde.sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate a random sample from the multivariate distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ugen</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator yielding independent standard uniform random numbers.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A 1-D NumPy array representing a sample from the KDE.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">MvNorm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#MvNorm"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A multivariate normal distribution object. A vector of means
+and a covariance matrix are computed from the input data.  If the sample
+covariance matrix is not positive definite, the Higham
+method is used to calculate the nearest positive definite matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>ArrayLike</em>) – Input data array of with variables in columns and observations
+in rows.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#MvNorm.sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate a random sample from the multivariate distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ugen</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator yielding independent standard uniform random numbers.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A 1-D NumPy array representing a sample from the KDE.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py">
 <span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">cclayton</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">draw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nvars</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#cclayton"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
@@ -180,49 +317,6 @@ Communications in Statistics - Theory and Methods, 9(17), 1749–1842.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">kde</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'scott'</span></span></em><span class="sig-paren">)</span></dt>
-<dd><p>Create an instance of a <code class="docutils literal notranslate"><span class="pre">Kde</span></code> object (a 1-D kernel density estimator
-(KDE) object).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sample</strong> (<em>VectorLike</em>) – 1-D data sample (list, tuple, np.ndarray, xr.DataArray, or pd.Series).</p></li>
-<li><p><strong>bw</strong> (<em>str</em><em>, </em><em>optional</em>) – Bandwidth selection method, ‘scott’, ‘silverman’, or a float.
-Default is ‘scott’.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>An instance of the Kde class.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="#funcsim.kde.Kde" title="funcsim.kde.Kde">Kde</a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">kdemv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'scott'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#kdemv"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Create an instance of a <code class="docutils literal notranslate"><span class="pre">MvKde</span></code> object (a multivariate KDE object).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>ArrayLike</em>) – Input data array of shape (n_samples, n_features).</p></li>
-<li><p><strong>bw</strong> (<em>str</em><em>, </em><em>optional</em>) – Bandwidth selection method, ‘scott’ or ‘silverman’.
-Default is ‘scott’.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>An instance of the MvKde class.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="#funcsim.dependence.MvKde" title="funcsim.dependence.MvKde">MvKde</a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py">
 <span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">normal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">draw</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#normal"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Generate joint normal random draws.</p>
 <p>Given a covariance matrix <cite>sigma</cite>, this function generates a vector of
@@ -291,89 +385,6 @@ Monte Carlo sampling is employed.  Default is ‘lh’.</p></li>
 <dd class="field-odd"><p>xarray.DataArray</p>
 </dd>
 </dl>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="funcsim.kde.Kde">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.kde.</span></span><span class="sig-name descname"><span class="pre">Kde</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'scott'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/funcsim/kde.html#Kde"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#funcsim.kde.Kde" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="py method">
-<dt class="sig sig-object py" id="funcsim.kde.Kde.cdf">
-<span class="sig-name descname"><span class="pre">cdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/funcsim/kde.html#Kde.cdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#funcsim.kde.Kde.cdf" title="Link to this definition">¶</a></dt>
-<dd><p>Cumulative distribution function of the KDE at value v.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>v</strong> (<em>float</em>) – Value at which to evaluate the CDF.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The estimated cumulative probability at v.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>float</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="funcsim.kde.Kde.pdf">
-<span class="sig-name descname"><span class="pre">pdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/funcsim/kde.html#Kde.pdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#funcsim.kde.Kde.pdf" title="Link to this definition">¶</a></dt>
-<dd><p>Probability density function of the KDE at value v.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>v</strong> (<em>float</em>) – Value at which to evaluate the PDF.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The estimated probability density at v.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>float</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="funcsim.kde.Kde.ppf">
-<span class="sig-name descname"><span class="pre">ppf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">u</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/funcsim/kde.html#Kde.ppf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#funcsim.kde.Kde.ppf" title="Link to this definition">¶</a></dt>
-<dd><p>Numerical percent point function (inverse CDF) for the KDE.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>u</strong> (<em>float</em>) – Probability value in the range [0.0, 1.0].</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The value x such that CDF(x) = u.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>float</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If u is not in [0.0, 1.0] or optimization fails.</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="funcsim.dependence.MvKde">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.dependence.</span></span><span class="sig-name descname"><span class="pre">MvKde</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'scott'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/funcsim/dependence.html#MvKde"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#funcsim.dependence.MvKde" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="py method">
-<dt class="sig sig-object py" id="funcsim.dependence.MvKde.sample">
-<span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">draw</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/funcsim/dependence.html#MvKde.sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#funcsim.dependence.MvKde.sample" title="Link to this definition">¶</a></dt>
-<dd><p>Generate a random sample from the multivariate KDE.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>draw</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator yielding independent standard uniform random numbers.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A 1-D NumPy array representing a sample from the KDE.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>np.ndarray</p>
-</dd>
-</dl>
-</dd></dl>
-
 </dd></dl>
 
 </section>

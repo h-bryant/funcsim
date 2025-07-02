@@ -1,6 +1,7 @@
 import funcsim as fs
 import numpy as np
 from scipy import stats
+from core import simulate
 
 
 def test_normal_0():
@@ -32,3 +33,18 @@ def test_normal_1():
     out = fs.simulate(f=f, ntrials=2000).sel(steps=0).values
     sampcorr = np.corrcoef(out, rowvar=False)[0, 1]
     assert abs(sampcorr - 0.5) < 0.05
+
+
+def test_MvNorm():
+    data = np.random.normal(size=(1000, 2))
+    mvn = fs.MvNorm(data)
+
+    def f(ugen):
+        samp = mvn.sample(ugen)
+        return {"samp0": samp[0], "samp1": samp[1]}
+
+    sampl = fs.simulate(f=f, ntrials=2000).sel(steps=0).values
+    assert sampl.shape == (2000, 2)
+
+    sampcorr = np.corrcoef(sampl, rowvar=False)[0, 1]
+    assert abs(sampcorr) < 0.10  # correlation should be close to zero

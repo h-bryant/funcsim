@@ -16,29 +16,36 @@ def vectorized_method(func):
 
 
 class Kde():
-    # create PDF, CDF, and PPF functions via Gaussian KDE.
-    # "sample" should be one of the following
-    # types: list, tuple, numpy.array, or pandas.Series.
-    # "bw" is the bandwidth method or parameter.  Alternatives
-    # to bw="scott" are 'silverman' or a float
+    """
+    A univariate kernel density estimator (KDE) object.
 
-    # resulting object has methods analogous to a scipy "frozen" (parameterized)
-    # parametric distribution object: pdf(), cdf(), and ppf()
-
+    Parameters
+    ----------
+    sample : VectorLike
+        1-D data sample (list, tuple, np.ndarray, xr.DataArray, or pd.Series).
+    bw : str, optional
+        Bandwidth selection method, 'scott', 'silverman'.
+        Default is 'scott'.
+    """
     def __init__(self, sample, bw='scott'):
 
+        sampleA = conversions.vlToArray(sample)
+
         # raw kde object
-        self.gkde = stats.gaussian_kde(sample, bw)
+        self.gkde = stats.gaussian_kde(sampleA, bw)
 
         # lower limit of integreation for CDF
-        self.cdf_low = float(min(sample)) - 1.0 * (max(sample) - min(sample))
+        self.cdf_low = float(min(sampleA)) - \
+            1.0 * (max(sampleA) - min(sampleA))
 
         # initial guess for PPF optimization: the sample mean
-        self.ppf_x0 = float(sum(sample)) / float(len(sample))
+        self.ppf_x0 = float(sum(sampleA)) / float(len(sampleA))
 
         # "bracket" for PPF root finding
-        self.ppf_low = float(min(sample)) - 3.0 * (max(sample) - min(sample))
-        self.ppf_high = float(max(sample)) + 3.0 * (max(sample) - min(sample))
+        self.ppf_low = float(min(sampleA)) - \
+            3.0 * (max(sampleA) - min(sampleA))
+        self.ppf_high = float(max(sampleA)) + \
+            3.0 * (max(sampleA) - min(sampleA))
 
     @vectorized_method
     def pdf(self,
@@ -157,25 +164,3 @@ class Kde():
             else:
                 msg = "numerical optimization for PPF failed"
                 raise ValueError(msg)
-
-
-def kde(sample: conversions.VectorLike,
-        bw: str = "scott") -> Kde:
-    """
-    Create an instance of a ``Kde`` object (a 1-D kernel density estimator
-    (KDE) object).
-
-    Parameters
-    ----------
-    sample : VectorLike
-        1-D data sample (list, tuple, np.ndarray, xr.DataArray, or pd.Series).
-    bw : str, optional
-        Bandwidth selection method, 'scott', 'silverman', or a float.
-        Default is 'scott'.
-
-    Returns
-    -------
-    Kde
-        An instance of the Kde class.
-    """
-    return Kde(sample, bw)
