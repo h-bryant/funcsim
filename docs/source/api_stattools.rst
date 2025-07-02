@@ -1,8 +1,8 @@
-Statistical Tools
-=================
+Miscellaneous Tools
+===================
 
 .. automodule:: funcsim
    :no-index:
-   :members: edf, fit, compare, kstest, adtest, cvmtest, shrink, covtocorr, spearman, screen, swtest
+   :members: edf, screen
    :undoc-members:
    :show-inheritance:

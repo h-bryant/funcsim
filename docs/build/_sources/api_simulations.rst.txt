@@ -1,8 +1,0 @@
-Simulation
-==========
-
-.. automodule:: funcsim
-   :no-index:
-   :members: simulate, kde, kdemv, normal, cgauss, cstudent, cgumbel, cclayton
-   :undoc-members:
-   :show-inheritance:

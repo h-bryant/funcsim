@@ -3,6 +3,6 @@ Simulation
 
 .. automodule:: funcsim
    :no-index:
-   :members: simulate, Kde, MvKde, MvNorm, normal, cgauss, cstudent, cgumbel, cclayton, imanconover
+   :members: simulate 
    :undoc-members:
    :show-inheritance:
