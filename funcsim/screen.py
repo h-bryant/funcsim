@@ -355,7 +355,7 @@ def _frmt(p_value: float,
         return f"{p_value:.3f}"
 
 
-def screen(series: conversions.VectorLike,
+def screen(data: conversions.VectorLike,
            alpha: float = 0.05
            ) -> str:
     """
@@ -363,7 +363,7 @@ def screen(series: conversions.VectorLike,
 
     Parameters
     ----------
-    series : VectorLike
+    data : VectorLike
         Input time series data (array-like or pandas Series).
     alpha : float, optional
         Significance level for hypothesis tests (default is 0.05).

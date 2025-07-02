@@ -37,13 +37,13 @@
 
 <div class="viewcode-block" id="edf">
 <a class="viewcode-back" href="../api_stattools.html#funcsim.edf">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">edf</span><span class="p">(</span><span class="n">sample</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">VectorLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">edf</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">VectorLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create an empirical distribution function (EDF) from a data sample.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    sample : VectorLike</span>
+<span class="sd">    data : VectorLike</span>
 <span class="sd">        1-D data sample (list, np.array, pd.Series, or 1-D xr.DataArray).</span>
 
 <span class="sd">    Returns</span>
@@ -51,11 +51,11 @@
 <span class="sd">    Callable[[float], float]</span>
 <span class="sd">        A function that computes the EDF at a given value.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">sampleVec</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">vlToArray</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+    <span class="n">sampleVec</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">vlToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
     <span class="n">M</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sampleVec</span><span class="p">))</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">edf</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
-        <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">a</span> <span class="o">&lt;=</span> <span class="n">v</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sample</span><span class="p">))</span> <span class="o">/</span> <span class="n">M</span>
+        <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">a</span> <span class="o">&lt;=</span> <span class="n">v</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">sampleVec</span><span class="p">))</span> <span class="o">/</span> <span class="n">M</span>
 
     <span class="k">return</span> <span class="n">edf</span></div>
 

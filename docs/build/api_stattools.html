@@ -139,11 +139,11 @@ matrix by the standard deviations of each variable.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">edf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/edf.html#edf"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">edf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/edf.html#edf"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Create an empirical distribution function (EDF) from a data sample.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>sample</strong> (<em>VectorLike</em>) – 1-D data sample (list, np.array, pd.Series, or 1-D xr.DataArray).</p>
+<dd class="field-odd"><p><strong>data</strong> (<em>VectorLike</em>) – 1-D data sample (list, np.array, pd.Series, or 1-D xr.DataArray).</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A function that computes the EDF at a given value.</p>
@@ -222,12 +222,12 @@ tests.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">screen</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/screen.html#screen"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">screen</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/screen.html#screen"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Screen a time series for non-i.i.d. properties using several tests.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>series</strong> (<em>VectorLike</em>) – Input time series data (array-like or pandas Series).</p></li>
+<li><p><strong>data</strong> (<em>VectorLike</em>) – Input time series data (array-like or pandas Series).</p></li>
 <li><p><strong>alpha</strong> (<em>float</em><em>, </em><em>optional</em>) – Significance level for hypothesis tests (default is 0.05).</p></li>
 </ul>
 </dd>
