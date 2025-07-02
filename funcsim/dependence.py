@@ -78,6 +78,207 @@ def _skew_stable_draw(draw, alpha, beta, gamma, delta):
     return z * gamma + delta + beta * gamma * omega
 
 
+class MvKde():
+    """
+    A multivariate KDE distribution object.
+
+    Parameters
+    ----------
+    data : ArrayLike
+        Input data array of with variables in columns and observations
+        in rows.
+    bw : str, optional
+        Bandwidth selection method, 'scott' or 'silverman'.
+        Default is 'scott'.    
+    """
+    def __init__(self,
+                 data: conversions.ArrayLike,
+                 bw: str = 'scott'
+                ) -> None:
+        self._data = conversions.alToArray(data)
+        (self._M, self._K) = self._data.shape
+
+        # sample standard deviations
+        stdevs = data.std(axis=0)
+
+        # rule-of-thumb bandwidths
+        mult = self._M**(-1.0/(self._K+1.0))
+        self._scott =  np.square(mult * np.diagflat(stdevs))
+        smult = (4.0 / (self._K+2.0))**(2.0 / (self._K+4.0))
+        self._silverman = smult * self._scott
+
+        if bw == 'scott' or bw is None:
+            self._bw = self._scott
+        elif bw == 'silverman':
+            self._bw = self._silverman
+        else:
+            self._bw = bw
+
+    def draw(self,
+             ugen: Generator[float, None, None]
+             ) -> np.ndarray:
+        """
+        Generate a joint random draw from the multivariate distribution.
+
+        Parameters
+        ----------
+        ugen : Generator[float, None, None]
+            A generator that yields independent standard uniform random numbers.
+
+        Returns
+        -------
+        np.ndarray
+            A 1-D NumPy array representing a sample from the KDE.
+        """
+        # hist obs about which we will sample
+        m = _rand_int(next(draw), self._M)
+
+        # means for this sample
+        mu = self._data.iloc[m]
+
+        return normal(draw, self._bw, mu)
+
+
+class MvNorm():
+    """
+    A multivariate normal distribution object. A vector of means
+    and a covariance matrix are computed from the input data.  If the sample
+    covariance matrix is not positive definite, the Higham
+    method is used to calculate the nearest positive definite matrix.
+
+    Parameters
+    ----------
+    data : ArrayLike
+        Input data array of with variables in columns and observations
+        in rows.
+    """
+
+    def __init__(self,
+                 data: conversions.ArrayLike,
+                ) -> None:
+        self._data = conversions.alToArray(data)
+        (self._M, self._K) = self._data.shape
+
+        # fit mean and covariance
+        self._mu = self._data.mean(axis=0)
+
+        # compute covariance matrix
+        self._sigma = np.cov(self._data, rowvar=False)
+        # ensure covariance matrix is positive definite
+        if not np.all(np.linalg.eigvals(self._sigma) > 0):
+            # use the Higam method to ensure positive definiteness
+            self._sigma = nearby.nearestpd(self._data)
+
+        # get cholesky decomposition of covariance matrix
+        self._A = np.linalg.cholesky(self._sigma)
+
+    def draw(self,
+             ugen: Generator[float, None, None]
+             ) -> np.ndarray:
+        """
+        Generate a random sample from the multivariate distribution.
+
+        Parameters
+        ----------
+        ugen : Generator[float, None, None]
+            A generator yielding independent standard uniform random numbers.
+
+        Returns
+        -------
+        np.ndarray
+            A 1-D NumPy array representing a sample from the KDE.
+        """
+        uvec = [next(ugen) for i in range(self._K)]
+        return self._mu + np.dot(self._A, stats.norm.ppf(uvec))
+
+
+def covtocorr(cov: conversions.ArrayLike) -> np.ndarray:
+    """
+    Convert a covariance matrix to a correlation matrix.
+
+    This function takes a symmetric, positive definite covariance matrix
+    and returns the corresponding correlation matrix.
+
+    Parameters
+    ----------
+    cov : ArrayLike
+        Covariance matrix (square, symmetric).
+
+    Returns
+    -------
+    np.ndarray
+        The corresponding correlation matrix.
+
+    Raises
+    ------
+    ValueError
+        If the input is not a valid covariance matrix.
+
+    Notes
+    -----
+    The correlation matrix is computed by normalizing the covariance
+    matrix by the standard deviations of each variable.
+    """
+    cov_np = conversions.alToArray(cov)
+    _checkcov(cov_np, "covariance matrix")    
+
+    N = cov.shape[0]
+    sinv = np.identity(N) * np.sqrt(1.0 / np.diag(cov))
+    return sinv.dot(cov).dot(sinv)
+
+
+def spearman(array: conversions.ArrayLike) -> Tuple[float, Tuple[float, float]]:
+    """
+    Calculate Spearman's rank correlation coefficient and its 95% confidence
+    interval.
+
+    This function computes Spearman's rho for two variables and returns the
+    correlation coefficient along with the lower and upper bounds of the 95%
+    confidence interval.
+
+    Parameters
+    ----------
+    array : ArrayLike
+        Input data as an (N, 2) array-like object, where N is the number of
+        observations and each column represents a variable.
+
+    Returns
+    -------
+    tuple of (float, tuple of float)
+        A tuple (rho, ci), where rho is Spearman's rank correlation coefficient,
+        and ci is a tuple of (lower, upper) bounds for the 95% confidence
+        interval.
+
+    Raises
+    ------
+    AssertionError
+        If the input array does not have shape (N, 2).
+
+    Notes
+    -----
+    The confidence interval is computed using Fisher's z-transformation.
+    """
+    a = conversions.alToArray(array)
+    assert len(a.shape) == 2, "a must have exactly two dimensions"
+    assert a.shape[1] == 2, "a must have exactly two columns"
+
+    rho_s = stats.spearmanr(a)[0]
+
+    N = a.shape[0]
+    if N <= 3:
+        raise ValueError("At least 4 observations are required for confidence interval.")
+
+    stderr = 1.0 / math.sqrt(N - 3)
+    delta = 1.96 * stderr
+    lower = math.tanh(math.atanh(rho_s) - delta)
+    upper = math.tanh(math.atanh(rho_s) + delta)
+
+    return (rho_s, (lower, upper))
+
+
+
+
+
 def normal(draw: Generator[float, None, None],
            sigma: conversions.ArrayLike,
            mu: Optional[conversions.VectorLike] = None
@@ -285,200 +486,3 @@ def cgumbel(draw: Generator[float, None, None],
     v = _skew_stable_draw(draw, alpha, 1.0, gamma, 0.0)
     return np.array([Ftilde(-math.log(next(draw))/v) for i in range(nvars)])
 
-
-class MvKde():
-    """
-    A multivariate KDE distribution object.
-
-    Parameters
-    ----------
-    data : ArrayLike
-        Input data array of with variables in columns and observations
-        in rows.
-    bw : str, optional
-        Bandwidth selection method, 'scott' or 'silverman'.
-        Default is 'scott'.    
-    """
-    def __init__(self,
-                 data: conversions.ArrayLike,
-                 bw: str = 'scott'
-                ) -> None:
-        self._data = conversions.alToArray(data)
-        (self._M, self._K) = self._data.shape
-
-        # sample standard deviations
-        stdevs = data.std(axis=0)
-
-        # rule-of-thumb bandwidths
-        mult = self._M**(-1.0/(self._K+1.0))
-        self._scott =  np.square(mult * np.diagflat(stdevs))
-        smult = (4.0 / (self._K+2.0))**(2.0 / (self._K+4.0))
-        self._silverman = smult * self._scott
-
-        if bw == 'scott' or bw is None:
-            self._bw = self._scott
-        elif bw == 'silverman':
-            self._bw = self._silverman
-        else:
-            self._bw = bw
-
-    def sample(self,
-               ugen: Generator[float, None, None]
-              ) -> np.ndarray:
-        """
-        Generate a random sample from the multivariate distribution.
-
-        Parameters
-        ----------
-        ugen : Generator[float, None, None]
-            A generator yielding independent standard uniform random numbers.
-
-        Returns
-        -------
-        np.ndarray
-            A 1-D NumPy array representing a sample from the KDE.
-        """
-        # hist obs about which we will sample
-        m = _rand_int(next(draw), self._M)
-
-        # means for this sample
-        mu = self._data.iloc[m]
-
-        return normal(draw, self._bw, mu)
-
-
-class MvNorm():
-    """
-    A multivariate normal distribution object. A vector of means
-    and a covariance matrix are computed from the input data.  If the sample
-    covariance matrix is not positive definite, the Higham
-    method is used to calculate the nearest positive definite matrix.
-
-    Parameters
-    ----------
-    data : ArrayLike
-        Input data array of with variables in columns and observations
-        in rows.
-    """
-
-    def __init__(self,
-                 data: conversions.ArrayLike,
-                ) -> None:
-        self._data = conversions.alToArray(data)
-        (self._M, self._K) = self._data.shape
-
-        # fit mean and covariance
-        self._mu = self._data.mean(axis=0)
-
-        # compute covariance matrix
-        self._sigma = np.cov(self._data, rowvar=False)
-        # ensure covariance matrix is positive definite
-        if not np.all(np.linalg.eigvals(self._sigma) > 0):
-            # use the Higam method to ensure positive definiteness
-            self._sigma = nearby.nearestpd(self._data)
-
-        # get cholesky decomposition of covariance matrix
-        self._A = np.linalg.cholesky(self._sigma)
-
-    def sample(self,
-               ugen: Generator[float, None, None]
-              ) -> np.ndarray:
-        """
-        Generate a random sample from the multivariate distribution.
-
-        Parameters
-        ----------
-        ugen : Generator[float, None, None]
-            A generator yielding independent standard uniform random numbers.
-
-        Returns
-        -------
-        np.ndarray
-            A 1-D NumPy array representing a sample from the KDE.
-        """
-        uvec = [next(ugen) for i in range(self._K)]
-        return self._mu + np.dot(self._A, stats.norm.ppf(uvec))
-
-
-def covtocorr(cov: conversions.ArrayLike) -> np.ndarray:
-    """
-    Convert a covariance matrix to a correlation matrix.
-
-    This function takes a symmetric, positive definite covariance matrix
-    and returns the corresponding correlation matrix.
-
-    Parameters
-    ----------
-    cov : ArrayLike
-        Covariance matrix (square, symmetric).
-
-    Returns
-    -------
-    np.ndarray
-        The corresponding correlation matrix.
-
-    Raises
-    ------
-    ValueError
-        If the input is not a valid covariance matrix.
-
-    Notes
-    -----
-    The correlation matrix is computed by normalizing the covariance
-    matrix by the standard deviations of each variable.
-    """
-    cov_np = conversions.alToArray(cov)
-    _checkcov(cov_np, "covariance matrix")    
-
-    N = cov.shape[0]
-    sinv = np.identity(N) * np.sqrt(1.0 / np.diag(cov))
-    return sinv.dot(cov).dot(sinv)
-
-
-def spearman(array: conversions.ArrayLike) -> Tuple[float, Tuple[float, float]]:
-    """
-    Calculate Spearman's rank correlation coefficient and its 95% confidence
-    interval.
-
-    This function computes Spearman's rho for two variables and returns the
-    correlation coefficient along with the lower and upper bounds of the 95%
-    confidence interval.
-
-    Parameters
-    ----------
-    array : ArrayLike
-        Input data as an (N, 2) array-like object, where N is the number of
-        observations and each column represents a variable.
-
-    Returns
-    -------
-    tuple of (float, tuple of float)
-        A tuple (rho, ci), where rho is Spearman's rank correlation coefficient,
-        and ci is a tuple of (lower, upper) bounds for the 95% confidence
-        interval.
-
-    Raises
-    ------
-    AssertionError
-        If the input array does not have shape (N, 2).
-
-    Notes
-    -----
-    The confidence interval is computed using Fisher's z-transformation.
-    """
-    a = conversions.alToArray(array)
-    assert len(a.shape) == 2, "a must have exactly two dimensions"
-    assert a.shape[1] == 2, "a must have exactly two columns"
-
-    rho_s = stats.spearmanr(a)[0]
-
-    N = a.shape[0]
-    if N <= 3:
-        raise ValueError("At least 4 observations are required for confidence interval.")
-
-    stderr = 1.0 / math.sqrt(N - 3)
-    delta = 1.96 * stderr
-    lower = math.tanh(math.atanh(rho_s) - delta)
-    upper = math.tanh(math.atanh(rho_s) + delta)
-
-    return (rho_s, (lower, upper))

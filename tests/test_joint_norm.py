@@ -40,7 +40,7 @@ def test_MvNorm():
     mvn = fs.MvNorm(data)
 
     def f(ugen):
-        samp = mvn.sample(ugen)
+        samp = mvn.draw(ugen)
         return {"samp0": samp[0], "samp1": samp[1]}
 
     sampl = fs.simulate(f=f, ntrials=2000).sel(steps=0).values

@@ -37,15 +37,15 @@
 <h1>Simulation<a class="headerlink" href="#simulation" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">Kde</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'scott'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kde.html#Kde"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">Kde</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'scott'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kde.html#Kde"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>A univariate kernel density estimator (KDE) object.</p>
+<p>Univariate kernel density estimator (KDE).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>sample</strong> (<em>VectorLike</em>) – 1-D data sample (list, tuple, np.ndarray, xr.DataArray, or pd.Series).</p></li>
-<li><p><strong>bw</strong> (<em>str</em><em>, </em><em>optional</em>) – Bandwidth selection method, ‘scott’, ‘silverman’.
-Default is ‘scott’.</p></li>
+<li><p><strong>data</strong> (<em>conversions.VectorLike</em>) – 1-D data vector (list, tuple, np.ndarray, xr.DataArray, or pd.Series).</p></li>
+<li><p><strong>bw</strong> (<em>str</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – Bandwidth selection method (‘scott’, ‘silverman’) or a positive
+float to use as the bandwidth. Default is ‘scott’.</p></li>
 </ul>
 </dd>
 </dl>
@@ -122,11 +122,11 @@ Default is ‘scott’.</p></li>
 </dl>
 <dl class="py method">
 <dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#MvKde.sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Generate a random sample from the multivariate distribution.</p>
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#MvKde.draw"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate a joint random draw from the multivariate distribution.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>ugen</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator yielding independent standard uniform random numbers.</p>
+<dd class="field-odd"><p><strong>ugen</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator that yields independent standard uniform random numbers.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A 1-D NumPy array representing a sample from the KDE.</p>
@@ -155,7 +155,7 @@ in rows.</p>
 </dl>
 <dl class="py method">
 <dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#MvNorm.sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#MvNorm.draw"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Generate a random sample from the multivariate distribution.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>

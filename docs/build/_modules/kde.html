@@ -31,8 +31,8 @@
           <div class="body" role="main">
             
   <h1>Source code for kde</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span>
@@ -52,19 +52,21 @@
 <a class="viewcode-back" href="../api_simulation.html#funcsim.Kde">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Kde</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A univariate kernel density estimator (KDE) object.</span>
+<span class="sd">    Univariate kernel density estimator (KDE).</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    sample : VectorLike</span>
-<span class="sd">        1-D data sample (list, tuple, np.ndarray, xr.DataArray, or pd.Series).</span>
-<span class="sd">    bw : str, optional</span>
-<span class="sd">        Bandwidth selection method, &#39;scott&#39;, &#39;silverman&#39;.</span>
-<span class="sd">        Default is &#39;scott&#39;.</span>
+<span class="sd">    data : conversions.VectorLike</span>
+<span class="sd">        1-D data vector (list, tuple, np.ndarray, xr.DataArray, or pd.Series).</span>
+<span class="sd">    bw : str or float, optional</span>
+<span class="sd">        Bandwidth selection method (&#39;scott&#39;, &#39;silverman&#39;) or a positive</span>
+<span class="sd">        float to use as the bandwidth. Default is &#39;scott&#39;.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">bw</span><span class="o">=</span><span class="s1">&#39;scott&#39;</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">data</span> <span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">VectorLike</span><span class="p">,</span>
+                 <span class="n">bw</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;scott&#39;</span><span class="p">):</span>
 
-        <span class="n">sampleA</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">vlToArray</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+        <span class="n">sampleA</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">vlToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
         <span class="c1"># raw kde object</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">gkde</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">gaussian_kde</span><span class="p">(</span><span class="n">sampleA</span><span class="p">,</span> <span class="n">bw</span><span class="p">)</span>

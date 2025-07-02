@@ -1,5 +1,5 @@
-import math
 import functools
+from typing import Union
 import numpy as np
 import pandas as pd
 import scipy
@@ -17,19 +17,21 @@ def vectorized_method(func):
 
 class Kde():
     """
-    A univariate kernel density estimator (KDE) object.
+    Univariate kernel density estimator (KDE).
 
     Parameters
     ----------
-    sample : VectorLike
-        1-D data sample (list, tuple, np.ndarray, xr.DataArray, or pd.Series).
-    bw : str, optional
-        Bandwidth selection method, 'scott', 'silverman'.
-        Default is 'scott'.
+    data : conversions.VectorLike
+        1-D data vector (list, tuple, np.ndarray, xr.DataArray, or pd.Series).
+    bw : str or float, optional
+        Bandwidth selection method ('scott', 'silverman') or a positive
+        float to use as the bandwidth. Default is 'scott'.
     """
-    def __init__(self, sample, bw='scott'):
+    def __init__(self,
+                 data : conversions.VectorLike,
+                 bw : Union[str, float] = 'scott'):
 
-        sampleA = conversions.vlToArray(sample)
+        sampleA = conversions.vlToArray(data)
 
         # raw kde object
         self.gkde = stats.gaussian_kde(sampleA, bw)

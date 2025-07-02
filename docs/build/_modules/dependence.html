@@ -111,6 +111,225 @@
     <span class="k">return</span> <span class="n">z</span> <span class="o">*</span> <span class="n">gamma</span> <span class="o">+</span> <span class="n">delta</span> <span class="o">+</span> <span class="n">beta</span> <span class="o">*</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">omega</span>
 
 
+<div class="viewcode-block" id="MvKde">
+<a class="viewcode-back" href="../api_simulation.html#funcsim.MvKde">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MvKde</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A multivariate KDE distribution object.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : ArrayLike</span>
+<span class="sd">        Input data array of with variables in columns and observations</span>
+<span class="sd">        in rows.</span>
+<span class="sd">    bw : str, optional</span>
+<span class="sd">        Bandwidth selection method, &#39;scott&#39; or &#39;silverman&#39;.</span>
+<span class="sd">        Default is &#39;scott&#39;.    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
+                 <span class="n">bw</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;scott&#39;</span>
+                <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># sample standard deviations</span>
+        <span class="n">stdevs</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># rule-of-thumb bandwidths</span>
+        <span class="n">mult</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="o">+</span><span class="mf">1.0</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scott</span> <span class="o">=</span>  <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">mult</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">diagflat</span><span class="p">(</span><span class="n">stdevs</span><span class="p">))</span>
+        <span class="n">smult</span> <span class="o">=</span> <span class="p">(</span><span class="mf">4.0</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="o">+</span><span class="mf">2.0</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="o">+</span><span class="mf">4.0</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_silverman</span> <span class="o">=</span> <span class="n">smult</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scott</span>
+
+        <span class="k">if</span> <span class="n">bw</span> <span class="o">==</span> <span class="s1">&#39;scott&#39;</span> <span class="ow">or</span> <span class="n">bw</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scott</span>
+        <span class="k">elif</span> <span class="n">bw</span> <span class="o">==</span> <span class="s1">&#39;silverman&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_silverman</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span> <span class="o">=</span> <span class="n">bw</span>
+
+<div class="viewcode-block" id="MvKde.draw">
+<a class="viewcode-back" href="../api_simulation.html#funcsim.MvKde.draw">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+             <span class="n">ugen</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+             <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate a joint random draw from the multivariate distribution.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ugen : Generator[float, None, None]</span>
+<span class="sd">            A generator that yields independent standard uniform random numbers.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        np.ndarray</span>
+<span class="sd">            A 1-D NumPy array representing a sample from the KDE.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># hist obs about which we will sample</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">_rand_int</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">)</span>
+
+        <span class="c1"># means for this sample</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">normal</span><span class="p">(</span><span class="n">draw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="MvNorm">
+<a class="viewcode-back" href="../api_simulation.html#funcsim.MvNorm">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MvNorm</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A multivariate normal distribution object. A vector of means</span>
+<span class="sd">    and a covariance matrix are computed from the input data.  If the sample</span>
+<span class="sd">    covariance matrix is not positive definite, the Higham</span>
+<span class="sd">    method is used to calculate the nearest positive definite matrix.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : ArrayLike</span>
+<span class="sd">        Input data array of with variables in columns and observations</span>
+<span class="sd">        in rows.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
+                <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># fit mean and covariance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># compute covariance matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">,</span> <span class="n">rowvar</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="c1"># ensure covariance matrix is positive definite</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvals</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="c1"># use the Higam method to ensure positive definiteness</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span> <span class="o">=</span> <span class="n">nearby</span><span class="o">.</span><span class="n">nearestpd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span>
+
+        <span class="c1"># get cholesky decomposition of covariance matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MvNorm.draw">
+<a class="viewcode-back" href="../api_simulation.html#funcsim.MvNorm.draw">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+             <span class="n">ugen</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+             <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate a random sample from the multivariate distribution.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ugen : Generator[float, None, None]</span>
+<span class="sd">            A generator yielding independent standard uniform random numbers.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        np.ndarray</span>
+<span class="sd">            A 1-D NumPy array representing a sample from the KDE.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">uvec</span> <span class="o">=</span> <span class="p">[</span><span class="nb">next</span><span class="p">(</span><span class="n">ugen</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mu</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_A</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="n">uvec</span><span class="p">))</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="covtocorr">
+<a class="viewcode-back" href="../api_stattools.html#funcsim.covtocorr">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">covtocorr</span><span class="p">(</span><span class="n">cov</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert a covariance matrix to a correlation matrix.</span>
+
+<span class="sd">    This function takes a symmetric, positive definite covariance matrix</span>
+<span class="sd">    and returns the corresponding correlation matrix.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cov : ArrayLike</span>
+<span class="sd">        Covariance matrix (square, symmetric).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray</span>
+<span class="sd">        The corresponding correlation matrix.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the input is not a valid covariance matrix.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The correlation matrix is computed by normalizing the covariance</span>
+<span class="sd">    matrix by the standard deviations of each variable.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cov_np</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span>
+    <span class="n">_checkcov</span><span class="p">(</span><span class="n">cov_np</span><span class="p">,</span> <span class="s2">&quot;covariance matrix&quot;</span><span class="p">)</span>    
+
+    <span class="n">N</span> <span class="o">=</span> <span class="n">cov</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">sinv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">N</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">cov</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">sinv</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sinv</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="spearman">
+<a class="viewcode-back" href="../api_stattools.html#funcsim.spearman">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">spearman</span><span class="p">(</span><span class="n">array</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate Spearman&#39;s rank correlation coefficient and its 95% confidence</span>
+<span class="sd">    interval.</span>
+
+<span class="sd">    This function computes Spearman&#39;s rho for two variables and returns the</span>
+<span class="sd">    correlation coefficient along with the lower and upper bounds of the 95%</span>
+<span class="sd">    confidence interval.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    array : ArrayLike</span>
+<span class="sd">        Input data as an (N, 2) array-like object, where N is the number of</span>
+<span class="sd">        observations and each column represents a variable.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple of (float, tuple of float)</span>
+<span class="sd">        A tuple (rho, ci), where rho is Spearman&#39;s rank correlation coefficient,</span>
+<span class="sd">        and ci is a tuple of (lower, upper) bounds for the 95% confidence</span>
+<span class="sd">        interval.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    AssertionError</span>
+<span class="sd">        If the input array does not have shape (N, 2).</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The confidence interval is computed using Fisher&#39;s z-transformation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">array</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;a must have exactly two dimensions&quot;</span>
+    <span class="k">assert</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;a must have exactly two columns&quot;</span>
+
+    <span class="n">rho_s</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">spearmanr</span><span class="p">(</span><span class="n">a</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">N</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">N</span> <span class="o">&lt;=</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;At least 4 observations are required for confidence interval.&quot;</span><span class="p">)</span>
+
+    <span class="n">stderr</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="mf">1.96</span> <span class="o">*</span> <span class="n">stderr</span>
+    <span class="n">lower</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">atanh</span><span class="p">(</span><span class="n">rho_s</span><span class="p">)</span> <span class="o">-</span> <span class="n">delta</span><span class="p">)</span>
+    <span class="n">upper</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">atanh</span><span class="p">(</span><span class="n">rho_s</span><span class="p">)</span> <span class="o">+</span> <span class="n">delta</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">rho_s</span><span class="p">,</span> <span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">))</span></div>
+
+
+
+
+
+
 <div class="viewcode-block" id="normal">
 <a class="viewcode-back" href="../api_simulation.html#funcsim.normal">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">normal</span><span class="p">(</span><span class="n">draw</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
@@ -332,221 +551,6 @@
     <span class="n">v</span> <span class="o">=</span> <span class="n">_skew_stable_draw</span><span class="p">(</span><span class="n">draw</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">Ftilde</span><span class="p">(</span><span class="o">-</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">))</span><span class="o">/</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nvars</span><span class="p">)])</span></div>
 
-
-
-<div class="viewcode-block" id="MvKde">
-<a class="viewcode-back" href="../api_simulation.html#funcsim.MvKde">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">MvKde</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A multivariate KDE distribution object.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    data : ArrayLike</span>
-<span class="sd">        Input data array of with variables in columns and observations</span>
-<span class="sd">        in rows.</span>
-<span class="sd">    bw : str, optional</span>
-<span class="sd">        Bandwidth selection method, &#39;scott&#39; or &#39;silverman&#39;.</span>
-<span class="sd">        Default is &#39;scott&#39;.    </span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                 <span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
-                 <span class="n">bw</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;scott&#39;</span>
-                <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">shape</span>
-
-        <span class="c1"># sample standard deviations</span>
-        <span class="n">stdevs</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-
-        <span class="c1"># rule-of-thumb bandwidths</span>
-        <span class="n">mult</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="o">+</span><span class="mf">1.0</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_scott</span> <span class="o">=</span>  <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">mult</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">diagflat</span><span class="p">(</span><span class="n">stdevs</span><span class="p">))</span>
-        <span class="n">smult</span> <span class="o">=</span> <span class="p">(</span><span class="mf">4.0</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="o">+</span><span class="mf">2.0</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="o">+</span><span class="mf">4.0</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_silverman</span> <span class="o">=</span> <span class="n">smult</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scott</span>
-
-        <span class="k">if</span> <span class="n">bw</span> <span class="o">==</span> <span class="s1">&#39;scott&#39;</span> <span class="ow">or</span> <span class="n">bw</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scott</span>
-        <span class="k">elif</span> <span class="n">bw</span> <span class="o">==</span> <span class="s1">&#39;silverman&#39;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_silverman</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span> <span class="o">=</span> <span class="n">bw</span>
-
-<div class="viewcode-block" id="MvKde.sample">
-<a class="viewcode-back" href="../api_simulation.html#funcsim.MvKde.sample">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-               <span class="n">ugen</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
-              <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Generate a random sample from the multivariate distribution.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        ugen : Generator[float, None, None]</span>
-<span class="sd">            A generator yielding independent standard uniform random numbers.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        np.ndarray</span>
-<span class="sd">            A 1-D NumPy array representing a sample from the KDE.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># hist obs about which we will sample</span>
-        <span class="n">m</span> <span class="o">=</span> <span class="n">_rand_int</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">)</span>
-
-        <span class="c1"># means for this sample</span>
-        <span class="n">mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
-
-        <span class="k">return</span> <span class="n">normal</span><span class="p">(</span><span class="n">draw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span></div>
-</div>
-
-
-
-<div class="viewcode-block" id="MvNorm">
-<a class="viewcode-back" href="../api_simulation.html#funcsim.MvNorm">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">MvNorm</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A multivariate normal distribution object. A vector of means</span>
-<span class="sd">    and a covariance matrix are computed from the input data.  If the sample</span>
-<span class="sd">    covariance matrix is not positive definite, the Higham</span>
-<span class="sd">    method is used to calculate the nearest positive definite matrix.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    data : ArrayLike</span>
-<span class="sd">        Input data array of with variables in columns and observations</span>
-<span class="sd">        in rows.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                 <span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
-                <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">shape</span>
-
-        <span class="c1"># fit mean and covariance</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-
-        <span class="c1"># compute covariance matrix</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">,</span> <span class="n">rowvar</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="c1"># ensure covariance matrix is positive definite</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvals</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
-            <span class="c1"># use the Higam method to ensure positive definiteness</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span> <span class="o">=</span> <span class="n">nearby</span><span class="o">.</span><span class="n">nearestpd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span>
-
-        <span class="c1"># get cholesky decomposition of covariance matrix</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span><span class="p">)</span>
-
-<div class="viewcode-block" id="MvNorm.sample">
-<a class="viewcode-back" href="../api_simulation.html#funcsim.MvNorm.sample">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-               <span class="n">ugen</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
-              <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Generate a random sample from the multivariate distribution.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        ugen : Generator[float, None, None]</span>
-<span class="sd">            A generator yielding independent standard uniform random numbers.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        np.ndarray</span>
-<span class="sd">            A 1-D NumPy array representing a sample from the KDE.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">uvec</span> <span class="o">=</span> <span class="p">[</span><span class="nb">next</span><span class="p">(</span><span class="n">ugen</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)]</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mu</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_A</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="n">uvec</span><span class="p">))</span></div>
-</div>
-
-
-
-<div class="viewcode-block" id="covtocorr">
-<a class="viewcode-back" href="../api_stattools.html#funcsim.covtocorr">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">covtocorr</span><span class="p">(</span><span class="n">cov</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Convert a covariance matrix to a correlation matrix.</span>
-
-<span class="sd">    This function takes a symmetric, positive definite covariance matrix</span>
-<span class="sd">    and returns the corresponding correlation matrix.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    cov : ArrayLike</span>
-<span class="sd">        Covariance matrix (square, symmetric).</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    np.ndarray</span>
-<span class="sd">        The corresponding correlation matrix.</span>
-
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    ValueError</span>
-<span class="sd">        If the input is not a valid covariance matrix.</span>
-
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    The correlation matrix is computed by normalizing the covariance</span>
-<span class="sd">    matrix by the standard deviations of each variable.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">cov_np</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span>
-    <span class="n">_checkcov</span><span class="p">(</span><span class="n">cov_np</span><span class="p">,</span> <span class="s2">&quot;covariance matrix&quot;</span><span class="p">)</span>    
-
-    <span class="n">N</span> <span class="o">=</span> <span class="n">cov</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">sinv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">N</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">cov</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">sinv</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sinv</span><span class="p">)</span></div>
-
-
-
-<div class="viewcode-block" id="spearman">
-<a class="viewcode-back" href="../api_stattools.html#funcsim.spearman">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">spearman</span><span class="p">(</span><span class="n">array</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Calculate Spearman&#39;s rank correlation coefficient and its 95% confidence</span>
-<span class="sd">    interval.</span>
-
-<span class="sd">    This function computes Spearman&#39;s rho for two variables and returns the</span>
-<span class="sd">    correlation coefficient along with the lower and upper bounds of the 95%</span>
-<span class="sd">    confidence interval.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    array : ArrayLike</span>
-<span class="sd">        Input data as an (N, 2) array-like object, where N is the number of</span>
-<span class="sd">        observations and each column represents a variable.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    tuple of (float, tuple of float)</span>
-<span class="sd">        A tuple (rho, ci), where rho is Spearman&#39;s rank correlation coefficient,</span>
-<span class="sd">        and ci is a tuple of (lower, upper) bounds for the 95% confidence</span>
-<span class="sd">        interval.</span>
-
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    AssertionError</span>
-<span class="sd">        If the input array does not have shape (N, 2).</span>
-
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    The confidence interval is computed using Fisher&#39;s z-transformation.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">a</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">array</span><span class="p">)</span>
-    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;a must have exactly two dimensions&quot;</span>
-    <span class="k">assert</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;a must have exactly two columns&quot;</span>
-
-    <span class="n">rho_s</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">spearmanr</span><span class="p">(</span><span class="n">a</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-
-    <span class="n">N</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">N</span> <span class="o">&lt;=</span> <span class="mi">3</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;At least 4 observations are required for confidence interval.&quot;</span><span class="p">)</span>
-
-    <span class="n">stderr</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="mi">3</span><span class="p">)</span>
-    <span class="n">delta</span> <span class="o">=</span> <span class="mf">1.96</span> <span class="o">*</span> <span class="n">stderr</span>
-    <span class="n">lower</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">atanh</span><span class="p">(</span><span class="n">rho_s</span><span class="p">)</span> <span class="o">-</span> <span class="n">delta</span><span class="p">)</span>
-    <span class="n">upper</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">atanh</span><span class="p">(</span><span class="n">rho_s</span><span class="p">)</span> <span class="o">+</span> <span class="n">delta</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="p">(</span><span class="n">rho_s</span><span class="p">,</span> <span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">))</span></div>
 
 </pre></div>
 
