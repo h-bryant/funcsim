@@ -154,8 +154,8 @@ def vlCoords(vl: VectorLike) -> pd.Index:
 
     Returns
     -------
-    List[str]
-        A list of coordinates corresponding to the vector-like object.
+    pandas.Index
+        A pandas index with coordinates corresponding to the vector-like object.
     """
     if not vlValidate(vl):
         raise ValueError("argument passed is not a vector-like object")
@@ -176,3 +176,28 @@ def vlCoords(vl: VectorLike) -> pd.Index:
         longest_dim = max(dim_size_to_name.keys())
         ret = vl.coords[dim_size_to_name[longest_dim]]
         return pd.Index(ret)
+
+
+def alColNames(al: ArrayLike) -> pd.Index:
+    """
+    Get or create column names from an array-like object.
+
+    Parameters
+    ----------
+    al : ArrayLike
+        The array-like object to process.
+
+    Returns
+    -------
+    pandas.Index
+        Column names of the array-like object.
+    """
+    if not alValidate(al):
+        raise ValueError("argument passed is not an array-like object")
+    if isinstance(al, pd.DataFrame):
+        return al.columns
+    if isinstance(al, xr.DataArray):
+        return al.coords[al.dims[-1]]
+    if isinstance(al, np.ndarray):
+        return pd.Index([f"v{i}" for i in range(al.shape[1])])
+    raise ValueError("Unsupported array-like type")

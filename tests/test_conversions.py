@@ -3,7 +3,7 @@ import pandas as pd
 import xarray as xr
 import pytest
 
-from funcsim.conversions import vlValidate, vlToArray, vlCoords
+from funcsim.conversions import vlValidate, vlToArray, vlCoords, alColNames
 
 def test_vlValidate_list():
     assert vlValidate([1, 2, 3]) is True
@@ -128,4 +128,26 @@ def test_vlCoords_6():
     c = vlCoords(a)
     assert isinstance(c, pd.Index)
     idx = pd.Index([0, 1, 2])
+    assert c.equals(idx)
+
+def test_alColNames_0():
+    a = np.array([[1, 2, 3]])
+    c = alColNames(a)
+    assert isinstance(c, pd.Index)
+    idx = pd.Index(["v0", "v1", "v2"])
+    assert c.equals(idx)
+
+def test_alColNames_1():
+    a = np.array([[1], [2], [3]])
+    c = alColNames(a)
+    assert isinstance(c, pd.Index)
+    idx = pd.Index(["v0"])
+    assert c.equals(idx)
+
+def test_alColNames_2():
+    a = np.array([[1, 2, 3]])
+    idx = pd.Index(["v0", "v1",  "v2"])
+    da = xr.DataArray(a, coords={"dim_0": [0], "dim_1": idx})
+    c = vlCoords(da)
+    assert isinstance(c, pd.Index)
     assert c.equals(idx)
