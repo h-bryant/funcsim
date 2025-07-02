@@ -129,10 +129,12 @@ Default is ‘scott’.</p></li>
 <dd class="field-odd"><p><strong>ugen</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator that yields independent standard uniform random numbers.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A 1-D NumPy array representing a sample from the KDE.</p>
+<dd class="field-even"><p>A pandas Series representing a joint draw from the KDE.  The index
+values are the variable names, and the values are the random
+values.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>np.ndarray</p>
+<dd class="field-odd"><p>pd.Series</p>
 </dd>
 </dl>
 </dd></dl>
@@ -156,16 +158,18 @@ in rows.</p>
 <dl class="py method">
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#MvNorm.draw"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Generate a random sample from the multivariate distribution.</p>
+<dd><p>Generate a joint random draw from the multivariate distribution.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>ugen</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator yielding independent standard uniform random numbers.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A 1-D NumPy array representing a sample from the KDE.</p>
+<dd class="field-even"><p>A pandas Series representing a joint draw from the KDE.  The index
+values are the variable names, and the values are the random
+values.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>np.ndarray</p>
+<dd class="field-odd"><p>pd.Series</p>
 </dd>
 </dl>
 </dd></dl>

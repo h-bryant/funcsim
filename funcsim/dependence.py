@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import pandas as pd
 from scipy import stats
 from typing import Generator, Optional, Tuple
 import conversions
@@ -96,6 +97,7 @@ class MvKde():
                  bw: str = 'scott'
                 ) -> None:
         self._data = conversions.alToArray(data)
+        self._names = conversions.alColNames(data)
         (self._M, self._K) = self._data.shape
 
         # sample standard deviations
@@ -116,7 +118,7 @@ class MvKde():
 
     def draw(self,
              ugen: Generator[float, None, None]
-             ) -> np.ndarray:
+             ) -> pd.Series:
         """
         Generate a joint random draw from the multivariate distribution.
 
@@ -127,8 +129,10 @@ class MvKde():
 
         Returns
         -------
-        np.ndarray
-            A 1-D NumPy array representing a sample from the KDE.
+        pd.Series
+            A pandas Series representing a joint draw from the KDE.  The index
+            values are the variable names, and the values are the random
+            values.
         """
         # hist obs about which we will sample
         m = _rand_int(next(draw), self._M)
@@ -156,7 +160,9 @@ class MvNorm():
     def __init__(self,
                  data: conversions.ArrayLike,
                 ) -> None:
+
         self._data = conversions.alToArray(data)
+        self._names = conversions.alColNames(data)
         (self._M, self._K) = self._data.shape
 
         # fit mean and covariance
@@ -164,6 +170,7 @@ class MvNorm():
 
         # compute covariance matrix
         self._sigma = np.cov(self._data, rowvar=False)
+
         # ensure covariance matrix is positive definite
         if not np.all(np.linalg.eigvals(self._sigma) > 0):
             # use the Higam method to ensure positive definiteness
@@ -172,11 +179,14 @@ class MvNorm():
         # get cholesky decomposition of covariance matrix
         self._A = np.linalg.cholesky(self._sigma)
 
+        # warn if data seem non-normally distributed
+        # TODO
+
     def draw(self,
              ugen: Generator[float, None, None]
-             ) -> np.ndarray:
+             ) -> pd.Series:
         """
-        Generate a random sample from the multivariate distribution.
+        Generate a joint random draw from the multivariate distribution.
 
         Parameters
         ----------
@@ -185,11 +195,14 @@ class MvNorm():
 
         Returns
         -------
-        np.ndarray
-            A 1-D NumPy array representing a sample from the KDE.
+        pd.Series
+            A pandas Series representing a joint draw from the KDE.  The index
+            values are the variable names, and the values are the random
+            values.
         """
         uvec = [next(ugen) for i in range(self._K)]
-        return self._mu + np.dot(self._A, stats.norm.ppf(uvec))
+        retA = self._mu + np.dot(self._A, stats.norm.ppf(uvec))
+        return pd.Series(retA, index=self._names)
 
 
 def covtocorr(cov: conversions.ArrayLike) -> np.ndarray:

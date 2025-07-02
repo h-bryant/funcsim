@@ -280,7 +280,7 @@ def compare(data: conversions.VectorLike,
             msg = (f"encountered a problem "
 				   f"while fitting the {r.distName} distribution. "
                    f"It will not be included in the results.")
-            warnings.warn(msg, UserWarning)
+            warnings.warn(msg, RuntimeWarning)
     lines = [_result_line(None, header=True)] + \
         list(map(_result_line, results_edit))
     return "".join(lines)
