@@ -252,7 +252,7 @@
 
 <div class="viewcode-block" id="covtocorr">
 <a class="viewcode-back" href="../api_stattools.html#funcsim.covtocorr">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">covtocorr</span><span class="p">(</span><span class="n">cov</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">covtocorr</span><span class="p">(</span><span class="n">cov</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Convert a covariance matrix to a correlation matrix.</span>
 
@@ -266,8 +266,8 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    np.ndarray</span>
-<span class="sd">        The corresponding correlation matrix.</span>
+<span class="sd">    pd.DataFrame</span>
+<span class="sd">        A pandas DataFrame representing the correlation matrix.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
@@ -280,11 +280,13 @@
 <span class="sd">    matrix by the standard deviations of each variable.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">cov_np</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alColNames</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span>
     <span class="n">_checkcov</span><span class="p">(</span><span class="n">cov_np</span><span class="p">,</span> <span class="s2">&quot;covariance matrix&quot;</span><span class="p">)</span>    
 
     <span class="n">N</span> <span class="o">=</span> <span class="n">cov</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">sinv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">N</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">cov</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">sinv</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sinv</span><span class="p">)</span></div>
+    <span class="n">corr</span> <span class="o">=</span> <span class="n">sinv</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">sinv</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">corr</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">names</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">names</span><span class="p">)</span></div>
 
 
 

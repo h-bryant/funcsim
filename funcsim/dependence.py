@@ -205,7 +205,7 @@ class MvNorm():
         return pd.Series(retA, index=self._names)
 
 
-def covtocorr(cov: conversions.ArrayLike) -> np.ndarray:
+def covtocorr(cov: conversions.ArrayLike) -> pd.DataFrame:
     """
     Convert a covariance matrix to a correlation matrix.
 
@@ -219,8 +219,8 @@ def covtocorr(cov: conversions.ArrayLike) -> np.ndarray:
 
     Returns
     -------
-    np.ndarray
-        The corresponding correlation matrix.
+    pd.DataFrame
+        A pandas DataFrame representing the correlation matrix.
 
     Raises
     ------
@@ -233,11 +233,13 @@ def covtocorr(cov: conversions.ArrayLike) -> np.ndarray:
     matrix by the standard deviations of each variable.
     """
     cov_np = conversions.alToArray(cov)
+    names = conversions.alColNames(cov)
     _checkcov(cov_np, "covariance matrix")    
 
     N = cov.shape[0]
     sinv = np.identity(N) * np.sqrt(1.0 / np.diag(cov))
-    return sinv.dot(cov).dot(sinv)
+    corr = sinv.dot(cov).dot(sinv)
+    return pd.DataFrame(corr, index=names, columns=names)
 
 
 def spearman(array: conversions.ArrayLike) -> Tuple[float, Tuple[float, float]]:
