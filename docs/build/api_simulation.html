@@ -153,7 +153,7 @@ marginals.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">imanconover</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spear</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vectors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imanconover.html#imanconover"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">imanconover</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spear</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vectors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imanconover.html#imanconover"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Induce a Spearman correlation using the Iman &amp; Conover (1980) method.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -162,12 +162,11 @@ marginals.</p>
 positive definite).</p></li>
 <li><p><strong>vectors</strong> (<em>list</em><em> of </em><em>VectorLike</em>) – List of vectors, each representing draws for one variable.</p></li>
 <li><p><strong>names</strong> (<em>list</em><em> of </em><em>str</em><em>, </em><em>optional</em>) – Column names for the output DataFrame. Defaults to v1, v2, …</p></li>
-<li><p><strong>index</strong> (<em>pandas.Index</em><em>, </em><em>optional</em>) – Index for the output DataFrame. Defaults to a range index.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>DataFrame with the same shape as the input vectors, with induced
-Spearman correlation structure.</p>
+<dd class="field-even"><p>DataFrame with one column for each vector/variable, where the
+data refelct the desired Spearman correlation structure.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>pandas.DataFrame</p>
@@ -262,9 +261,9 @@ covariance matrix to induce the desired correlation structure.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>f</strong> (<em>function</em>) – Function that performs a single trial in a static simulation or a s
 single step through time in a recursive dynamic simulation.  Should take
-‘draw’ as a first argument in either case, where ‘draw’ will be a
+‘ugen’ as a first argument in either case, where ‘ugen’ will be a
 generator that emits standard uniform draws (or standard normal draws,
-if <cite>stdnorm</cite> is True) that will be provided by <code class="docutils literal notranslate"><span class="pre">simulate</span></code>.
+if <cite>stdnorm</cite> is True) that will be passed to f by <code class="docutils literal notranslate"><span class="pre">simulate</span></code>.
 In the case of a recursive dynamic simulation that employs past values,
 f should take ‘data’ as a second argument, where this will be a type of
 array that is also provided by <code class="docutils literal notranslate"><span class="pre">simulate.</span></code> This function should return

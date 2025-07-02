@@ -2,13 +2,13 @@ from scipy import stats
 import funcsim as fs
 
 
-def trial(draw):
+def trial(ugen):
     # function to perform one trial.
     # simulate one std. norm variable, and one Bernoilli variable
 
     # independent uniform draws
-    u1 = next(draw)
-    u2 = next(draw)
+    u1 = next(ugen)
+    u2 = next(ugen)
 
     # inverse CDF transformations
     eps = stats.norm.ppf(u1)

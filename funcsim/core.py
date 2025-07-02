@@ -146,9 +146,9 @@ def simulate(f: Callable[[Generator[int, float, None],
     f : function
         Function that performs a single trial in a static simulation or a s
         single step through time in a recursive dynamic simulation.  Should take
-        'draw' as a first argument in either case, where 'draw' will be a
+        'ugen' as a first argument in either case, where 'ugen' will be a
         generator that emits standard uniform draws (or standard normal draws,
-        if `stdnorm` is True) that will be provided by ``simulate``.
+        if `stdnorm` is True) that will be passed to f by ``simulate``.
         In the case of a recursive dynamic simulation that employs past values,
         f should take 'data' as a second argument, where this will be a type of
         array that is also provided by ``simulate.`` This function should return

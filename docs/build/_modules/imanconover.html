@@ -79,7 +79,8 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">imanconover</span><span class="p">(</span><span class="n">spear</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
                 <span class="n">vectors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">conversions</span><span class="o">.</span><span class="n">VectorLike</span><span class="p">],</span>
                 <span class="n">names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[],</span>
-                <span class="n">index</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+                <span class="p">)</span><span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Induce a Spearman correlation using the Iman &amp; Conover (1980) method.</span>
 
@@ -92,14 +93,12 @@
 <span class="sd">        List of vectors, each representing draws for one variable.</span>
 <span class="sd">    names : list of str, optional</span>
 <span class="sd">        Column names for the output DataFrame. Defaults to v1, v2, ...</span>
-<span class="sd">    index : pandas.Index, optional</span>
-<span class="sd">        Index for the output DataFrame. Defaults to a range index.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    pandas.DataFrame</span>
-<span class="sd">        DataFrame with the same shape as the input vectors, with induced</span>
-<span class="sd">        Spearman correlation structure.</span>
+<span class="sd">        DataFrame with one column for each vector/variable, where the</span>
+<span class="sd">        data refelct the desired Spearman correlation structure.</span>
 
 <span class="sd">    References</span>
 <span class="sd">    ----------</span>
@@ -119,9 +118,6 @@
     <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vectors</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">!=</span> <span class="n">N</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;All vectors must have the same length.&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">!=</span> <span class="n">N</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The index length must match the length&quot;</span>
-                         <span class="s2">&quot;of the vectors.&quot;</span><span class="p">)</span>
 
     <span class="c1"># IC step 2</span>
     <span class="n">L</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="n">spear</span><span class="p">)</span>
@@ -141,10 +137,18 @@
     <span class="c1"># pack into a DataFrame</span>
     <span class="k">if</span> <span class="n">names</span> <span class="o">==</span> <span class="p">[]:</span>
         <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;v</span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">K</span><span class="p">)]</span>
-    <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">RangeIndex</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">vlCoords</span><span class="p">(</span><span class="n">vectors</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
     <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">names</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">)</span></div>
 
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="c1"># usage example</span>
+    <span class="n">v1</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="mf">4.0</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">)</span><span class="o">.</span><span class="n">rvs</span><span class="p">(</span><span class="mi">30</span><span class="p">)</span>
+    <span class="n">v2</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">3.2</span><span class="p">)</span><span class="o">.</span><span class="n">rvs</span><span class="p">(</span><span class="mi">30</span><span class="p">)</span>
+    <span class="n">rho_s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.89</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.89</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]])</span>
+    <span class="n">ic</span> <span class="o">=</span> <span class="n">imanconover</span><span class="p">(</span><span class="n">rho_s</span><span class="p">,</span> <span class="p">[</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">ic</span><span class="p">)</span>
 </pre></div>
 
           </div>

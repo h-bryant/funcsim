@@ -44,12 +44,12 @@ through time (for a recursive-dynamic simulation).</p>
 <p>For a static simulation, the trial function has the
 following form:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># function to perform one trial</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">trial</span><span class="p">(</span><span class="n">draw</span><span class="p">):</span>
-    <span class="c1"># &#39;draw&#39; argument is required and must be the first argumnet</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">trial</span><span class="p">(</span><span class="n">ugen</span><span class="p">):</span>
+    <span class="c1"># &#39;ugen&#39; argument is required and must be the first argumnet</span>
 
     <span class="c1"># independent draws from U(0, 1)</span>
-    <span class="n">u1</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">)</span>
-    <span class="n">u2</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">)</span>
+    <span class="n">u1</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">ugen</span><span class="p">)</span>
+    <span class="n">u2</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">ugen</span><span class="p">)</span>
 
     <span class="c1"># do some kind of work</span>
     <span class="n">x</span> <span class="o">=</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">u1</span>
@@ -80,8 +80,8 @@ a recursive-dynamic simulation is appropriate.  The user specifies a
 function describing one step forward, as in the example below.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">stats</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="n">draw</span><span class="p">,</span> <span class="n">hist</span><span class="p">):</span>
-    <span class="c1"># Function to take one step through time. The &#39;draw&#39; argument</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="n">ugen</span><span class="p">,</span> <span class="n">hist</span><span class="p">):</span>
+    <span class="c1"># Function to take one step through time. The &#39;ugen&#39; argument</span>
     <span class="c1"># is first and is required as with the static simulation.</span>
     <span class="c1"># The &#39;hist&#39; argument is needed if &#39;f&#39; refers to lagged values of</span>
     <span class="c1"># some sort, as in this example.</span>
@@ -90,7 +90,7 @@ function describing one step forward, as in the example below.</p>
     <span class="n">plag</span> <span class="o">=</span> <span class="n">hist</span><span class="o">.</span><span class="n">recall</span><span class="p">(</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">lag</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="c1"># do some kind of work</span>
-    <span class="n">pnew</span> <span class="o">=</span> <span class="mf">0.25</span> <span class="o">+</span> <span class="mf">0.9</span> <span class="o">*</span> <span class="n">plag</span> <span class="o">+</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">))</span>
+    <span class="n">pnew</span> <span class="o">=</span> <span class="mf">0.25</span> <span class="o">+</span> <span class="mf">0.9</span> <span class="o">*</span> <span class="n">plag</span> <span class="o">+</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">ugen</span><span class="p">))</span>
 
     <span class="c1"># return new value(s) for this step/time period</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;p&quot;</span><span class="p">:</span> <span class="n">pnew</span><span class="p">}</span>

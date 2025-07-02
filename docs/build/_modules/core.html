@@ -181,9 +181,9 @@
 <span class="sd">    f : function</span>
 <span class="sd">        Function that performs a single trial in a static simulation or a s</span>
 <span class="sd">        single step through time in a recursive dynamic simulation.  Should take</span>
-<span class="sd">        &#39;draw&#39; as a first argument in either case, where &#39;draw&#39; will be a</span>
+<span class="sd">        &#39;ugen&#39; as a first argument in either case, where &#39;ugen&#39; will be a</span>
 <span class="sd">        generator that emits standard uniform draws (or standard normal draws,</span>
-<span class="sd">        if `stdnorm` is True) that will be provided by ``simulate``.</span>
+<span class="sd">        if `stdnorm` is True) that will be passed to f by ``simulate``.</span>
 <span class="sd">        In the case of a recursive dynamic simulation that employs past values,</span>
 <span class="sd">        f should take &#39;data&#39; as a second argument, where this will be a type of</span>
 <span class="sd">        array that is also provided by ``simulate.`` This function should return</span>

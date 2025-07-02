@@ -16,12 +16,12 @@ following form:
 .. code-block:: python
 
      # function to perform one trial
-     def trial(draw):
-         # 'draw' argument is required and must be the first argumnet
+     def trial(ugen):
+         # 'ugen' argument is required and must be the first argumnet
 
          # independent draws from U(0, 1)
-         u1 = next(draw)
-         u2 = next(draw)
+         u1 = next(ugen)
+         u2 = next(ugen)
 
          # do some kind of work
          x = 1.5 * u1
@@ -59,8 +59,8 @@ function describing one step forward, as in the example below.
 
     from scipy import stats
 
-    def step(draw, hist):
-        # Function to take one step through time. The 'draw' argument
+    def step(ugen, hist):
+        # Function to take one step through time. The 'ugen' argument
         # is first and is required as with the static simulation.
         # The 'hist' argument is needed if 'f' refers to lagged values of
         # some sort, as in this example.
@@ -69,7 +69,7 @@ function describing one step forward, as in the example below.
         plag = hist.recall("p", lag=1)
 
         # do some kind of work
-        pnew = 0.25 + 0.9 * plag + stats.norm.ppf(next(draw))
+        pnew = 0.25 + 0.9 * plag + stats.norm.ppf(next(ugen))
 
         # return new value(s) for this step/time period
         return {"p": pnew}
