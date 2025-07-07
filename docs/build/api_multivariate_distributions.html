@@ -48,7 +48,9 @@ columns and observations in rows.  That is, each column
 represents the result of applying the fitted CDF of some marginal
 distribution to the raw data for that variable.  The
 values in each column should be in the range [0, 1]. Parameters are
-fit using maximum likelihood.</p>
+fit using maximum likelihood.  This implementation accomodates
+only positive dependence, so the fitted value for theta is
+constrained to be &gt;= 2.0.</p>
 </dd>
 </dl>
 <dl class="py method">
@@ -104,6 +106,48 @@ calculate the nearest positive definite matrix.</p>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A pandas Series representing a joint draw from the Gaussian copula.
 The index reflects the variable names, and non-independent
+standard uniform draws are the values in the Series.
+If no variable names were provided in the input data,
+the variables will be named ‘v0’, ‘v1’, …, reflecting the
+oreder of the columns in the input data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">CopulaGumbel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">udata</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#CopulaGumbel"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A Gumbel copula object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>udata</strong> (<em>ArrayLike</em>) – Input array of probability values from individual marginal
+distributions (“pseudo-observations”) with variables in
+columns and observations in rows.  That is, each column
+represents the result of applying the fitted CDF of some marginal
+distribution to the raw data for that variable.  The
+values in each column should be in the range [0, 1]. Parameters are
+fit using maximum likelihood.  This implementation accomodates
+only positive dependence, so the fitted value for theta is
+constrained to be &gt; 1.0.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#CopulaGumbel.draw"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate a joint random draw from the Gumbel copula.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ugen</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator yielding independent standard uniform random numbers.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pandas Series representing a joint draw from the Clayton
+copula. The index reflects the variable names, and non-independent
 standard uniform draws are the values in the Series.
 If no variable names were provided in the input data,
 the variables will be named ‘v0’, ‘v1’, …, reflecting the

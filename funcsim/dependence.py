@@ -410,8 +410,6 @@ class CopulaStudent():
         # fit parameters
         self._cop = copulae.elliptical.StudentCopula()
         self._cop.fit(self._data)
-
-        # create a multivariate normal distribution object
         self._rho = self._cop.sigma
         self._nu = self._cop.params.df
 
@@ -458,7 +456,9 @@ class CopulaClayton():
         represents the result of applying the fitted CDF of some marginal
         distribution to the raw data for that variable.  The
         values in each column should be in the range [0, 1]. Parameters are
-        fit using maximum likelihood.
+        fit using maximum likelihood.  This implementation accomodates
+        only positive dependence, so the fitted value for theta is
+        constrained to be >= 2.0.
     """
 
     def __init__(self,
@@ -487,14 +487,20 @@ class CopulaClayton():
         # fit parameters
         self._cop = copulae.archimedean.ClaytonCopula()
         self._cop.fit(self._data)
+        self._theta = max(self._cop.params, 2.000)
+        if self._cop.params < 2.00:
+            warnings.warn(f"The Clayton copula implementation in funcsim "
+                          f"accomodates only positive dependence. The fitted "
+                          f"value for theta is {self._theta}, implying "
+                          f"negative dependence.  A theta value of 2.0 is "
+                          f"being used rather that the fitted value, but this "
+                          f"implies no dependence among the variables. You "
+                          f"should probably choose a different dependence "
+                          f"representation for your data.",
+                          UserWarning)
 
-        # create a multivariate normal distribution object
-        self._theta = self._cop.params.theta
-
-
-    def _Ftilde(t):
+    def _Ftilde(self, t):
         return (1.0 + t)**(-1.0 / self._theta)
-
 
     def draw(self,
              ugen: Generator[float, None, None]
@@ -519,55 +525,95 @@ class CopulaClayton():
         
         """
         v = stats.gamma.ppf(next(ugen), (1.0/self._theta))
-        retA = np.array([self._Ftilde(-math.log(next(draw))/v)
-                         for i in range(nvars)])
+        retA = np.array([self._Ftilde(-math.log(next(ugen))/v)
+                         for i in range(self._K)])
         return pd.Series(retA, index=self._names)
 
 
-
-
-
-def cgumbel(draw: Generator[float, None, None],
-            nvars: int,
-            theta: float
-           ) -> np.ndarray:
+class CopulaGumbel():
     """
-    Generate joint uniform draws from a Gumbel copula.
+    A Gumbel copula object. 
 
     Parameters
     ----------
-    draw : Generator[float, None, None]
-        A generator yielding independent standard uniform random numbers.
-    nvars : int
-        Number of variables (dimension), must be >= 2.
-    theta : float
-        Copula parameter, must be > 1.0.
-
-    Returns
-    -------
-    np.ndarray
-        A 1-D NumPy array of length nvars with joint uniform draws from
-        the Gumbel copula.
-
-    Raises
-    ------
-    ValueError
-        If theta is not a float or theta <= 1.0.
-
-    Notes
-    -----
-    See SAS documentation for the Gumbel copula construction.
+    udata : ArrayLike
+        Input array of probability values from individual marginal
+        distributions ("pseudo-observations") with variables in
+        columns and observations in rows.  That is, each column
+        represents the result of applying the fitted CDF of some marginal
+        distribution to the raw data for that variable.  The
+        values in each column should be in the range [0, 1]. Parameters are
+        fit using maximum likelihood.  This implementation accomodates
+        only positive dependence, so the fitted value for theta is
+        constrained to be > 1.0.
     """
-    if type(theta) != float:
-        raise ValueError('"theta" must be a float')
-    if theta <= 1.0:
-        raise ValueError('"theta" must be greater than 1.0')
 
-    def Ftilde(t):
-        return math.exp(-(t**(1.0/theta)))
+    def __init__(self,
+                 udata: conversions.ArrayLike,
+                 ) -> None:
+        
+        # check that copulae package is installed
+        try:
+            import copulae
+        except ImportError as e:
+            raise ImportError("Optional dependency 'copulae' is required for "
+                              "CopulaGumbel. Install with `pip install "
+                              "copulae`.") from e
 
-    gamma = math.cos(0.5 * math.pi / theta)**theta
-    alpha = 1.0 / theta
-    v = _skew_stable_draw(draw, alpha, 1.0, gamma, 0.0)
-    return np.array([Ftilde(-math.log(next(draw))/v) for i in range(nvars)])
+        self._data = conversions.alToArray(udata)
+        self._names = conversions.alColNames(udata)
+        (self._M, self._K) = self._data.shape
 
+        # check that data are in (0, 1)
+        for k in range(self._K):
+            if not _goodUvec(self._data[:, k]):
+                raise ValueError(f"Column {k} of the input data, with name "
+                                 f"{self._names[k]}, has values that are not "
+                                 f"in the range (0, 1)")
+
+        # fit parameters
+        self._cop = copulae.archimedean.GumbelCopula()
+        self._cop.fit(self._data)
+        self._theta = max(self._cop.params, 1.0000038089)  # ensure theta > 1.0
+        if self._cop.params <= 1.0:
+            warnings.warn(f"The Gumbel copula implementation in funcsim "
+                          f"accomodates only positive dependence. The fitted "
+                          f"value for theta is {self._params}, implying "
+                          f"negative dependence.  A theta value of 1.0 is "
+                          f"being used rather that the fitted value, but this "
+                          f"implies no dependence among the variables. You "
+                          f"should probably choose a different dependence "
+                          f"representation for your data.",
+                          UserWarning)
+
+    def _Ftilde(self, t):
+        return math.exp(-(t**(1.0/self._theta)))
+
+    def draw(self,
+             ugen: Generator[float, None, None]
+             ) -> pd.Series:
+        """
+        Generate a joint random draw from the Gumbel copula.
+
+        Parameters
+        ----------
+        ugen : Generator[float, None, None]
+            A generator yielding independent standard uniform random numbers.
+
+        Returns
+        -------
+        pd.Series
+            A pandas Series representing a joint draw from the Clayton
+            copula. The index reflects the variable names, and non-independent
+            standard uniform draws are the values in the Series.
+            If no variable names were provided in the input data,
+            the variables will be named 'v0', 'v1', ..., reflecting the
+            oreder of the columns in the input data.
+        
+        """
+        gamma = math.cos(0.5 * math.pi / self._theta)**self._theta
+        alpha = 1.0 / self._theta
+        v = _skew_stable_draw(ugen, alpha, 1.0, gamma, 0.0)
+        retA = np.array([self._Ftilde(-math.log(next(ugen))/v)
+                         for i in range(self._K)])
+        return pd.Series(retA, index=self._names)
