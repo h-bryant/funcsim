@@ -9,6 +9,11 @@ import nearby
 import shapiro
 
 
+def _goodUvec(uvec: np.ndarray) -> bool:
+    # check that values in uvec are in (0, 1)
+    return np.all((uvec > 0.0) & (uvec <1.0))
+
+
 def _memoize(f):
     # custom memoization decorator for _makeA, which works around the
     # fact that a numpy array is not inherently hashable
@@ -325,6 +330,13 @@ class CopulaGauss():
         self._names = conversions.alColNames(udata)
         (self._M, self._K) = self._data.shape
 
+        # check that data are in (0, 1)
+        for k in range(self._K):
+            if not _goodUvec(self._data[:, k]):
+                raise ValueError(f"Column {k} of the input data, with name "
+                                 f"{self._names[k]}, has values that are not "
+                                 f"in the range (0, 1)")
+
         # standardize the data
         self._z = pd.DataFrame(stats.norm.ppf(self._data), columns=self._names)
 
@@ -387,6 +399,13 @@ class CopulaStudent():
         self._data = conversions.alToArray(udata)
         self._names = conversions.alColNames(udata)
         (self._M, self._K) = self._data.shape
+
+        # check that data are in (0, 1)
+        for k in range(self._K):
+            if not _goodUvec(self._data[:, k]):
+                raise ValueError(f"Column {k} of the input data, with name "
+                                 f"{self._names[k]}, has values that are not "
+                                 f"in the range (0, 1)")
 
         # fit parameters
         self._cop = copulae.elliptical.StudentCopula()
@@ -457,6 +476,13 @@ class CopulaClayton():
         self._data = conversions.alToArray(udata)
         self._names = conversions.alColNames(udata)
         (self._M, self._K) = self._data.shape
+
+        # check that data are in (0, 1)
+        for k in range(self._K):
+            if not _goodUvec(self._data[:, k]):
+                raise ValueError(f"Column {k} of the input data, with name "
+                                 f"{self._names[k]}, has values that are not "
+                                 f"in the range (0, 1)")
 
         # fit parameters
         self._cop = copulae.archimedean.ClaytonCopula()
