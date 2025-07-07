@@ -312,7 +312,10 @@ class CopulaGauss():
         columns and observations in rows.  That is, each column
         represents the result of applying the fitted CDF of some marginal
         distribution to the raw data for that variable.  The
-        values in each column should be in the range [0, 1].
+        values in each column should be in the range [0, 1]. The parameters
+        are fit using the method of moments.  If the sample covariance
+        matrix is not positive definite, the Higham method is used to
+        calculate the nearest positive definite matrix.
     """
 
     def __init__(self,
@@ -353,84 +356,78 @@ class CopulaGauss():
         return self._mvnorm.draw(ugen).apply(stats.norm.cdf)
 
 
-
-
-
-
-def cgauss(draw: Generator[float, None, None],
-           rho: conversions.ArrayLike
-          ) -> np.ndarray:
+class CopulaStudent():
     """
-    Generate joint uniform draws from a Gaussian copula.
-
-    Given a correlation matrix `rho`, this function generates a vector of joint
-    uniform random variables (copula samples) using the Gaussian copula
-    construction. The random number generator `draw` should yield independent
-    standard uniform random numbers.
+    A Student's t Copula object. 
 
     Parameters
     ----------
-    draw : generator
-        A generator that yields independent standard uniform random numbers.
-    rho : ArrayLike
-        Correlation matrix (K x K) for the Gaussian copula.
-
-    Returns
-    -------
-    ndarray
-        A 1-D NumPy array of length K containing joint uniform draws from the
-        Gaussian copula.
-
-    Notes
-    -----
-    The function first generates a joint normal random vector with correlation
-    structure `rho`, then applies the standard normal CDF to each component to
-    obtain standard uniform draws reflecting the Gaussian copula dependence
-    structure.
+    udata : ArrayLike
+        Input array of probability values from individual marginal
+        distributions ("pseudo-observations") with variables in
+        columns and observations in rows.  That is, each column
+        represents the result of applying the fitted CDF of some marginal
+        distribution to the raw data for that variable.  The
+        values in each column should be in the range [0, 1]. Parameters are
+        fit using maximum likelihood.
     """
-    rho_prelim = conversions.alToArray(rho)
-    return stats.norm.cdf(normal(draw, _checkcov(rho_prelim, "rho")))
+
+    def __init__(self,
+                 udata: conversions.ArrayLike,
+                 ) -> None:
+        
+        # check that copulae package is installed
+        try:
+            import copulae
+        except ImportError as e:
+            raise ImportError("Optional dependency 'copulae' is required for "
+                              "CopulaStudentst. Install with `pip install "
+                              "copulae`.") from e
+
+        self._data = conversions.alToArray(udata)
+        self._names = conversions.alColNames(udata)
+        (self._M, self._K) = self._data.shape
+
+        # fit parameters
+        # self._cop = copulae.elliptical.StudentCopula(dim=self._K)
+        self._cop = copulae.elliptical.StudentCopula()
+        self._cop.fit(self._data)
+
+        # create a multivariate normal distribution object
+        self._rho = self._cop.sigma
+        self._nu = self._cop.params.df
+
+    def draw(self,
+             ugen: Generator[float, None, None]
+             ) -> pd.Series:
+        """
+        Generate a joint random draw from the Student's t copula.
+
+        Parameters
+        ----------
+        ugen : Generator[float, None, None]
+            A generator yielding independent standard uniform random numbers.
+
+        Returns
+        -------
+        pd.Series
+            A pandas Series representing a joint draw from the Student's t
+            copula. The index reflects the variable names, and non-independent
+            standard uniform draws are the values in the Series.
+            If no variable names were provided in the input data,
+            the variables will be named 'v0', 'v1', ..., reflecting the
+            oreder of the columns in the input data.
+        
+        """
+        uvec = [next(ugen) for i in range(self._K)]
+        z = np.dot(self._rho, stats.norm.ppf(uvec))
+        chi2 = stats.chi2.ppf(next(ugen), df=self._nu)
+        mult = (self._nu / chi2)**0.5
+        retA = stats.t.cdf(mult * z, df=self._nu)
+        return pd.Series(retA, index=self._names)
 
 
-def cstudent(draw: Generator[float, None, None],
-             rho: conversions.ArrayLike,
-             nu: float
-            ) -> np.ndarray:
-    """
-    Generate joint uniform draws from a Student's t copula.
 
-    Given a correlation matrix `rho` and degrees of freedom `nu`, this
-    function generates a vector of joint uniform random variables (copula
-    samples) using the Student's t copula construction. The random number
-    generator `draw` should yield independent standard uniform random
-    numbers.
-
-    Parameters
-    ----------
-    draw : generator
-        A generator that yields independent standard uniform random numbers.
-    rho : ArrayLike
-        Correlation matrix (K x K) for the Student's t copula.
-    nu : float
-        Degrees of freedom for the Student's t distribution.
-
-    Returns
-    -------
-    ndarray
-        A 1-D NumPy array of length K containing joint uniform draws from
-        the Student's t copula.
-
-    Notes
-    -----
-    The function generates a joint normal random vector with correlation
-    structure `rho`, scales it by a chi-squared random variable, and then
-    applies the Student's t CDF to each component to obtain uniform
-    marginals.
-    """
-    x = normal(draw, rho)
-    chi2 = stats.chi2.ppf(next(draw), df=nu)
-    mult = (nu / chi2)**0.5
-    return stats.t.cdf(mult * x, df=nu)
 
 
 def cclayton(draw: Generator[float, None, None],

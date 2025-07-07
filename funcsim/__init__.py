@@ -9,8 +9,8 @@ from dependence import spearman
 from dependence import MvNorm
 from dependence import MvKde
 from dependence import CopulaGauss
+from dependence import CopulaStudent
 
-# from dependence import cstudent
 # from dependence import cgumbel
 # from dependence import cclayton
 
