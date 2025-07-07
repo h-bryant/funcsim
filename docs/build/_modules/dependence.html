@@ -36,8 +36,10 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">stats</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Generator</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">conversions</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">nearby</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shapiro</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_memoize</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
@@ -110,144 +112,6 @@
              <span class="o">-</span> <span class="n">bt</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">z</span> <span class="o">*</span> <span class="n">gamma</span> <span class="o">+</span> <span class="n">delta</span> <span class="o">+</span> <span class="n">beta</span> <span class="o">*</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">omega</span>
-
-
-<div class="viewcode-block" id="MvKde">
-<a class="viewcode-back" href="../api_multivariate_distributions.html#funcsim.MvKde">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">MvKde</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A multivariate KDE distribution object.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    data : ArrayLike</span>
-<span class="sd">        Input data array of with variables in columns and observations</span>
-<span class="sd">        in rows.</span>
-<span class="sd">    bw : str, optional</span>
-<span class="sd">        Bandwidth selection method, &#39;scott&#39; or &#39;silverman&#39;.</span>
-<span class="sd">        Default is &#39;scott&#39;.    </span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                 <span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
-                 <span class="n">bw</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;scott&#39;</span>
-                <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_names</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alColNames</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">shape</span>
-
-        <span class="c1"># sample standard deviations</span>
-        <span class="n">stdevs</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-
-        <span class="c1"># rule-of-thumb bandwidths</span>
-        <span class="n">mult</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="o">+</span><span class="mf">1.0</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_scott</span> <span class="o">=</span>  <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">mult</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">diagflat</span><span class="p">(</span><span class="n">stdevs</span><span class="p">))</span>
-        <span class="n">smult</span> <span class="o">=</span> <span class="p">(</span><span class="mf">4.0</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="o">+</span><span class="mf">2.0</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="o">+</span><span class="mf">4.0</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_silverman</span> <span class="o">=</span> <span class="n">smult</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scott</span>
-
-        <span class="k">if</span> <span class="n">bw</span> <span class="o">==</span> <span class="s1">&#39;scott&#39;</span> <span class="ow">or</span> <span class="n">bw</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scott</span>
-        <span class="k">elif</span> <span class="n">bw</span> <span class="o">==</span> <span class="s1">&#39;silverman&#39;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_silverman</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span> <span class="o">=</span> <span class="n">bw</span>
-
-<div class="viewcode-block" id="MvKde.draw">
-<a class="viewcode-back" href="../api_multivariate_distributions.html#funcsim.MvKde.draw">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-             <span class="n">ugen</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
-             <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Generate a joint random draw from the multivariate distribution.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        ugen : Generator[float, None, None]</span>
-<span class="sd">            A generator that yields independent standard uniform random numbers.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        pd.Series</span>
-<span class="sd">            A pandas Series representing a joint draw from the KDE.  The index</span>
-<span class="sd">            values are the variable names, and the values are the random</span>
-<span class="sd">            values.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># hist obs about which we will sample</span>
-        <span class="n">m</span> <span class="o">=</span> <span class="n">_rand_int</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">)</span>
-
-        <span class="c1"># means for this sample</span>
-        <span class="n">mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
-
-        <span class="k">return</span> <span class="n">normal</span><span class="p">(</span><span class="n">draw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span></div>
-</div>
-
-
-
-<div class="viewcode-block" id="MvNorm">
-<a class="viewcode-back" href="../api_multivariate_distributions.html#funcsim.MvNorm">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">MvNorm</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A multivariate normal distribution object. A vector of means</span>
-<span class="sd">    and a covariance matrix are computed from the input data.  If the sample</span>
-<span class="sd">    covariance matrix is not positive definite, the Higham</span>
-<span class="sd">    method is used to calculate the nearest positive definite matrix.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    data : ArrayLike</span>
-<span class="sd">        Input data array of with variables in columns and observations</span>
-<span class="sd">        in rows.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                 <span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
-                <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_names</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alColNames</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">shape</span>
-
-        <span class="c1"># fit mean and covariance</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-
-        <span class="c1"># compute covariance matrix</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">,</span> <span class="n">rowvar</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-
-        <span class="c1"># ensure covariance matrix is positive definite</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvals</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
-            <span class="c1"># use the Higam method to ensure positive definiteness</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span> <span class="o">=</span> <span class="n">nearby</span><span class="o">.</span><span class="n">nearestpd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span>
-
-        <span class="c1"># get cholesky decomposition of covariance matrix</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span><span class="p">)</span>
-
-        <span class="c1"># warn if data seem non-normally distributed</span>
-        <span class="c1"># TODO</span>
-
-<div class="viewcode-block" id="MvNorm.draw">
-<a class="viewcode-back" href="../api_multivariate_distributions.html#funcsim.MvNorm.draw">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-             <span class="n">ugen</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
-             <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Generate a joint random draw from the multivariate distribution.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        ugen : Generator[float, None, None]</span>
-<span class="sd">            A generator yielding independent standard uniform random numbers.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        pd.Series</span>
-<span class="sd">            A pandas Series representing a joint draw from the KDE.  The index</span>
-<span class="sd">            values are the variable names, and the values are the random</span>
-<span class="sd">            values.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">uvec</span> <span class="o">=</span> <span class="p">[</span><span class="nb">next</span><span class="p">(</span><span class="n">ugen</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)]</span>
-        <span class="n">retA</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mu</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_A</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="n">uvec</span><span class="p">))</span>
-        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">retA</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_names</span><span class="p">)</span></div>
-</div>
-
 
 
 <div class="viewcode-block" id="covtocorr">
@@ -339,51 +203,212 @@
     <span class="k">return</span> <span class="p">(</span><span class="n">rho_s</span><span class="p">,</span> <span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">))</span>
 
 
-
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">normal</span><span class="p">(</span><span class="n">draw</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
-           <span class="n">sigma</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
-           <span class="n">mu</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">conversions</span><span class="o">.</span><span class="n">VectorLike</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-          <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>    
+<div class="viewcode-block" id="MvKde">
+<a class="viewcode-back" href="../api_multivariate_distributions.html#funcsim.MvKde">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MvKde</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Generate joint normal random draws.</span>
-
-<span class="sd">    Given a covariance matrix `sigma`, this function generates a vector of</span>
-<span class="sd">    joint normal random variables using the provided random number generator</span>
-<span class="sd">    `draw`. If `mu` is provided, it is used as the mean vector; otherwise,</span>
-<span class="sd">    the mean is assumed to be zero.</span>
+<span class="sd">    A multivariate KDE distribution object.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    draw : generator</span>
-<span class="sd">        A generator that yields independent standard uniform random numbers.</span>
-<span class="sd">    sigma : ArrayLike</span>
-<span class="sd">        Covariance matrix (K x K) for the joint normal distribution.</span>
-<span class="sd">    mu : vector_like, optional</span>
-<span class="sd">        Mean vector (length K) for the joint normal distribution.</span>
-<span class="sd">        If None, the mean is zero.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    ndarray</span>
-<span class="sd">        A 1-D NumPy array of length K containing a sample from the specified</span>
-<span class="sd">        joint normal distribution.</span>
-
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    The function transforms standard uniform draws into standard normal draws</span>
-<span class="sd">    using the inverse CDF, then applies the Cholesky decomposition of the</span>
-<span class="sd">    covariance matrix to induce the desired correlation structure.</span>
+<span class="sd">    data : ArrayLike</span>
+<span class="sd">        Input data array of with variables in columns and observations</span>
+<span class="sd">        in rows.</span>
+<span class="sd">    bw : str, optional</span>
+<span class="sd">        Bandwidth selection method, &#39;scott&#39; or &#39;silverman&#39;.</span>
+<span class="sd">        Default is &#39;scott&#39;.    </span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">A_prelim</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">sigma</span><span class="p">)</span>
-    <span class="n">A</span> <span class="o">=</span> <span class="n">_makeA</span><span class="p">(</span><span class="n">_checkcov</span><span class="p">(</span><span class="n">A_prelim</span><span class="p">,</span> <span class="s2">&quot;sigma&quot;</span><span class="p">))</span>
-    <span class="n">K</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>  <span class="c1"># number of variables</span>
-    <span class="n">prod</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">([</span><span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">K</span><span class="p">)]))</span>
-    <span class="k">if</span> <span class="n">mu</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">prod</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">mu</span> <span class="o">+</span> <span class="n">prod</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
+                 <span class="n">bw</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;scott&#39;</span>
+                <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_names</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alColNames</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># sample standard deviations</span>
+        <span class="n">stdevs</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># rule-of-thumb bandwidths</span>
+        <span class="n">mult</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="o">+</span><span class="mf">1.0</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scott</span> <span class="o">=</span>  <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">mult</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">diagflat</span><span class="p">(</span><span class="n">stdevs</span><span class="p">))</span>
+        <span class="n">smult</span> <span class="o">=</span> <span class="p">(</span><span class="mf">4.0</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="o">+</span><span class="mf">2.0</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="o">+</span><span class="mf">4.0</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_silverman</span> <span class="o">=</span> <span class="n">smult</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scott</span>
+
+        <span class="k">if</span> <span class="n">bw</span> <span class="o">==</span> <span class="s1">&#39;scott&#39;</span> <span class="ow">or</span> <span class="n">bw</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scott</span>
+        <span class="k">elif</span> <span class="n">bw</span> <span class="o">==</span> <span class="s1">&#39;silverman&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_silverman</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span> <span class="o">=</span> <span class="n">bw</span>
+
+<div class="viewcode-block" id="MvKde.draw">
+<a class="viewcode-back" href="../api_multivariate_distributions.html#funcsim.MvKde.draw">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+             <span class="n">ugen</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+             <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate a joint random draw from the multivariate distribution.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ugen : Generator[float, None, None]</span>
+<span class="sd">            A generator that yields independent standard uniform random numbers.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pd.Series</span>
+<span class="sd">            A pandas Series representing a joint draw from the KDE.  The index</span>
+<span class="sd">            values are the variable names, and the values are the random</span>
+<span class="sd">            values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># hist obs about which we will sample</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">_rand_int</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">)</span>
+
+        <span class="c1"># means for this sample</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">normal</span><span class="p">(</span><span class="n">draw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bw</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="MvNorm">
+<a class="viewcode-back" href="../api_multivariate_distributions.html#funcsim.MvNorm">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MvNorm</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A multivariate normal distribution object. A vector of means</span>
+<span class="sd">    and a covariance matrix are computed from the input data.  If the sample</span>
+<span class="sd">    covariance matrix is not positive definite, the Higham</span>
+<span class="sd">    method is used to calculate the nearest positive definite matrix.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : ArrayLike</span>
+<span class="sd">        Input data array of with variables in columns and observations</span>
+<span class="sd">        in rows.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
+                <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_names</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alColNames</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># fit mean and covariance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># compute covariance matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">,</span> <span class="n">rowvar</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1"># ensure covariance matrix is positive definite</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvals</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="c1"># use the Higam method to ensure positive definiteness</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span> <span class="o">=</span> <span class="n">nearby</span><span class="o">.</span><span class="n">nearestpd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span>
+
+        <span class="c1"># get cholesky decomposition of covariance matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sigma</span><span class="p">)</span>
+
+        <span class="c1"># warn if data seem non-normally distributed</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">):</span>
+            <span class="n">swp</span> <span class="o">=</span> <span class="n">shapiro</span><span class="o">.</span><span class="n">swtest</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[:,</span> <span class="n">k</span><span class="p">])[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">swp</span> <span class="o">&gt;</span> <span class="mf">0.05</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: variable &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_names</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="si">}</span><span class="s2">&#39; may not be &quot;</span>
+                       <span class="sa">f</span><span class="s2">&quot; normally distributed. (Shapiro-Wilk p-value&quot;</span>
+                       <span class="sa">f</span><span class="s2">&quot;=</span><span class="si">{</span><span class="n">swp</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="ne">UserWarning</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MvNorm.draw">
+<a class="viewcode-back" href="../api_multivariate_distributions.html#funcsim.MvNorm.draw">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+             <span class="n">ugen</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+             <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate a joint random draw from the multivariate distribution.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ugen : Generator[float, None, None]</span>
+<span class="sd">            A generator yielding independent standard uniform random numbers.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pd.Series</span>
+<span class="sd">            A pandas Series representing a joint draw from the KDE.  The index</span>
+<span class="sd">            values are the variable names, and the values are the random</span>
+<span class="sd">            values. If no variable names were provided in the input data,</span>
+<span class="sd">            the variables will be named &#39;v0&#39;, &#39;v1&#39;, ..., reflecting the</span>
+<span class="sd">            oreder of the columns in the input data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">uvec</span> <span class="o">=</span> <span class="p">[</span><span class="nb">next</span><span class="p">(</span><span class="n">ugen</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)]</span>
+        <span class="n">retA</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mu</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_A</span><span class="p">,</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="n">uvec</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">retA</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_names</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="CopulaGauss">
+<a class="viewcode-back" href="../api_multivariate_distributions.html#funcsim.CopulaGauss">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CopulaGauss</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A Gaussian Copula object. </span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    udata : ArrayLike</span>
+<span class="sd">        Input array of probability values from individual marginal</span>
+<span class="sd">        distributions (&quot;pseudo-observations&quot;) with variables in</span>
+<span class="sd">        columns and observations in rows.  That is, each column</span>
+<span class="sd">        represents the result of applying the fitted CDF of some marginal</span>
+<span class="sd">        distribution to the raw data for that variable.  The</span>
+<span class="sd">        values in each column should be in the range [0, 1].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">udata</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
+                 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">udata</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_names</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alColNames</span><span class="p">(</span><span class="n">udata</span><span class="p">)</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># standardize the data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_z</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">),</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_names</span><span class="p">)</span>
+
+        <span class="c1"># fit MV normal dist to the standardized data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mvnorm</span> <span class="o">=</span> <span class="n">MvNorm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_z</span><span class="p">)</span>
+
+<div class="viewcode-block" id="CopulaGauss.draw">
+<a class="viewcode-back" href="../api_multivariate_distributions.html#funcsim.CopulaGauss.draw">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+             <span class="n">ugen</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+             <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate a joint random draw from the Gaussian copula.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ugen : Generator[float, None, None]</span>
+<span class="sd">            A generator yielding independent standard uniform random numbers.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pd.Series</span>
+<span class="sd">            A pandas Series representing a joint draw from the Gaussian copula.</span>
+<span class="sd">            The index reflects the variable names, and non-independent</span>
+<span class="sd">            standard uniform draws are the values in the Series.</span>
+<span class="sd">            If no variable names were provided in the input data,</span>
+<span class="sd">            the variables will be named &#39;v0&#39;, &#39;v1&#39;, ..., reflecting the</span>
+<span class="sd">            oreder of the columns in the input data.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mvnorm</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">ugen</span><span class="p">)</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">cdf</span><span class="p">)</span></div>
+</div>
+
+
+
+
+
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">cgauss</span><span class="p">(</span><span class="n">draw</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>

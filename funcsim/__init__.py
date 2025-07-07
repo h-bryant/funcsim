@@ -4,16 +4,15 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 from core import simulate
 
-from dependence import normal
-from dependence import cgauss
-from dependence import cstudent
-from dependence import cgumbel
-from dependence import cclayton
 from dependence import covtocorr
 from dependence import spearman
-
 from dependence import MvNorm
 from dependence import MvKde
+from dependence import CopulaGauss
+
+# from dependence import cstudent
+# from dependence import cgumbel
+# from dependence import cclayton
 
 from imanconover import imanconover
 

@@ -37,6 +37,45 @@
 <h1>Multivariate Distributions and Dependence<a class="headerlink" href="#multivariate-distributions-and-dependence" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">CopulaGauss</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">udata</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#CopulaGauss"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A Gaussian Copula object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>udata</strong> (<em>ArrayLike</em>) – Input array of probability values from individual marginal
+distributions (“pseudo-observations”) with variables in
+columns and observations in rows.  That is, each column
+represents the result of applying the fitted CDF of some marginal
+distribution to the raw data for that variable.  The
+values in each column should be in the range [0, 1].</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#CopulaGauss.draw"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate a joint random draw from the Gaussian copula.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ugen</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator yielding independent standard uniform random numbers.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pandas Series representing a joint draw from the Gaussian copula.
+The index reflects the variable names, and non-independent
+standard uniform draws are the values in the Series.
+If no variable names were provided in the input data,
+the variables will be named ‘v0’, ‘v1’, …, reflecting the
+oreder of the columns in the input data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">MvKde</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'scott'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#MvKde"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>A multivariate KDE distribution object.</p>
@@ -96,7 +135,9 @@ in rows.</p>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A pandas Series representing a joint draw from the KDE.  The index
 values are the variable names, and the values are the random
-values.</p>
+values. If no variable names were provided in the input data,
+the variables will be named ‘v0’, ‘v1’, …, reflecting the
+oreder of the columns in the input data.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>pd.Series</p>
@@ -211,6 +252,35 @@ vol 4(2005), issue 1.</p></li>
 <dd class="field-even"><p><strong>ValueError</strong> – If target is not one of: ‘A’, ‘B’, ‘C’, ‘D’, ‘E’, ‘F’.</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">spearman</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#spearman"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Calculate Spearman’s rank correlation coefficient and its 95% confidence
+interval.</p>
+<p>This function computes Spearman’s rho for two variables and returns the
+correlation coefficient along with the lower and upper bounds of the 95%
+confidence interval.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>array</strong> (<em>ArrayLike</em>) – Input data as an (N, 2) array-like object, where N is the number of
+observations and each column represents a variable.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A tuple (rho, ci), where rho is Spearman’s rank correlation coefficient,
+and ci is a tuple of (lower, upper) bounds for the 95% confidence
+interval.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple of (float, tuple of float)</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>AssertionError</strong> – If the input array does not have shape (N, 2).</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The confidence interval is computed using Fisher’s z-transformation.</p>
 </dd></dl>
 
 </section>
