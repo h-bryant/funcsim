@@ -18,7 +18,7 @@ setuptools.setup(
     install_requires=[ 
         'numpy>=2.2.0',
         'pandas>=2.2.0',
-        'scipy>=1.15.0',
+        'scipy>=1.16.0',
         'xarray>=2025.4.0'
     ],
     extras_require={
