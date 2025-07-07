@@ -355,7 +355,7 @@
 <a class="viewcode-back" href="../api_multivariate_distributions.html#funcsim.CopulaGauss">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">CopulaGauss</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A Gaussian Copula object. </span>
+<span class="sd">    A Gaussian copula object. </span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -417,7 +417,7 @@
 <a class="viewcode-back" href="../api_multivariate_distributions.html#funcsim.CopulaStudent">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">CopulaStudent</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A Student&#39;s t Copula object. </span>
+<span class="sd">    A Student&#39;s t copula object. </span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -440,7 +440,7 @@
             <span class="kn">import</span><span class="w"> </span><span class="nn">copulae</span>
         <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;Optional dependency &#39;copulae&#39; is required for &quot;</span>
-                              <span class="s2">&quot;CopulaStudentst. Install with `pip install &quot;</span>
+                              <span class="s2">&quot;CopulaStudent. Install with `pip install &quot;</span>
                               <span class="s2">&quot;copulae`.&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">udata</span><span class="p">)</span>
@@ -448,7 +448,6 @@
         <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">shape</span>
 
         <span class="c1"># fit parameters</span>
-        <span class="c1"># self._cop = copulae.elliptical.StudentCopula(dim=self._K)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cop</span> <span class="o">=</span> <span class="n">copulae</span><span class="o">.</span><span class="n">elliptical</span><span class="o">.</span><span class="n">StudentCopula</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cop</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span>
 
@@ -490,91 +489,85 @@
 
 
 
-
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">cstudent</span><span class="p">(</span><span class="n">draw</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
-             <span class="n">rho</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
-             <span class="n">nu</span><span class="p">:</span> <span class="nb">float</span>
-            <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<div class="viewcode-block" id="CopulaClayton">
+<a class="viewcode-back" href="../api_multivariate_distributions.html#funcsim.CopulaClayton">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CopulaClayton</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Generate joint uniform draws from a Student&#39;s t copula.</span>
-
-<span class="sd">    Given a correlation matrix `rho` and degrees of freedom `nu`, this</span>
-<span class="sd">    function generates a vector of joint uniform random variables (copula</span>
-<span class="sd">    samples) using the Student&#39;s t copula construction. The random number</span>
-<span class="sd">    generator `draw` should yield independent standard uniform random</span>
-<span class="sd">    numbers.</span>
+<span class="sd">    A Clayton copula object. </span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    draw : generator</span>
-<span class="sd">        A generator that yields independent standard uniform random numbers.</span>
-<span class="sd">    rho : ArrayLike</span>
-<span class="sd">        Correlation matrix (K x K) for the Student&#39;s t copula.</span>
-<span class="sd">    nu : float</span>
-<span class="sd">        Degrees of freedom for the Student&#39;s t distribution.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    ndarray</span>
-<span class="sd">        A 1-D NumPy array of length K containing joint uniform draws from</span>
-<span class="sd">        the Student&#39;s t copula.</span>
-
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    The function generates a joint normal random vector with correlation</span>
-<span class="sd">    structure `rho`, scales it by a chi-squared random variable, and then</span>
-<span class="sd">    applies the Student&#39;s t CDF to each component to obtain uniform</span>
-<span class="sd">    marginals.</span>
+<span class="sd">    udata : ArrayLike</span>
+<span class="sd">        Input array of probability values from individual marginal</span>
+<span class="sd">        distributions (&quot;pseudo-observations&quot;) with variables in</span>
+<span class="sd">        columns and observations in rows.  That is, each column</span>
+<span class="sd">        represents the result of applying the fitted CDF of some marginal</span>
+<span class="sd">        distribution to the raw data for that variable.  The</span>
+<span class="sd">        values in each column should be in the range [0, 1]. Parameters are</span>
+<span class="sd">        fit using maximum likelihood.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">x</span> <span class="o">=</span> <span class="n">normal</span><span class="p">(</span><span class="n">draw</span><span class="p">,</span> <span class="n">rho</span><span class="p">)</span>
-    <span class="n">chi2</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">chi2</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">),</span> <span class="n">df</span><span class="o">=</span><span class="n">nu</span><span class="p">)</span>
-    <span class="n">mult</span> <span class="o">=</span> <span class="p">(</span><span class="n">nu</span> <span class="o">/</span> <span class="n">chi2</span><span class="p">)</span><span class="o">**</span><span class="mf">0.5</span>
-    <span class="k">return</span> <span class="n">stats</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">mult</span> <span class="o">*</span> <span class="n">x</span><span class="p">,</span> <span class="n">df</span><span class="o">=</span><span class="n">nu</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">udata</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
+                 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        
+        <span class="c1"># check that copulae package is installed</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">copulae</span>
+        <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;Optional dependency &#39;copulae&#39; is required for &quot;</span>
+                              <span class="s2">&quot;CopulaClayton. Install with `pip install &quot;</span>
+                              <span class="s2">&quot;copulae`.&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">udata</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_names</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alColNames</span><span class="p">(</span><span class="n">udata</span><span class="p">)</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_K</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># fit parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cop</span> <span class="o">=</span> <span class="n">copulae</span><span class="o">.</span><span class="n">archimedean</span><span class="o">.</span><span class="n">ClaytonCopula</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cop</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span>
+
+        <span class="c1"># create a multivariate normal distribution object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_theta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cop</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">theta</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">cclayton</span><span class="p">(</span><span class="n">draw</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
-             <span class="n">nvars</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-             <span class="n">theta</span><span class="p">:</span> <span class="nb">float</span>
-            <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Generate joint uniform draws from a Clayton copula.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_Ftilde</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">t</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_theta</span><span class="p">)</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    draw : Generator[float, None, None]</span>
-<span class="sd">        A generator yielding independent standard uniform random numbers.</span>
-<span class="sd">    nvars : int</span>
-<span class="sd">        Number of variables (dimension), must be &gt;= 2.</span>
-<span class="sd">    theta : float</span>
-<span class="sd">        Copula parameter, must be &gt; 0.0.</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    np.ndarray</span>
-<span class="sd">        A 1-D NumPy array of length nvars with joint uniform draws from</span>
-<span class="sd">        the Clayton copula.</span>
+<div class="viewcode-block" id="CopulaClayton.draw">
+<a class="viewcode-back" href="../api_multivariate_distributions.html#funcsim.CopulaClayton.draw">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+             <span class="n">ugen</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+             <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate a joint random draw from the Clayton copula.</span>
 
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    ValueError</span>
-<span class="sd">        If theta is not a float or theta &lt;= 0.0.</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ugen : Generator[float, None, None]</span>
+<span class="sd">            A generator yielding independent standard uniform random numbers.</span>
 
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    See SAS documentation for the Clayton copula construction.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">float</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;theta&quot; must be a float&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">theta</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;theta&quot; must be greater than 0.0&#39;</span><span class="p">)</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pd.Series</span>
+<span class="sd">            A pandas Series representing a joint draw from the Clayton</span>
+<span class="sd">            copula. The index reflects the variable names, and non-independent</span>
+<span class="sd">            standard uniform draws are the values in the Series.</span>
+<span class="sd">            If no variable names were provided in the input data,</span>
+<span class="sd">            the variables will be named &#39;v0&#39;, &#39;v1&#39;, ..., reflecting the</span>
+<span class="sd">            oreder of the columns in the input data.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">gamma</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">ugen</span><span class="p">),</span> <span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">_theta</span><span class="p">))</span>
+        <span class="n">retA</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_Ftilde</span><span class="p">(</span><span class="o">-</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">))</span><span class="o">/</span><span class="n">v</span><span class="p">)</span>
+                         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nvars</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">retA</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_names</span><span class="p">)</span></div>
+</div>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">Ftilde</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
-        <span class="k">return</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">t</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">theta</span><span class="p">)</span>
 
-    <span class="n">v</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">gamma</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">),</span> <span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">theta</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">Ftilde</span><span class="p">(</span><span class="o">-</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">))</span><span class="o">/</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nvars</span><span class="p">)])</span>
+
+
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">cgumbel</span><span class="p">(</span><span class="n">draw</span><span class="p">:</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
