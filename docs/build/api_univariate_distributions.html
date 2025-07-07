@@ -35,101 +35,12 @@
             
   <section id="univariate-distributions">
 <h1>Univariate Distributions<a class="headerlink" href="#univariate-distributions" title="Link to this heading">¶</a></h1>
-<dl class="py class">
-<dt class="sig sig-object py">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">Kde</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'scott'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kde.html#Kde"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Univariate kernel density estimator (KDE).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>conversions.VectorLike</em>) – 1-D data vector (list, tuple, np.ndarray, xr.DataArray, or pd.Series).</p></li>
-<li><p><strong>bw</strong> (<em>str</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – Bandwidth selection method (‘scott’, ‘silverman’) or a positive
-float to use as the bandwidth. Default is ‘scott’.</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="py method">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">cdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kde.html#Kde.cdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Cumulative distribution function of the KDE at value v.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>v</strong> (<em>float</em>) – Value at which to evaluate the CDF.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The estimated cumulative probability at v.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>float</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">pdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kde.html#Kde.pdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Probability density function of the KDE at value v.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>v</strong> (<em>float</em>) – Value at which to evaluate the PDF.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The estimated probability density at v.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>float</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">ppf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">u</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kde.html#Kde.ppf"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Numerical percent point function (inverse CDF) for the KDE.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>u</strong> (<em>float</em>) – Probability value in the range [0.0, 1.0].</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The value x such that CDF(x) = u.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>float</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If u is not in [0.0, 1.0] or optimization fails.</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
+<p>Functionality for univariate distribution fitting and testing. It includes methods for kernel density estimation, goodness-of-fit tests, and various statistical tests.</p>
+<section id="module-funcsim">
+<span id="distibution-fitting"></span><h2>Distibution fitting<a class="headerlink" href="#module-funcsim" title="Link to this heading">¶</a></h2>
 <dl class="py function">
-<dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">adtest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_sorted</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecdfgof.html#adtest"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Anderson-Darling test for goodness of fit to a distribution.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>VectorLike</em>) – Sample data vector.</p></li>
-<li><p><strong>dist</strong> (<em>str</em><em> or </em><em>frozen distribution object</em>) – Scipy distribution name or frozen distribution object.</p></li>
-<li><p><strong>args</strong> (<em>tuple</em><em>, </em><em>optional</em>) – Parameters for the distribution if it is not a string.</p></li>
-<li><p><strong>assume_sorted</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, assumes that <cite>data</cite> is already sorted.  Defaults to False.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A named tuple with the test statistic and p-value.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>GofResult</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">compare</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lowerLimit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upperLimit</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distfit.html#compare"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dt class="sig sig-object py" id="funcsim.compare">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">compare</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lowerLimit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upperLimit</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distfit.html#compare"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#funcsim.compare" title="Link to this definition">¶</a></dt>
 <dd><p>Compare fits of univariate distributions for a continuous random variable.</p>
 <p>This function fits all candidate distributions with the specified support
 (lower and/or upper limit) to the provided data. It returns a formatted
@@ -161,30 +72,8 @@ p-value for each distribution.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">cvmtest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_sorted</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecdfgof.html#cvmtest"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Cramer-von Mises test for goodness of fit to a distribution.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>VectorLike</em>) – Sample data vector.</p></li>
-<li><p><strong>dist</strong> (<em>str</em><em> or </em><em>frozen distribution object</em>) – Scipy distribution name or frozen distribution object.</p></li>
-<li><p><strong>args</strong> (<em>tuple</em><em>, </em><em>optional</em>) – Parameters for the distribution if it is not a string.</p></li>
-<li><p><strong>assume_sorted</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, assumes that <cite>data</cite> is already sorted.  Defaults to False.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A named tuple with the test statistic and p-value.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>GofResult</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scipydist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distName</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distfit.html#fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dt class="sig sig-object py" id="funcsim.fit">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scipydist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distName</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/distfit.html#fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#funcsim.fit" title="Link to this definition">¶</a></dt>
 <dd><p>Fit a univariate distribution for a continuous random variable.</p>
 <p>This function fits a given scipy.stats univariate distribution to the
 provided data using maximum likelihood estimation. It returns a named
@@ -224,6 +113,53 @@ frozen distribution, and the distribution name.</p>
 <p>The function uses maximum likelihood estimation for parameter fitting.
 Goodness-of-fit is assessed using Anderson-Darling and Kolmogorov-Smirnov
 tests.</p>
+</dd></dl>
+
+</section>
+<section id="goodness-of-fit-tests">
+<h2>Goodness-of-fit tests<a class="headerlink" href="#goodness-of-fit-tests" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">adtest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_sorted</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecdfgof.html#adtest"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Anderson-Darling test for goodness of fit to a distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>VectorLike</em>) – Sample data vector.</p></li>
+<li><p><strong>dist</strong> (<em>str</em><em> or </em><em>frozen distribution object</em>) – Scipy distribution name or frozen distribution object.</p></li>
+<li><p><strong>args</strong> (<em>tuple</em><em>, </em><em>optional</em>) – Parameters for the distribution if it is not a string.</p></li>
+<li><p><strong>assume_sorted</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, assumes that <cite>data</cite> is already sorted.  Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A named tuple with the test statistic and p-value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>GofResult</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">cvmtest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_sorted</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecdfgof.html#cvmtest"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Cramer-von Mises test for goodness of fit to a distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>VectorLike</em>) – Sample data vector.</p></li>
+<li><p><strong>dist</strong> (<em>str</em><em> or </em><em>frozen distribution object</em>) – Scipy distribution name or frozen distribution object.</p></li>
+<li><p><strong>args</strong> (<em>tuple</em><em>, </em><em>optional</em>) – Parameters for the distribution if it is not a string.</p></li>
+<li><p><strong>assume_sorted</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, assumes that <cite>data</cite> is already sorted.  Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A named tuple with the test statistic and p-value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>GofResult</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -295,6 +231,80 @@ included.</p>
 </dl>
 </dd></dl>
 
+</section>
+<section id="distibution-representations">
+<h2>Distibution representations<a class="headerlink" href="#distibution-representations" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">Kde</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'scott'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kde.html#Kde"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Univariate kernel density estimator (KDE).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>conversions.VectorLike</em>) – 1-D data vector (list, tuple, np.ndarray, xr.DataArray, or pd.Series).</p></li>
+<li><p><strong>bw</strong> (<em>str</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – Bandwidth selection method (‘scott’, ‘silverman’) or a positive
+float to use as the bandwidth. Default is ‘scott’.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">cdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kde.html#Kde.cdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Cumulative distribution function of the KDE at value v.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>v</strong> (<em>float</em>) – Value at which to evaluate the CDF.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The estimated cumulative probability at v.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">pdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kde.html#Kde.pdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Probability density function of the KDE at value v.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>v</strong> (<em>float</em>) – Value at which to evaluate the PDF.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The estimated probability density at v.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">ppf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">u</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kde.html#Kde.ppf"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Numerical percent point function (inverse CDF) for the KDE.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>u</strong> (<em>float</em>) – Probability value in the range [0.0, 1.0].</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The value x such that CDF(x) = u.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If u is not in [0.0, 1.0] or optimization fails.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
 </section>
 
 

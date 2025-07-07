@@ -47,7 +47,7 @@ def imanconover(spear: conversions.ArrayLike,
                 )-> pd.DataFrame:
 
     """
-    Induce a Spearman correlation using the Iman & Conover (1980) method.
+    Induce a Spearman correlation stucture using the Iman & Conover method.
 
     Parameters
     ----------
