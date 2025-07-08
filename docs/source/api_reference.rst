@@ -11,3 +11,4 @@ API Reference
    api_stattools
    api_eut
    api_cpt
+   api_plotting

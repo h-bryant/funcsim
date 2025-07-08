@@ -43,6 +43,8 @@
 <span class="n">EutResult</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;EutResult&quot;</span><span class="p">,</span> <span class="s2">&quot;ExpectedValue CertaintyEquiv&quot;</span><span class="p">)</span>
 
 
+<div class="viewcode-block" id="utilIsoelastic">
+<a class="viewcode-back" href="../api_eut.html#funcsim.utilIsoelastic">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">utilIsoelastic</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">crra</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Compute isoelastic (CRRA) utility for a monetary outcome.</span>
@@ -68,7 +70,8 @@
         <span class="n">num</span> <span class="o">=</span> <span class="n">y</span><span class="o">**</span><span class="p">(</span><span class="mf">1.0</span><span class="o">-</span><span class="n">crra</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1.0</span>
         <span class="n">denom</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">crra</span>
         <span class="n">ret</span> <span class="o">=</span> <span class="n">num</span> <span class="o">/</span> <span class="n">denom</span>
-    <span class="k">return</span> <span class="n">ret</span>
+    <span class="k">return</span> <span class="n">ret</span></div>
+
 
 
 <div class="viewcode-block" id="eut">
