@@ -40,4 +40,4 @@ from cpt import weightPrelec2, cptBV
 
 from eut import eut, utilIsoelastic
 
-from plotting import fan
+from plotting import fan, twofuncs

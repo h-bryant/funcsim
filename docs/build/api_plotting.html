@@ -43,7 +43,7 @@
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>da</strong> (<em>xr.DataArray</em>) – Simulation results with dimensions “trials”, “variables”, “steps”.</p></li>
 <li><p><strong>varname</strong> (<em>str</em>) – Name of the variable to plot from the “variables” dimension.</p></li>
-<li><p><strong>filepath</strong> (<em>str</em><em>, </em><em>optional</em>) – Path to save the chart. Supports HTML and image formats. Default None.</p></li>
+<li><p><strong>filepath</strong> (<em>str</em><em>, </em><em>opti</em>) – Path to save the chart. Supports HTML and image formats. Default None.</p></li>
 <li><p><strong>line_color</strong> (<em>str</em><em>, </em><em>optional</em>) – Color of the mean line. Default is ‘blue’.</p></li>
 <li><p><strong>width</strong> (<em>int</em><em>, </em><em>optional</em>) – Width of the chart in pixels. Default is 800.</p></li>
 <li><p><strong>height</strong> (<em>int</em><em>, </em><em>optional</em>) – Height of the chart in pixels. Default is 500.</p></li>
@@ -51,6 +51,31 @@
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The Plotly figure object for the fan chart.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>plotly.graph_objects.Figure</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">twofuncs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xmin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xmax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'f0'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'f1'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/plotting.html#twofuncs"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Plot two functions on the same axes using Plotly.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>f0</strong> (<em>callable</em>) – First function to plot. Should accept a float and return a float.</p></li>
+<li><p><strong>f1</strong> (<em>callable</em>) – Second function to plot. Should accept a float and return a float.</p></li>
+<li><p><strong>xmin</strong> (<em>float</em>) – Minimum value of the x-axis.</p></li>
+<li><p><strong>xmax</strong> (<em>float</em>) – Maximum value of the x-axis.</p></li>
+<li><p><strong>name0</strong> (<em>str</em><em>, </em><em>optional</em>) – Label for the first function. Default is “f0”.</p></li>
+<li><p><strong>name1</strong> (<em>str</em><em>, </em><em>optional</em>) – Label for the second function. Default is “f1”.</p></li>
+<li><p><strong>title</strong> (<em>str</em><em>, </em><em>optinal</em>) – Title for the top of the figure.  Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The Plotly figure object with both functions plotted.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>plotly.graph_objects.Figure</p>

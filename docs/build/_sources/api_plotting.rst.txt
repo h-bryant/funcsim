@@ -3,6 +3,6 @@ Plotting
 
 .. automodule:: funcsim
    :no-index:
-   :members: fan 
+   :members: fan, twofuncs
    :undoc-members:
    :show-inheritance:

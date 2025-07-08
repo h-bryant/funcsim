@@ -36,6 +36,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
 
 
 <div class="viewcode-block" id="fan">
@@ -55,7 +56,7 @@
 <span class="sd">        Simulation results with dimensions &quot;trials&quot;, &quot;variables&quot;, &quot;steps&quot;.</span>
 <span class="sd">    varname : str</span>
 <span class="sd">        Name of the variable to plot from the &quot;variables&quot; dimension.</span>
-<span class="sd">    filepath : str, optional</span>
+<span class="sd">    filepath : str, opti</span>
 <span class="sd">        Path to save the chart. Supports HTML and image formats. Default None.</span>
 <span class="sd">    line_color : str, optional</span>
 <span class="sd">        Color of the mean line. Default is &#39;blue&#39;.</span>
@@ -246,6 +247,65 @@
     <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">)</span>
     
     <span class="k">return</span> <span class="n">fig</span> <span class="c1"># Return the Plotly figure object</span></div>
+
+
+
+<div class="viewcode-block" id="twofuncs">
+<a class="viewcode-back" href="../api_plotting.html#funcsim.twofuncs">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">twofuncs</span><span class="p">(</span><span class="n">f0</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">],</span>
+             <span class="n">f1</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">],</span>
+             <span class="n">xmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+             <span class="n">xmax</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+             <span class="n">name0</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;f0&quot;</span><span class="p">,</span>
+             <span class="n">name1</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;f1&quot;</span><span class="p">,</span>
+             <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+             <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot two functions on the same axes using Plotly.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    f0 : callable</span>
+<span class="sd">        First function to plot. Should accept a float and return a float.</span>
+<span class="sd">    f1 : callable</span>
+<span class="sd">        Second function to plot. Should accept a float and return a float.</span>
+<span class="sd">    xmin : float</span>
+<span class="sd">        Minimum value of the x-axis.</span>
+<span class="sd">    xmax : float</span>
+<span class="sd">        Maximum value of the x-axis.</span>
+<span class="sd">    name0 : str, optional</span>
+<span class="sd">        Label for the first function. Default is &quot;f0&quot;.</span>
+<span class="sd">    name1 : str, optional</span>
+<span class="sd">        Label for the second function. Default is &quot;f1&quot;.</span>
+<span class="sd">    title : str, optinal</span>
+<span class="sd">        Title for the top of the figure.  Defaults to None.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    plotly.graph_objects.Figure</span>
+<span class="sd">        The Plotly figure object with both functions plotted.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">plotly.graph_objects</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">go</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+    <span class="n">y0</span> <span class="o">=</span> <span class="p">[</span><span class="n">f0</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">x</span><span class="p">]</span>
+    <span class="n">y1</span> <span class="o">=</span> <span class="p">[</span><span class="n">f1</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">x</span><span class="p">]</span>
+
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">()</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span><span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y0</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;lines&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name0</span><span class="p">))</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span><span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y1</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;lines&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name1</span><span class="p">))</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span>
+        <span class="n">xaxis_title</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">,</span>
+        <span class="n">yaxis_title</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">,</span>
+        <span class="n">template</span><span class="o">=</span><span class="s2">&quot;simple_white&quot;</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">title</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span>
+            <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">fig</span></div>
 
 </pre></div>
 

@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import warnings
+from typing import Callable
 
 
 def fan(da: xr.DataArray,
@@ -20,7 +21,7 @@ def fan(da: xr.DataArray,
         Simulation results with dimensions "trials", "variables", "steps".
     varname : str
         Name of the variable to plot from the "variables" dimension.
-    filepath : str, optional
+    filepath : str, opti
         Path to save the chart. Supports HTML and image formats. Default None.
     line_color : str, optional
         Color of the mean line. Default is 'blue'.
@@ -211,3 +212,59 @@ def fan(da: xr.DataArray,
     fig.update_layout(width=width, height=height)
     
     return fig # Return the Plotly figure object
+
+
+def twofuncs(f0: Callable[[float], float],
+             f1: Callable[[float], float],
+             xmin: float,
+             xmax: float,
+             name0: str = "f0",
+             name1: str = "f1",
+             title: str = ""
+             ):
+    """
+    Plot two functions on the same axes using Plotly.
+
+    Parameters
+    ----------
+    f0 : callable
+        First function to plot. Should accept a float and return a float.
+    f1 : callable
+        Second function to plot. Should accept a float and return a float.
+    xmin : float
+        Minimum value of the x-axis.
+    xmax : float
+        Maximum value of the x-axis.
+    name0 : str, optional
+        Label for the first function. Default is "f0".
+    name1 : str, optional
+        Label for the second function. Default is "f1".
+    title : str, optinal
+        Title for the top of the figure.  Defaults to None.
+
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        The Plotly figure object with both functions plotted.
+    """
+    import numpy as np
+    import plotly.graph_objects as go
+
+    x = np.linspace(xmin, xmax, 200)
+    y0 = [f0(val) for val in x]
+    y1 = [f1(val) for val in x]
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=x, y=y0, mode='lines', name=name0))
+    fig.add_trace(go.Scatter(x=x, y=y1, mode='lines', name=name1))
+    fig.update_layout(
+        xaxis_title="x",
+        yaxis_title="y",
+        template="simple_white"
+    )
+    if title != "":
+        fig.update_layout(
+            title=title,
+        )
+
+    return fig
