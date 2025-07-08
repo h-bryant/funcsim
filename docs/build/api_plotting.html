@@ -37,14 +37,16 @@
 <dl class="py function">
 <dt class="sig sig-object py">
 <span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">dblscat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/plotting.html#dblscat"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Create a scatter plot for two pairs of series using Plotly.</p>
+<dd><p>Create a scatter plot reflecting two sets of paired values.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>a0</strong> (<em>conversions.VectorLike</em>) – First array, shape (M, 2), variables in columns, obs in rows.</p></li>
-<li><p><strong>a1</strong> (<em>conversions.VectorLike</em>) – Second array, shape (N, 2), variables in columns, obs in rows.</p></li>
-<li><p><strong>name0</strong> (<em>str</em><em>, </em><em>optional</em>) – Label for the first series. Default is “a0”.</p></li>
-<li><p><strong>name1</strong> (<em>str</em><em>, </em><em>optional</em>) – Label for the second series. Default is “a1”.</p></li>
+<li><p><strong>a0</strong> (<em>conversions.ArrayLike</em>) – First array of paired values, with shape (M, 2), with variables
+in columns, obs in rows.</p></li>
+<li><p><strong>a1</strong> (<em>conversions.ArrayLike</em>) – Second array of paired values, with shape (N, 2), variables
+in columns, obs in rows.</p></li>
+<li><p><strong>name0</strong> (<em>str</em><em>, </em><em>optional</em>) – Label for the first array of paired values. Default is “a0”.</p></li>
+<li><p><strong>name1</strong> (<em>str</em><em>, </em><em>optional</em>) – Label for the second array of paired values. Default is “a1”.</p></li>
 <li><p><strong>title</strong> (<em>str</em><em>, </em><em>optional</em>) – Title for the figure. Default is “” (no title).</p></li>
 <li><p><strong>width</strong> (<em>int</em><em>, </em><em>optional</em>) – Width of the chart in pixels. Default is 800.</p></li>
 <li><p><strong>height</strong> (<em>int</em><em>, </em><em>optional</em>) – Height of the chart in pixels. Default is 500.</p></li>

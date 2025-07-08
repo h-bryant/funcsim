@@ -376,18 +376,20 @@ def dblscat(a0: conversions.ArrayLike,
             height: int = 500
             ):
     """
-    Create a scatter plot for two pairs of series using Plotly.
+    Create a scatter plot reflecting two sets of paired values.
 
     Parameters
     ----------
-    a0 : conversions.VectorLike
-        First array, shape (M, 2), variables in columns, obs in rows.
-    a1 : conversions.VectorLike
-        Second array, shape (N, 2), variables in columns, obs in rows.
+    a0 : conversions.ArrayLike
+        First array of paired values, with shape (M, 2), with variables
+        in columns, obs in rows.
+    a1 : conversions.ArrayLike
+        Second array of paired values, with shape (N, 2), variables
+        in columns, obs in rows.
     name0 : str, optional
-        Label for the first series. Default is "a0".
+        Label for the first array of paired values. Default is "a0".
     name1 : str, optional
-        Label for the second series. Default is "a1".
+        Label for the second array of paired values. Default is "a1".
     title : str, optional
         Title for the figure. Default is "" (no title).
     width : int, optional
@@ -418,6 +420,8 @@ def dblscat(a0: conversions.ArrayLike,
 
     # names
     varNames = conversions.alColNames(a0)
+    n0 = name0 if name0 is not None else "a0"
+    n1 = name1 if name1 is not None else "a1"
 
     if a0A.ndim != 2:
         raise ValueError("a0 must have exactly two dimensions")
@@ -427,9 +431,6 @@ def dblscat(a0: conversions.ArrayLike,
         raise ValueError("a0 must have exactly two columns")
     if a1A.shape[1] != 2:
         raise ValueError("a1 must have exactly two columns")
-
-    n0 = name0 if name0 is not None else "a0"
-    n1 = name1 if name1 is not None else "a1"
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
