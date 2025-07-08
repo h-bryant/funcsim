@@ -10,15 +10,19 @@ Features:
 - functional paradigm
 
 Developed using:
-- python 3.9.6
-- numpy 2.0.2
-- scipy 1.13.1
-- pandas 2.2.3
-- xarray 2024.7.0
+- python >= 3.9
+- numpy 2.2.0
+- scipy 1.16.0
+- pandas 2.2.0
+- xarray 2025.4.0
+
+For optional functionality, additinoal packages are needed:
+- plotting: plotly
+- some copula typed: copulae
 
 Additionally, to run the demos, run tests, and build docs:
-- pytest 3.3.0
-- sphinx 1.6.5
+- pytest
+- sphinx, sphinx-autodoc-typehints
 
 ### building html docs
 From the top-level funcsim directory...

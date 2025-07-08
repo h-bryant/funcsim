@@ -22,7 +22,7 @@ setuptools.setup(
         'xarray>=2025.4.0'
     ],
     extras_require={
-        "plot": ["plotly>=6.0.0"],
+        "plotting": ["plotly>=6.0.0"],
         "copula": ['copulae>=0.8.0'],
         "full": ["plotly>=6.0.0", "copulae>=0.8.0"],
     },
@@ -33,10 +33,7 @@ setuptools.setup(
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
         "Topic :: Scientific/Engineering :: Information Analysis"
