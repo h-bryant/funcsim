@@ -463,3 +463,73 @@ def dblscat(a0: conversions.ArrayLike,
     fig.update_layout(width=width, height=height)
  
     return fig
+
+
+
+def qqplot(data: conversions.VectorLike,
+           ppf: Callable[[float], float],
+           title: str = "",
+           width: int = 500,
+           height: int = 500
+           ):
+    """
+    Create a Q-Q plot comparing data quantiles to a theoretical distribution.
+
+    Parameters
+    ----------
+    data : VectorLike
+        Input data to compare to the hypothesized distribution.
+    ppf : Callable[[float], float]
+        Percent point function (inverse CDF) of the hypothesized distribution.
+        Should accept a float in (0, 1) and return a float.
+    title : str, optional
+        Title for the figure. Default is "" (no title).
+    width : int, optional
+        Width of the chart in pixels. Default is 500.
+    height : int, optional
+        Height of the chart in pixels. Default is 500.
+
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        The Plotly figure object for the Q-Q plot.
+    """
+    # conditional import of plotly
+    try:
+        import plotly.graph_objects as go
+    except ImportError as e:
+        raise ImportError("Optional dependency 'plotly' is required for all "
+                          "funcsim plotting fucntions. Install with "
+                          "`pip install plotly`.") from e
+
+    dataA = np.sort(conversions.vlToArray(data))
+    n = len(dataA)
+    probs = (np.arange(1, n + 1) - 0.5) / n
+    theor = np.array([ppf(p) for p in probs])
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=theor, y=dataA, mode='markers',
+        marker=dict(color='blue', size=7)
+    ))
+    # Add 45-degree reference line
+    min_val = min(np.min(theor), np.min(dataA))
+    max_val = max(np.max(theor), np.max(dataA))
+    fig.add_trace(go.Scatter(
+        x=[min_val, max_val], y=[min_val, max_val],
+        mode='lines', line=dict(color='red', dash='dash')
+    ))
+    fig.update_layout(
+        xaxis_title="Hypothesized Quantiles",
+        yaxis_title="Sample Quantiles",
+        template="simple_white"
+    )
+
+    fig.update_layout(showlegend=False)
+ 
+    if title != "":
+        fig.update_layout(title=title)
+
+    fig.update_layout(width=width, height=height)
+
+    return fig
