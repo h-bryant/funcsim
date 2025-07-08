@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import warnings
-from typing import Callable, Sequence
+from typing import Callable, Optional
 import conversions
 
 
@@ -11,6 +11,7 @@ def fan(da: xr.DataArray,
         varname: str,
         filepath: str = None,
         line_color: str = 'blue',
+        title: str = "",
         width: int = 750,
         height: int = 400):
     """
@@ -26,6 +27,8 @@ def fan(da: xr.DataArray,
         Path to save the chart. Supports HTML and image formats. Default None.
     line_color : str, optional
         Color of the mean line. Default is 'blue'.
+    title : str, optional
+        Title for the figure. Default is "" (no title).
     width : int, optional
         Width of the chart in pixels. Default is 800.
     height : int, optional
@@ -152,7 +155,6 @@ def fan(da: xr.DataArray,
 
     # Customize the layout of the figure
     fig.update_layout(
-        title_text=varname,  # Set the plot title to the variable name
         xaxis_title='',      # Remove the x-axis label (originally "steps")
         yaxis_title=varname, # Set y-axis label to variable name
         showlegend=True      # Display the legend (will show the 'Mean' trace)
@@ -208,6 +210,10 @@ def fan(da: xr.DataArray,
         gridcolor='rgba(200,200,200,0.4)',
         gridwidth=1
     )
+    if title != "":
+        fig.update_layout(
+            title=title,
+        )
 
     # resize for fitting in a jupyter window without scrolling
     fig.update_layout(width=width, height=height)
@@ -285,7 +291,7 @@ def twofuncs(f0: Callable[[float], float],
     return fig
 
 
-def histpdf(data: Sequence[float],
+def histpdf(data: conversions.VectorLike,
             pdf: Callable[[float], float],
             nbins: int = None,
             title: str = "",
@@ -297,7 +303,7 @@ def histpdf(data: Sequence[float],
 
     Parameters
     ----------
-    data : Sequence[float]
+    data : VectorLike
         Input data to plot as a histogram.
     pdf : Callable[[float], float]
         Probability density function to plot. Should accept a float and
@@ -350,6 +356,108 @@ def histpdf(data: Sequence[float],
 
     fig.update_layout(showlegend=False)
  
+    if title != "":
+        fig.update_layout(
+            title=title,
+        )
+
+    # resize for fitting in a jupyter window without scrolling
+    fig.update_layout(width=width, height=height)
+ 
+    return fig
+
+
+def dblscat(a0: conversions.ArrayLike,
+            a1: conversions.ArrayLike,
+            name0: Optional[str] = None,
+            name1: Optional[str] = None,
+            title: str = "",
+            width: int = 500,
+            height: int = 500
+            ):
+    """
+    Create a scatter plot for two pairs of series using Plotly.
+
+    Parameters
+    ----------
+    a0 : conversions.VectorLike
+        First array, shape (M, 2), variables in columns, obs in rows.
+    a1 : conversions.VectorLike
+        Second array, shape (N, 2), variables in columns, obs in rows.
+    name0 : str, optional
+        Label for the first series. Default is "a0".
+    name1 : str, optional
+        Label for the second series. Default is "a1".
+    title : str, optional
+        Title for the figure. Default is "" (no title).
+    width : int, optional
+        Width of the chart in pixels. Default is 800.
+    height : int, optional
+        Height of the chart in pixels. Default is 500.
+
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        The Plotly figure object with both scatter plots.
+
+    Raises
+    ------
+    ValueError
+        If input arrays are not 2D with exactly two columns.
+    """
+    # conditional import of plotly
+    try:
+        import plotly.graph_objects as go
+    except ImportError as e:
+        raise ImportError("Optional dependency 'plotly' is required for all "
+                            "funcsim plotting fucntions. Install with "
+                            "`pip install plotly`.") from e
+
+    a0A = conversions.alToArray(a0)
+    a1A = conversions.alToArray(a1)
+
+    # names
+    varNames = conversions.alColNames(a0)
+
+    if a0A.ndim != 2:
+        raise ValueError("a0 must have exactly two dimensions")
+    if a1A.ndim != 2:
+        raise ValueError("a1 must have exactly two dimensions")
+    if a0A.shape[1] != 2:
+        raise ValueError("a0 must have exactly two columns")
+    if a1A.shape[1] != 2:
+        raise ValueError("a1 must have exactly two columns")
+
+    n0 = name0 if name0 is not None else "a0"
+    n1 = name1 if name1 is not None else "a1"
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=a0A[:, 0], y=a0A[:, 1], mode='markers',
+        marker=dict(color='red', symbol='circle', size=8),
+        name=n0
+    ))
+    fig.add_trace(go.Scatter(
+        x=a1A[:, 0], y=a1A[:, 1], mode='markers',
+        marker=dict(color='grey', symbol='x', size=8),
+        name=n1
+    ))
+    fig.update_layout(
+        xaxis_title=varNames[0],
+        yaxis_title=varNames[1],
+        template="simple_white",
+        legend=dict(x=0.01, y=0.99)
+    )
+    fig.update_yaxes(
+        scaleanchor="x",
+        scaleratio=1
+    )
+
+    if title != "":
+        fig.update_layout(
+            title=title,
+        )
+
     # resize for fitting in a jupyter window without scrolling
     fig.update_layout(width=width, height=height)
  

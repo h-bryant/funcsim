@@ -36,7 +36,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">conversions</span>
 
 
@@ -46,6 +46,7 @@
         <span class="n">varname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">line_color</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;blue&#39;</span><span class="p">,</span>
+        <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
         <span class="n">width</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">750</span><span class="p">,</span>
         <span class="n">height</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">400</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -61,6 +62,8 @@
 <span class="sd">        Path to save the chart. Supports HTML and image formats. Default None.</span>
 <span class="sd">    line_color : str, optional</span>
 <span class="sd">        Color of the mean line. Default is &#39;blue&#39;.</span>
+<span class="sd">    title : str, optional</span>
+<span class="sd">        Title for the figure. Default is &quot;&quot; (no title).</span>
 <span class="sd">    width : int, optional</span>
 <span class="sd">        Width of the chart in pixels. Default is 800.</span>
 <span class="sd">    height : int, optional</span>
@@ -187,7 +190,6 @@
 
     <span class="c1"># Customize the layout of the figure</span>
     <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span>
-        <span class="n">title_text</span><span class="o">=</span><span class="n">varname</span><span class="p">,</span>  <span class="c1"># Set the plot title to the variable name</span>
         <span class="n">xaxis_title</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>      <span class="c1"># Remove the x-axis label (originally &quot;steps&quot;)</span>
         <span class="n">yaxis_title</span><span class="o">=</span><span class="n">varname</span><span class="p">,</span> <span class="c1"># Set y-axis label to variable name</span>
         <span class="n">showlegend</span><span class="o">=</span><span class="kc">True</span>      <span class="c1"># Display the legend (will show the &#39;Mean&#39; trace)</span>
@@ -243,6 +245,10 @@
         <span class="n">gridcolor</span><span class="o">=</span><span class="s1">&#39;rgba(200,200,200,0.4)&#39;</span><span class="p">,</span>
         <span class="n">gridwidth</span><span class="o">=</span><span class="mi">1</span>
     <span class="p">)</span>
+    <span class="k">if</span> <span class="n">title</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span>
+            <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
+        <span class="p">)</span>
 
     <span class="c1"># resize for fitting in a jupyter window without scrolling</span>
     <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">)</span>
@@ -324,7 +330,9 @@
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">histpdf</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+<div class="viewcode-block" id="histpdf">
+<a class="viewcode-back" href="../api_plotting.html#funcsim.histpdf">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">histpdf</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">VectorLike</span><span class="p">,</span>
             <span class="n">pdf</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">],</span>
             <span class="n">nbins</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
@@ -336,7 +344,7 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    data : Sequence[float]</span>
+<span class="sd">    data : VectorLike</span>
 <span class="sd">        Input data to plot as a histogram.</span>
 <span class="sd">    pdf : Callable[[float], float]</span>
 <span class="sd">        Probability density function to plot. Should accept a float and</span>
@@ -389,10 +397,116 @@
 
     <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">showlegend</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
  
+    <span class="k">if</span> <span class="n">title</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span>
+            <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
+        <span class="p">)</span>
+
     <span class="c1"># resize for fitting in a jupyter window without scrolling</span>
     <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">)</span>
  
-    <span class="k">return</span> <span class="n">fig</span>
+    <span class="k">return</span> <span class="n">fig</span></div>
+
+
+
+<div class="viewcode-block" id="dblscat">
+<a class="viewcode-back" href="../api_plotting.html#funcsim.dblscat">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">dblscat</span><span class="p">(</span><span class="n">a0</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
+            <span class="n">a1</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">ArrayLike</span><span class="p">,</span>
+            <span class="n">name0</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">name1</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+            <span class="n">width</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">500</span><span class="p">,</span>
+            <span class="n">height</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">500</span>
+            <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a scatter plot for two pairs of series using Plotly.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    a0 : conversions.VectorLike</span>
+<span class="sd">        First array, shape (M, 2), variables in columns, obs in rows.</span>
+<span class="sd">    a1 : conversions.VectorLike</span>
+<span class="sd">        Second array, shape (N, 2), variables in columns, obs in rows.</span>
+<span class="sd">    name0 : str, optional</span>
+<span class="sd">        Label for the first series. Default is &quot;a0&quot;.</span>
+<span class="sd">    name1 : str, optional</span>
+<span class="sd">        Label for the second series. Default is &quot;a1&quot;.</span>
+<span class="sd">    title : str, optional</span>
+<span class="sd">        Title for the figure. Default is &quot;&quot; (no title).</span>
+<span class="sd">    width : int, optional</span>
+<span class="sd">        Width of the chart in pixels. Default is 800.</span>
+<span class="sd">    height : int, optional</span>
+<span class="sd">        Height of the chart in pixels. Default is 500.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    plotly.graph_objects.Figure</span>
+<span class="sd">        The Plotly figure object with both scatter plots.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If input arrays are not 2D with exactly two columns.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># conditional import of plotly</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">plotly.graph_objects</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">go</span>
+    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;Optional dependency &#39;plotly&#39; is required for all &quot;</span>
+                            <span class="s2">&quot;funcsim plotting fucntions. Install with &quot;</span>
+                            <span class="s2">&quot;`pip install plotly`.&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+
+    <span class="n">a0A</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">a0</span><span class="p">)</span>
+    <span class="n">a1A</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alToArray</span><span class="p">(</span><span class="n">a1</span><span class="p">)</span>
+
+    <span class="c1"># names</span>
+    <span class="n">varNames</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">alColNames</span><span class="p">(</span><span class="n">a0</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">a0A</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;a0 must have exactly two dimensions&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">a1A</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;a1 must have exactly two dimensions&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">a0A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;a0 must have exactly two columns&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">a1A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;a1 must have exactly two columns&quot;</span><span class="p">)</span>
+
+    <span class="n">n0</span> <span class="o">=</span> <span class="n">name0</span> <span class="k">if</span> <span class="n">name0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;a0&quot;</span>
+    <span class="n">n1</span> <span class="o">=</span> <span class="n">name1</span> <span class="k">if</span> <span class="n">name1</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;a1&quot;</span>
+
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">()</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span><span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">a0A</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">y</span><span class="o">=</span><span class="n">a0A</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;markers&#39;</span><span class="p">,</span>
+        <span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">symbol</span><span class="o">=</span><span class="s1">&#39;circle&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">8</span><span class="p">),</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">n0</span>
+    <span class="p">))</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span><span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">a1A</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">y</span><span class="o">=</span><span class="n">a1A</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;markers&#39;</span><span class="p">,</span>
+        <span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s1">&#39;grey&#39;</span><span class="p">,</span> <span class="n">symbol</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">8</span><span class="p">),</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">n1</span>
+    <span class="p">))</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span>
+        <span class="n">xaxis_title</span><span class="o">=</span><span class="n">varNames</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">yaxis_title</span><span class="o">=</span><span class="n">varNames</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">template</span><span class="o">=</span><span class="s2">&quot;simple_white&quot;</span><span class="p">,</span>
+        <span class="n">legend</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mf">0.99</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">update_yaxes</span><span class="p">(</span>
+        <span class="n">scaleanchor</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">,</span>
+        <span class="n">scaleratio</span><span class="o">=</span><span class="mi">1</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">title</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span>
+            <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="c1"># resize for fitting in a jupyter window without scrolling</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">)</span>
+ 
+    <span class="k">return</span> <span class="n">fig</span></div>
+
 </pre></div>
 
           </div>
