@@ -37,13 +37,16 @@
 <h1>Expected Utility Theory<a class="headerlink" href="#expected-utility-theory" title="Link to this heading">¶</a></h1>
 <dl class="py function">
 <dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">eut</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crra</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outcomes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eut.html#eut"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Compute expected isoelastic utility and certainty equivalent income.</p>
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">eut</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">util</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outcomes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">precision</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eut.html#eut"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Compute expected utility and certainty equivalent income.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>crra</strong> (<em>float</em>) – Constant relative risk aversion coefficient (must be non-negative).</p></li>
+<li><p><strong>util</strong> (<em>Callable</em>) – Utility function that takes a float as its sole argument
+and returns a float</p></li>
 <li><p><strong>outcomes</strong> (<em>VectorLike</em>) – Sequence of monetary outcomes (all must be positive).</p></li>
+<li><p><strong>precition</strong> (<em>float</em><em>, </em><em>optional</em>) – Precision parameter used in solving for the certainty equivalent.
+The default value is 0.001</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -58,6 +61,26 @@
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>EutResult</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">utilIsoelastic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">crra</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/eut.html#utilIsoelastic"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Compute isoelastic (CRRA) utility for a monetary outcome.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y</strong> (<em>float</em>) – Monetary outcome (must be &gt;= 1.0).</p></li>
+<li><p><strong>crra</strong> (<em>float</em>) – Constant relative risk aversion coefficient (must be non-negative).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Isoelastic utility value for the given outcome and CRRA.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
 </dd>
 </dl>
 </dd></dl>

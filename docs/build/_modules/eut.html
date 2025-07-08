@@ -31,11 +31,11 @@
           <div class="body" role="main">
             
   <h1>Source code for eut</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;calculate isoelastic utility expected value and certainty equiv&quot;&quot;&quot;</span>
-
-<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">conversions</span>
 
 
@@ -43,52 +43,53 @@
 <span class="n">EutResult</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;EutResult&quot;</span><span class="p">,</span> <span class="s2">&quot;ExpectedValue CertaintyEquiv&quot;</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">utility</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">crra</span><span class="p">):</span>
-    <span class="c1"># isoelastic utility function: return the utility level associated</span>
-    <span class="c1"># with the monetary outcome &quot;y&quot; given the constant relative</span>
-    <span class="c1"># risk aversion coefficient &quot;crra&quot;</span>
-    <span class="c1">#print(type(y))</span>
-    <span class="c1"># assert type(y) in [float, np.float64], &quot;y must be a float&quot;</span>
-    <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span> <span class="s2">&quot;y must be a float&quot;</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">utilIsoelastic</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">crra</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute isoelastic (CRRA) utility for a monetary outcome.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    y : float</span>
+<span class="sd">        Monetary outcome (must be &gt;= 1.0).</span>
+<span class="sd">    crra : float</span>
+<span class="sd">        Constant relative risk aversion coefficient (must be non-negative).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        Isoelastic utility value for the given outcome and CRRA.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span> <span class="sa">f</span><span class="s2">&quot;y (=</span><span class="si">{</span><span class="n">y</span><span class="si">}</span><span class="s2">) must be a float&quot;</span>
     <span class="k">assert</span> <span class="n">y</span> <span class="o">&gt;=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="s2">&quot;y must be &gt;= one&quot;</span>
     <span class="k">assert</span> <span class="n">crra</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">&quot;crra must be non-negative&quot;</span>
     <span class="k">if</span> <span class="n">crra</span> <span class="o">==</span> <span class="mf">1.0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">num</span> <span class="o">=</span> <span class="n">y</span><span class="o">**</span><span class="p">(</span><span class="mf">1.0</span><span class="o">-</span><span class="n">crra</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1.0</span>
         <span class="n">denom</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">crra</span>
-        <span class="k">return</span> <span class="n">num</span> <span class="o">/</span> <span class="n">denom</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_util_inv</span><span class="p">(</span><span class="n">util</span><span class="p">,</span> <span class="n">crra</span><span class="p">):</span>
-    <span class="c1"># inverse isoelastic utility function: return the monetary outcome</span>
-    <span class="c1"># associated with a given &quot;utility&quot; level, given the constant</span>
-    <span class="c1"># relative risk aversion coefficient &quot;crra&quot;</span>
-    <span class="c1"># assert type(utility) in [float, np.float64], \</span>
-    <span class="c1">#    &quot;util must be a float&quot;</span>
-    <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">util</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">],</span> <span class="s2">&quot;util must be a float&quot;</span>
-    <span class="k">assert</span> <span class="n">util</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">&quot;util must be non-negative&quot;</span>
-    <span class="k">assert</span> <span class="n">crra</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">&quot;crra must be non-negative&quot;</span>
-    <span class="k">if</span> <span class="n">crra</span> <span class="o">==</span> <span class="mf">1.0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">util</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">crra</span><span class="p">)</span> <span class="o">*</span> <span class="n">util</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="mf">1.0</span><span class="o">-</span><span class="n">crra</span><span class="p">))</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="n">num</span> <span class="o">/</span> <span class="n">denom</span>
+    <span class="k">return</span> <span class="n">ret</span>
 
 
 <div class="viewcode-block" id="eut">
 <a class="viewcode-back" href="../api_eut.html#funcsim.eut">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">eut</span><span class="p">(</span><span class="n">crra</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-        <span class="n">outcomes</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">VectorLike</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">eut</span><span class="p">(</span><span class="n">util</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">float</span><span class="p">],</span>
+        <span class="n">outcomes</span><span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">VectorLike</span><span class="p">,</span>
+        <span class="n">precision</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.001</span>
         <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EutResult</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Compute expected isoelastic utility and certainty equivalent income.</span>
+<span class="sd">    Compute expected utility and certainty equivalent income.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    crra : float</span>
-<span class="sd">        Constant relative risk aversion coefficient (must be non-negative).</span>
+<span class="sd">    util : Callable</span>
+<span class="sd">        Utility function that takes a float as its sole argument</span>
+<span class="sd">        and returns a float</span>
 <span class="sd">    outcomes : VectorLike</span>
 <span class="sd">        Sequence of monetary outcomes (all must be positive).</span>
+<span class="sd">    precition : float, optional</span>
+<span class="sd">        Precision parameter used in solving for the certainty equivalent.</span>
+<span class="sd">        The default value is 0.001</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -100,26 +101,30 @@
 <span class="sd">        CertaintyEquiv : float</span>
 <span class="sd">            The certainty equivalent income.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="c1"># check inputs</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">crra</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;crra must be a float&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">crra</span> <span class="o">&lt;</span> <span class="mf">0.0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;crra must be non-negative&quot;</span><span class="p">)</span>
-
+    
+    <span class="c1"># outcomes to numpy vec </span>
     <span class="n">outcomesA</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">vlToArray</span><span class="p">(</span><span class="n">outcomes</span><span class="p">)</span>
 
-    <span class="c1"># find scaling factor such that min adjusted outcome is one</span>
-    <span class="n">scale</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">outcomesA</span><span class="p">)</span>
+    <span class="c1"># expected util</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">outcomes</span><span class="p">)</span>
+    <span class="n">eutil</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">util</span><span class="p">)(</span><span class="n">outcomesA</span><span class="p">))</span> <span class="o">/</span> <span class="n">n</span><span class="p">)</span>
 
-    <span class="c1"># scale outcomes</span>
-    <span class="n">y_scaled</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="o">/</span> <span class="n">scale</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">outcomesA</span><span class="p">]</span>
-
-    <span class="c1"># calculations</span>
-    <span class="n">N</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">outcomesA</span><span class="p">))</span>
-    <span class="n">eUtil</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">utility</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">crra</span><span class="p">),</span> <span class="n">y_scaled</span><span class="p">))</span> <span class="o">/</span> <span class="n">N</span>
-    <span class="n">ce</span> <span class="o">=</span> <span class="n">scale</span> <span class="o">*</span> <span class="n">_util_inv</span><span class="p">(</span><span class="n">eUtil</span><span class="p">,</span> <span class="n">crra</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">EutResult</span><span class="p">(</span><span class="n">ExpectedValue</span><span class="o">=</span><span class="n">eUtil</span><span class="p">,</span> <span class="n">CertaintyEquiv</span><span class="o">=</span><span class="n">ce</span><span class="p">)</span></div>
+    <span class="c1"># certainty equiv: find C.E. such than U(C.E.) = E(U)</span>
+    <span class="n">meanOutcome</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">outcomesA</span><span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">obj</span><span class="p">(</span><span class="n">ce</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">util</span><span class="p">(</span><span class="n">ce</span><span class="p">)</span> <span class="o">-</span> <span class="n">eutil</span>
+    
+    <span class="n">solveout</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">root_scalar</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="n">obj</span><span class="p">,</span>
+                                          <span class="n">bracket</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">outcomesA</span><span class="p">),</span>
+                                                    <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">outcomesA</span><span class="p">)),</span>
+                                          <span class="n">x0</span><span class="o">=</span><span class="n">meanOutcome</span><span class="p">,</span>
+                                          <span class="n">x1</span><span class="o">=</span><span class="p">(</span><span class="n">meanOutcome</span> <span class="o">*</span> <span class="mf">0.99</span><span class="p">),</span>
+                                          <span class="n">maxiter</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+                                          <span class="n">rtol</span><span class="o">=</span><span class="n">precision</span><span class="p">)</span>
+    <span class="n">certequiv</span> <span class="o">=</span> <span class="n">solveout</span><span class="o">.</span><span class="n">root</span> <span class="k">if</span> <span class="n">solveout</span><span class="o">.</span><span class="n">converged</span> <span class="ow">is</span> <span class="kc">True</span> <span class="k">else</span> <span class="kc">None</span>
+ 
+    <span class="k">return</span> <span class="n">EutResult</span><span class="p">(</span><span class="n">eutil</span><span class="p">,</span> <span class="n">certequiv</span><span class="p">)</span></div>
 
 </pre></div>
 

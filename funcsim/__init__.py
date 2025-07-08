@@ -38,4 +38,4 @@ from screen import screen
 from cpt import cpt, utilPower, utilNormLog, weightTK, weightPrelec1
 from cpt import weightPrelec2, cptBV
 
-from eut import eut
+from eut import eut, utilIsoelastic

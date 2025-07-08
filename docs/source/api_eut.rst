@@ -3,6 +3,6 @@ Expected Utility Theory
 
 .. automodule:: funcsim
    :no-index:
-   :members: eut
+   :members: eut, utilIsoelastic
    :undoc-members:
    :show-inheritance:
