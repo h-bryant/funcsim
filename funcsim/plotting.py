@@ -3,15 +3,16 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import warnings
-from typing import Callable
+from typing import Callable, Sequence
+import conversions
 
 
 def fan(da: xr.DataArray,
         varname: str,
         filepath: str = None,
         line_color: str = 'blue',
-        width: int = 800,
-        height: int = 500):
+        width: int = 750,
+        height: int = 400):
     """
     Create a fan chart for a variable from a simulation output xr.DataArray.
 
@@ -220,7 +221,9 @@ def twofuncs(f0: Callable[[float], float],
              xmax: float,
              name0: str = "f0",
              name1: str = "f1",
-             title: str = ""
+             title: str = "",
+             width: int = 750,
+             height: int = 400
              ):
     """
     Plot two functions on the same axes using Plotly.
@@ -241,15 +244,24 @@ def twofuncs(f0: Callable[[float], float],
         Label for the second function. Default is "f1".
     title : str, optinal
         Title for the top of the figure.  Defaults to None.
+    width : int, optional
+        Width of the chart in pixels. Default is 800.
+    height : int, optional
+        Height of the chart in pixels. Default is 500.
 
     Returns
     -------
     plotly.graph_objects.Figure
         The Plotly figure object with both functions plotted.
     """
-    import numpy as np
-    import plotly.graph_objects as go
-
+    # conditional import of plotly
+    try:
+        import plotly.graph_objects as go
+    except ImportError as e:
+        raise ImportError("Optional dependency 'plotly' is required for all "
+                            "funcsim plotting fucntions. Install with "
+                            "`pip install plotly`.") from e
+ 
     x = np.linspace(xmin, xmax, 200)
     y0 = [f0(val) for val in x]
     y1 = [f1(val) for val in x]
@@ -267,4 +279,78 @@ def twofuncs(f0: Callable[[float], float],
             title=title,
         )
 
+    # resize for fitting in a jupyter window without scrolling
+    fig.update_layout(width=width, height=height)
+ 
+    return fig
+
+
+def histpdf(data: Sequence[float],
+            pdf: Callable[[float], float],
+            nbins: int = None,
+            title: str = "",
+            width: int = 750,
+            height: int = 400
+            ):
+    """
+    Plot a histogram of data and a probability density function (PDF).
+
+    Parameters
+    ----------
+    data : Sequence[float]
+        Input data to plot as a histogram.
+    pdf : Callable[[float], float]
+        Probability density function to plot. Should accept a float and
+        return a float.
+    nbins : int, optional
+        Number of bins for the histogram. If None, uses 'auto' binning.
+    title : str, optional
+        Title for the figure. Default is "" (no title).
+    width : int, optional
+        Width of the chart in pixels. Default is 800.
+    height : int, optional
+        Height of the chart in pixels. Default is 500.
+
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        The Plotly figure object reflecting the histogram and PDF.
+    """
+    # conditional import of plotly
+    try:
+        import plotly.graph_objects as go
+    except ImportError as e:
+        raise ImportError("Optional dependency 'plotly' is required for all "
+                            "funcsim plotting fucntions. Install with "
+                            "`pip install plotly`.") from e
+ 
+    dataA = conversions.vlToArray(data)
+    x = np.linspace(np.min(dataA), np.max(dataA), 200)
+    y = [pdf(val) for val in x]
+
+    if nbins is None:
+        bins = np.histogram_bin_edges(dataA, bins='auto')
+        nbinsx = len(bins) - 1
+    else:
+        nbinsx = nbins
+
+    fig = go.Figure()
+    fig.add_trace(go.Histogram(
+        x=dataA, nbinsx=nbinsx, histnorm='probability density', opacity=0.6
+    ))
+    fig.add_trace(go.Scatter(
+        x=x, y=y, mode='lines', line=dict(color='red')
+    ))
+    fig.update_layout(
+        yaxis_title="Density",
+        template="simple_white"
+    )
+    if title:
+        fig.update_layout(title=title)
+
+    fig.update_layout(showlegend=False)
+ 
+    # resize for fitting in a jupyter window without scrolling
+    fig.update_layout(width=width, height=height)
+ 
     return fig
