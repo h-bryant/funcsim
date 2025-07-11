@@ -29,7 +29,6 @@ setuptools.setup(
     test_requires=[
         'pytest',
         'sphinx',
-        'sphinx-autodoc-typehints'
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
