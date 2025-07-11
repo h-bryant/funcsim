@@ -2,34 +2,42 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
-from core import static
-from core import recdyn
+from core import simulate
 
-from rdarrays import chron
-from rdarrays import recall
+from dependence import covtocorr
+from dependence import spearman
+from dependence import MvNorm
+from dependence import MvKde
+from dependence import CopulaGauss
+from dependence import CopulaStudent
+from dependence import CopulaClayton
+from dependence import CopulaGumbel
 
-from dependence import normal
-from dependence import cgauss
-from dependence import cstudent
-from dependence import cgumbel
-from dependence import cclayton
-from dependence import fitkdemv
+from imanconover import imanconover
 
 from shrinkage import shrink
-from shrinkage import target_a
-from shrinkage import target_b
-from shrinkage import target_c
-from shrinkage import target_d
-from shrinkage import target_e
-from shrinkage import target_f
+from nearby import nearestpd
 
-from edf import makeedf
+from edf import edf
 
-from kde import fitkde
+from kde import Kde
 
 from ecdfgof import kstest
 from ecdfgof import adtest
 from ecdfgof import cvmtest
 
+from shapiro import swtest
+
 from distfit import fit
 from distfit import compare
+
+from utests import utests
+
+from screen import screen
+
+from cpt import cpt, utilPower, utilNormLog, weightTK, weightPrelec1
+from cpt import weightPrelec2, cptBV
+
+from eut import eut, utilIsoelastic
+
+from plotting import fan, twofuncs, histpdf, dblscat, qqplot

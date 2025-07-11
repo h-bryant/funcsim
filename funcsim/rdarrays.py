@@ -2,6 +2,10 @@ import numpy as np
 import xarray as xr
 
 
+class MissingValue(Exception):
+    pass
+
+
 class RDdata():
     # container for an np array with pre-allocated memory for future values
     # for a single trial in an RD sim
@@ -17,20 +21,66 @@ class RDdata():
         self._varNames = set(namePositions.keys())
 
         # set up values container for all variables & time steps
-        self._a = np.empty((len(self._namePos.keys()), self._totSteps))
-        self._a[:, 0:self._histSteps] = a.transpose()
+        self._a = np.full(shape=(len(self._namePos.keys()), self._totSteps),
+                          fill_value=np.nan, dtype=float)
+        self._a[:, 0:self._histSteps] = np.copy(a).transpose()
 
         self._currStep = 0
 
     def incrStep(self):
         self._currStep += 1
 
-    def append(self, varname, value):
-        self._a[self._namePos[varname], self._histSteps+self._currStep] = value
+    def append(self, valueDict):
+        for varname, value in valueDict.items():
+            self._a[self._namePos[varname],
+                    self._histSteps + self._currStep] = value   
+        self._currStep += 1
 
-    def recall(self, varname, lag=0):
-        return self._a[self._namePos[varname],
-                       self._histSteps + self._currStep - lag]
+    def recall(self,
+               varname: str,
+               lag: int = 0
+              ) -> float:
+        """
+        Recall the value of a variable at the current step minus lag.
+
+        Parameters
+        ----------
+        varname : str
+            Name of the variable to recall.
+        lag : int, optional
+            Number of steps to lag (default is 0).
+
+        Returns
+        -------
+        float
+            The recalled value.
+
+        Raises
+        ------
+        MissingValue
+            If the requested value is not available.
+        """
+        try:
+            ret = self._a[self._namePos[varname],
+                          self._histSteps + self._currStep - lag]
+        except KeyError:
+            ret = np.nan
+        if np.isnan(ret):
+            if self._currStep == 0:
+                raise MissingValue(f'In the 1st time step in the '
+                                   f'simulation, no (non-NaN) value for the '
+                                   f'variable "{varname}" with {lag} lag(s) is '
+                                   f'available. Be sure that you passed a '
+                                   f'a "data0" array to "simulate" and that it '
+                                   f'contains this value.')
+            else:
+                raise MissingValue(f'In time step {self._currStep} in the '
+                                   f'simulation, no value for the variable '
+                                   f'"{varname}" with {lag} lag(s) is '
+                                   f'available. Be sure that your "f" is '
+                                   f'including non-NaN values for this '
+                                   f'variable in the dictionary it returns.')
+        return ret
 
     @property
     def varNameSet(self):
@@ -39,25 +89,3 @@ class RDdata():
     @property
     def array(self):
         return self._a
-
-
-def chron(dobj, new):
-    # append data for all vars with a dict with var names as keys
-
-    # check types of inputs; check that 'new' reflects all vars in 'da'
-    assert isinstance(dobj, RDdata)
-    assert type(new) == dict
-    if not dobj.varNameSet == set(new.keys()):
-        msg = 'variable names passed to "chron" do not match the '
-        msg2 = 'variable names in "data0"'
-        raise ValueError(msg + msg2)
-
-    # actual work
-    [dobj.append(i[0], i[1]) for i in new.items()]
-    dobj.incrStep()
-    return dobj
-
-
-def recall(dobj, var, lag):
-    # retrieve a previous value
-    return dobj.recall(var, lag)

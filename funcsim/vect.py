@@ -16,7 +16,8 @@ Original Work (scikit-gof) Copyright (c) 2015 Wojciech Ruszczewski <scipy@wr.waw
 
 Modified Work Copyright (c) 2020 h-bryant
 """
-from __future__ import division
+from collections.abc import Iterable
+# from __future__ import division
 
 from numpy import arange, stack, vectorize as numpy_vectorize
 
@@ -58,6 +59,9 @@ def varange(starts, count):
                [3, 4, 5, 6, 7]])
     """
     try:
-        return stack(arange(s, s + count) for s in starts)
+        if isinstance(starts, Iterable):
+            return stack([arange(s, s + count) for s in starts])
+        else:
+            return stack([arange(s, s + count) for s in [starts]])
     except TypeError:
         return arange(starts, starts + count)

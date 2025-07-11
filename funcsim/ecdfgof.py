@@ -41,10 +41,11 @@ from __future__ import division
 from collections import namedtuple
 from functools import partial
 
-from numpy import arange, log, sort
+from numpy import arange, log, sort, clip
 from six import string_types
 from scipy.stats import distributions
 
+import conversions
 # from .addist import ad_unif
 # from .cvmdist import cvm_unif
 # from .ksdist import ks_unif
@@ -84,8 +85,10 @@ def ad_stat(data):
     The warning can be silenced or raised using numpy.errstate(divide=...).
     """
     samples = len(data)
+    data_edit = clip(data, 0.0001, 0.9999)
     factors = arange(1, 2 * samples, 2)
-    return -samples - (factors * log(data * (1 - data[::-1]))).sum() / samples
+    return -samples - (factors *
+                       log(data_edit * (1 - data_edit[::-1]))).sum() / samples
 
 
 def simple_test(data, dist, args=(), stat=ad_stat, pdist=ad_unif,
@@ -107,6 +110,84 @@ def simple_test(data, dist, args=(), stat=ad_stat, pdist=ad_unif,
     return GofResult(statistic, pvalue)
 
 
-kstest = partial(simple_test, stat=ks_stat, pdist=ks_unif)
-cvmtest = partial(simple_test, stat=cvm_stat, pdist=cvm_unif)
-adtest = partial(simple_test, stat=ad_stat, pdist=ad_unif)
+def kstest(data: conversions.VectorLike,
+           dist,
+           args=(),
+           assume_sorted: bool = False):
+    """
+    Kolmogorov-Smirnov test for goodness of fit to a distribution.
+
+    Parameters
+    ----------
+    data : VectorLike
+        Sample data vector.
+    dist : str or frozen distribution object
+        Scipy distribution name or frozen distribution object.
+    args : tuple, optional
+        Parameters for the distribution if it is not a string.
+    assume_sorted : bool, optional
+        If True, assumes that `data` is already sorted.  Defaults to False.
+
+    Returns
+    -------
+    GofResult
+        A named tuple with the test statistic and p-value.
+    """
+    data_np = conversions.vlToArray(data)
+    return simple_test(data_np, dist, args, stat=ks_stat, pdist=ks_unif,
+                       assume_sorted=assume_sorted)
+
+
+def cvmtest(data: conversions.VectorLike,
+            dist,
+            args=(),
+            assume_sorted: bool = False):
+    """
+    Cramer-von Mises test for goodness of fit to a distribution.
+
+    Parameters
+    ----------
+    data : VectorLike
+        Sample data vector.
+    dist : str or frozen distribution object
+        Scipy distribution name or frozen distribution object.
+    args : tuple, optional
+        Parameters for the distribution if it is not a string.
+    assume_sorted : bool, optional
+        If True, assumes that `data` is already sorted.  Defaults to False.
+
+    Returns
+    -------
+    GofResult
+        A named tuple with the test statistic and p-value.
+    """
+    data_np = conversions.vlToArray(data)
+    return simple_test(data_np, dist, args, stat=cvm_stat, pdist=cvm_unif,
+                       assume_sorted=assume_sorted)
+
+def adtest(data: conversions.VectorLike,    
+           dist,
+           args=(),
+           assume_sorted: bool = False):
+    """
+    Anderson-Darling test for goodness of fit to a distribution.
+
+    Parameters
+    ----------
+    data : VectorLike
+        Sample data vector.
+    dist : str or frozen distribution object
+        Scipy distribution name or frozen distribution object.
+    args : tuple, optional
+        Parameters for the distribution if it is not a string.
+    assume_sorted : bool, optional
+        If True, assumes that `data` is already sorted.  Defaults to False.
+
+    Returns
+    -------
+    GofResult
+        A named tuple with the test statistic and p-value.
+    """
+    data_np = conversions.vlToArray(data)
+    return simple_test(data_np, dist, args, stat=ad_stat, pdist=ad_unif,
+                       assume_sorted=assume_sorted) 

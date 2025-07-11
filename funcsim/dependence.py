@@ -1,6 +1,17 @@
 import math
 import numpy as np
+import pandas as pd
 from scipy import stats
+from typing import Generator, Optional, Tuple
+import warnings
+import conversions
+import nearby
+import shapiro
+
+
+def _goodUvec(uvec: np.ndarray) -> bool:
+    # check that values in uvec are in (0, 1)
+    return np.all((uvec > 0.0) & (uvec <1.0))
 
 
 def _memoize(f):
@@ -11,7 +22,7 @@ def _memoize(f):
             self.f = f
 
         def __call__(self, sig):
-            key = hash(sig.tostring())
+            key = hash(sig.tobytes())
             if key not in self.keys():
                 self[key] = self.f(sig)
             return self[key]
@@ -27,21 +38,17 @@ def _makeA(sigma):
 
 def _checkcov(cov, name):
     # sanity check a covariace matrix.  Use "name" in any error/exception msg
-    if type(cov) != np.ndarray:
-        raise ValueError("%s must be of type numpy.ndarray" % name)
-    if len(cov.shape) != 2:
-        raise ValueError("%s must be two-dimensional" % name)
     if not np.allclose(cov, cov.T):
-        raise ValueError("%s must be symmetrical" % name)
+        raise ValueError(f"{name} must be symmetrical")
     if not np.all(np.linalg.eigvals(cov) > 0):
-        raise ValueError("%s must be positive definite" % name)
+        raise ValueError(f"{name} must be positive definite")
     return cov
 
 
 def _rand_int(u, M):
     # given a standard uniform draw "u", select a
     # random integer from a length "M" sequece: 0, 1, ..., M-1
-    return min(math.floor((M)*u), M)
+    return int(min(math.floor((M)*u), M))
 
 
 def _skew_stable_draw(draw, alpha, beta, gamma, delta):
@@ -79,80 +86,111 @@ def _skew_stable_draw(draw, alpha, beta, gamma, delta):
     return z * gamma + delta + beta * gamma * omega
 
 
-def normal(draw, sigma, mu=None):
-    # perform joint normal draws.  "sigma" should be a covariance matrix as
-    # a numpy.array
-    A = _makeA(_checkcov(sigma, "sigma"))
-    K = len(A)  # number of variables
-    prod = np.dot(A, stats.norm.ppf([next(draw) for i in range(K)]))
-    if mu is None:
-        return prod
-    else:
-        return mu + prod
+def covtocorr(cov: conversions.ArrayLike) -> pd.DataFrame:
+    """
+    Convert a covariance matrix to a correlation matrix.
+
+    This function takes a symmetric, positive definite covariance matrix
+    and returns the corresponding correlation matrix.
+
+    Parameters
+    ----------
+    cov : ArrayLike
+        Covariance matrix (square, symmetric).
+
+    Returns
+    -------
+    pd.DataFrame
+        A pandas DataFrame representing the correlation matrix.
+
+    Raises
+    ------
+    ValueError
+        If the input is not a valid covariance matrix.
+
+    Notes
+    -----
+    The correlation matrix is computed by normalizing the covariance
+    matrix by the standard deviations of each variable.
+    """
+    cov_np = conversions.alToArray(cov)
+    names = conversions.alColNames(cov)
+    _checkcov(cov_np, "covariance matrix")    
+
+    N = cov.shape[0]
+    sinv = np.identity(N) * np.sqrt(1.0 / np.diag(cov))
+    corr = sinv.dot(cov).dot(sinv)
+    return pd.DataFrame(corr, index=names, columns=names)
 
 
-def cgauss(draw, rho):
-    # joint u draws from a Gaussian copula.
-    # "rho" should be a correlation matrix as a numpy.array
-    return stats.norm.cdf(normal(draw, _checkcov(rho, "rho")))
+def spearman(array: conversions.ArrayLike) -> Tuple[float, Tuple[float, float]]:
+    """
+    Calculate Spearman's rank correlation coefficient and its 95% confidence
+    interval.
 
+    This function computes Spearman's rho for two variables and returns the
+    correlation coefficient along with the lower and upper bounds of the 95%
+    confidence interval.
 
-def cstudent(draw, rho, nu):
-    # joint u draws from a Student's t copula.
-    # "rho" is a correlation  matrix
-    # "nu" is the degrees-of-freedom parameter
-    x = normal(draw, rho)
-    chi2 = stats.chi2.ppf(next(draw), df=nu)
-    mult = (nu / chi2)**0.5
-    return stats.t.cdf(mult * x, df=nu)
+    Parameters
+    ----------
+    array : ArrayLike
+        Input data as an (N, 2) array-like object, where N is the number of
+        observations and each column represents a variable.
 
+    Returns
+    -------
+    tuple of (float, tuple of float)
+        A tuple (rho, ci), where rho is Spearman's rank correlation coefficient,
+        and ci is a tuple of (lower, upper) bounds for the 95% confidence
+        interval.
 
-def cclayton(draw, nvars, theta):
-    # joint u draws from a clayton copula
-    # "nvars" is an integer >= 2
-    # "theta" is a float > 0.0
-    #
-    # see: https://support.sas.com/documentation/cdl/en/etsug/63939/HTML/default/viewer.htm#etsug_copula_sect017.htm
+    Raises
+    ------
+    AssertionError
+        If the input array does not have shape (N, 2).
 
-    if type(theta) != float:
-        raise ValueError('"theta" must be a float')
-    if theta <= 0.0:
-        raise ValueError('"theta" must be greater than 0.0')
+    Notes
+    -----
+    The confidence interval is computed using Fisher's z-transformation.
+    """
+    a = conversions.alToArray(array)
+    assert len(a.shape) == 2, "a must have exactly two dimensions"
+    assert a.shape[1] == 2, "a must have exactly two columns"
 
-    def Ftilde(t):
-        return (1.0 + t)**(-1.0 / theta)
+    rho_s = stats.spearmanr(a)[0]
 
-    v = stats.gamma.ppf(next(draw), (1.0/theta))
-    return np.array([Ftilde(-math.log(next(draw))/v) for i in range(nvars)])
+    N = a.shape[0]
+    if N <= 3:
+        raise ValueError("At least 4 observations are required for confidence interval.")
 
+    stderr = 1.0 / math.sqrt(N - 3)
+    delta = 1.96 * stderr
+    lower = math.tanh(math.atanh(rho_s) - delta)
+    upper = math.tanh(math.atanh(rho_s) + delta)
 
-def cgumbel(draw, nvars, theta):
-    # joint u draws from a gumbel copula
-    # "nvars" is an integer >= 2
-    # "theta" is a float > 0.0
-    #
-    # see: https://support.sas.com/documentation/cdl/en/etsug/63939/HTML/default/viewer.htm#etsug_copula_sect017.htm
-
-    if type(theta) != float:
-        raise ValueError('"theta" must be a float')
-    if theta <= 1.0:
-        raise ValueError('"theta" must be greater than 1.0')
-
-    def Ftilde(t):
-        return math.exp(-(t**(1.0/theta)))
-
-    gamma = math.cos(0.5 * math.pi / theta)**theta
-    alpha = 1.0 / theta
-    v = _skew_stable_draw(draw, alpha, 1.0, gamma, 0.0)
-    return np.array([Ftilde(-math.log(next(draw))/v) for i in range(nvars)])
+    return (rho_s, (lower, upper))
 
 
 class MvKde():
+    """
+    A multivariate KDE distribution object.
 
-    def __init__(self, data, bw='scott'):
-        # sample should be a numpy array
-
-        self._data = data
+    Parameters
+    ----------
+    data : ArrayLike
+        Input data array of with variables in columns and observations
+        in rows.
+    bw : str, optional
+        Bandwidth selection method, 'scott' or 'silverman'.
+        Default is 'scott'.    
+    """
+    def __init__(self,
+                 data: conversions.ArrayLike,
+                 bw: str = 'scott'
+                ) -> None:
+        self._data = conversions.alToArray(data)
+        self._names = conversions.alColNames(data)
         (self._M, self._K) = self._data.shape
 
         # sample standard deviations
@@ -171,9 +209,24 @@ class MvKde():
         else:
             self._bw = bw
 
-    def sample(self, draw):
-        # random draw from the KDE
+    def draw(self,
+             ugen: Generator[float, None, None]
+             ) -> pd.Series:
+        """
+        Generate a joint random draw from the multivariate distribution.
 
+        Parameters
+        ----------
+        ugen : Generator[float, None, None]
+            A generator that yields independent standard uniform random numbers.
+
+        Returns
+        -------
+        pd.Series
+            A pandas Series representing a joint draw from the KDE.  The index
+            values are the variable names, and the values are the random
+            values.
+        """
         # hist obs about which we will sample
         m = _rand_int(next(draw), self._M)
 
@@ -183,5 +236,384 @@ class MvKde():
         return normal(draw, self._bw, mu)
 
 
-def fitkdemv(data, bw='scott'):
-    return MvKde(data, bw)
+class MvNorm():
+    """
+    A multivariate normal distribution object. A vector of means
+    and a covariance matrix are computed from the input data.  If the sample
+    covariance matrix is not positive definite, the Higham
+    method is used to calculate the nearest positive definite matrix.
+
+    Parameters
+    ----------
+    data : ArrayLike
+        Input data array of with variables in columns and observations
+        in rows.
+    """
+    def __init__(self,
+                 data: conversions.ArrayLike,
+                ) -> None:
+
+        self._data = conversions.alToArray(data)
+        self._names = conversions.alColNames(data)
+        (self._M, self._K) = self._data.shape
+
+        # fit mean and covariance
+        self._mu = self._data.mean(axis=0)
+
+        # compute covariance matrix
+        self._sigma = np.cov(self._data, rowvar=False)
+
+        # ensure covariance matrix is positive definite
+        if not np.all(np.linalg.eigvals(self._sigma) > 0):
+            # use the Higam method to ensure positive definiteness
+            self._sigma = nearby.nearestpd(self._data)
+
+        # get cholesky decomposition of covariance matrix
+        self._A = np.linalg.cholesky(self._sigma)
+
+        # warn if data seem non-normally distributed
+        for k in range(self._K):
+            swp = shapiro.swtest(self._data[:, k])[1]
+            if not swp > 0.05:
+                msg = (f"Warning: variable '{self._names[k]}' may not be "
+                       f" normally distributed. (Shapiro-Wilk p-value"
+                       f"={swp:.3f})")
+                warnings.warn(msg, UserWarning)
+
+    def draw(self,
+             ugen: Generator[float, None, None]
+             ) -> pd.Series:
+        """
+        Generate a joint random draw from the multivariate distribution.
+
+        Parameters
+        ----------
+        ugen : Generator[float, None, None]
+            A generator yielding independent standard uniform random numbers.
+
+        Returns
+        -------
+        pd.Series
+            A pandas Series representing a joint draw from the KDE.  The index
+            values are the variable names, and the values are the random
+            values. If no variable names were provided in the input data,
+            the variables will be named 'v0', 'v1', ..., reflecting the
+            oreder of the columns in the input data.
+        """
+        uvec = [next(ugen) for i in range(self._K)]
+        retA = self._mu + np.dot(self._A, stats.norm.ppf(uvec))
+        return pd.Series(retA, index=self._names)
+
+
+class CopulaGauss():
+    """
+    A Gaussian copula object. 
+
+    Parameters
+    ----------
+    udata : ArrayLike
+        Input array of probability values from individual marginal
+        distributions ("pseudo-observations") with variables in
+        columns and observations in rows.  That is, each column
+        represents the result of applying the fitted CDF of some marginal
+        distribution to the raw data for that variable.  The
+        values in each column should be in the range [0, 1]. The parameters
+        are fit using the method of moments.  If the sample covariance
+        matrix is not positive definite, the Higham method is used to
+        calculate the nearest positive definite matrix.
+    """
+
+    def __init__(self,
+                 udata: conversions.ArrayLike,
+                 ) -> None:
+        self._data = conversions.alToArray(udata)
+        self._names = conversions.alColNames(udata)
+        (self._M, self._K) = self._data.shape
+
+        # check that data are in (0, 1)
+        for k in range(self._K):
+            if not _goodUvec(self._data[:, k]):
+                raise ValueError(f"Column {k} of the input data, with name "
+                                 f"{self._names[k]}, has values that are not "
+                                 f"in the range (0, 1)")
+
+        # standardize the data
+        self._z = pd.DataFrame(stats.norm.ppf(self._data), columns=self._names)
+
+        # fit MV normal dist to the standardized data
+        self._mvnorm = MvNorm(self._z)
+
+    def draw(self,
+             ugen: Generator[float, None, None]
+             ) -> pd.Series:
+        """
+        Generate a joint random draw from the Gaussian copula.
+
+        Parameters
+        ----------
+        ugen : Generator[float, None, None]
+            A generator yielding independent standard uniform random numbers.
+
+        Returns
+        -------
+        pd.Series
+            A pandas Series representing a joint draw from the Gaussian copula.
+            The index reflects the variable names, and non-independent
+            standard uniform draws are the values in the Series.
+            If no variable names were provided in the input data,
+            the variables will be named 'v0', 'v1', ..., reflecting the
+            oreder of the columns in the input data.
+        
+        """
+        return self._mvnorm.draw(ugen).apply(stats.norm.cdf)
+
+
+class CopulaStudent():
+    """
+    A Student's t copula object. 
+
+    Parameters
+    ----------
+    udata : ArrayLike
+        Input array of probability values from individual marginal
+        distributions ("pseudo-observations") with variables in
+        columns and observations in rows.  That is, each column
+        represents the result of applying the fitted CDF of some marginal
+        distribution to the raw data for that variable.  The
+        values in each column should be in the range [0, 1]. Parameters are
+        fit using maximum likelihood.
+    """
+
+    def __init__(self,
+                 udata: conversions.ArrayLike,
+                 ) -> None:
+        
+        # check that copulae package is installed
+        try:
+            import copulae
+        except ImportError as e:
+            raise ImportError("Optional dependency 'copulae' is required for "
+                              "CopulaStudent. Install with `pip install "
+                              "copulae`.") from e
+
+        self._data = conversions.alToArray(udata)
+        self._names = conversions.alColNames(udata)
+        (self._M, self._K) = self._data.shape
+
+        # check that data are in (0, 1)
+        for k in range(self._K):
+            if not _goodUvec(self._data[:, k]):
+                raise ValueError(f"Column {k} of the input data, with name "
+                                 f"{self._names[k]}, has values that are not "
+                                 f"in the range (0, 1)")
+
+        # fit parameters
+        self._cop = copulae.elliptical.StudentCopula()
+        self._cop.fit(self._data)
+        self._rho = self._cop.sigma
+        self._nu = self._cop.params.df
+
+    def draw(self,
+             ugen: Generator[float, None, None]
+             ) -> pd.Series:
+        """
+        Generate a joint random draw from the Student's t copula.
+
+        Parameters
+        ----------
+        ugen : Generator[float, None, None]
+            A generator yielding independent standard uniform random numbers.
+
+        Returns
+        -------
+        pd.Series
+            A pandas Series representing a joint draw from the Student's t
+            copula. The index reflects the variable names, and non-independent
+            standard uniform draws are the values in the Series.
+            If no variable names were provided in the input data,
+            the variables will be named 'v0', 'v1', ..., reflecting the
+            oreder of the columns in the input data.
+        
+        """
+        uvec = [next(ugen) for i in range(self._K)]
+        z = np.dot(self._rho, stats.norm.ppf(uvec))
+        chi2 = stats.chi2.ppf(next(ugen), df=self._nu)
+        mult = (self._nu / chi2)**0.5
+        retA = stats.t.cdf(mult * z, df=self._nu)
+        return pd.Series(retA, index=self._names)
+
+
+class CopulaClayton():
+    """
+    A Clayton copula object. 
+
+    Parameters
+    ----------
+    udata : ArrayLike
+        Input array of probability values from individual marginal
+        distributions ("pseudo-observations") with variables in
+        columns and observations in rows.  That is, each column
+        represents the result of applying the fitted CDF of some marginal
+        distribution to the raw data for that variable.  The
+        values in each column should be in the range [0, 1]. Parameters are
+        fit using maximum likelihood.  This implementation accomodates
+        only positive dependence, so the fitted value for theta is
+        constrained to be >= 2.0.
+    """
+
+    def __init__(self,
+                 udata: conversions.ArrayLike,
+                 ) -> None:
+        
+        # check that copulae package is installed
+        try:
+            import copulae
+        except ImportError as e:
+            raise ImportError("Optional dependency 'copulae' is required for "
+                              "CopulaClayton. Install with `pip install "
+                              "copulae`.") from e
+
+        self._data = conversions.alToArray(udata)
+        self._names = conversions.alColNames(udata)
+        (self._M, self._K) = self._data.shape
+
+        # check that data are in (0, 1)
+        for k in range(self._K):
+            if not _goodUvec(self._data[:, k]):
+                raise ValueError(f"Column {k} of the input data, with name "
+                                 f"{self._names[k]}, has values that are not "
+                                 f"in the range (0, 1)")
+
+        # fit parameters
+        self._cop = copulae.archimedean.ClaytonCopula()
+        self._cop.fit(self._data)
+        self._theta = max(self._cop.params, 2.000)
+        if self._cop.params < 2.00:
+            warnings.warn(f"The Clayton copula implementation in funcsim "
+                          f"accomodates only positive dependence. The fitted "
+                          f"value for theta is {self._theta}, implying "
+                          f"negative dependence.  A theta value of 2.0 is "
+                          f"being used rather that the fitted value, but this "
+                          f"implies no dependence among the variables. You "
+                          f"should probably choose a different dependence "
+                          f"representation for your data.",
+                          UserWarning)
+
+    def _Ftilde(self, t):
+        return (1.0 + t)**(-1.0 / self._theta)
+
+    def draw(self,
+             ugen: Generator[float, None, None]
+             ) -> pd.Series:
+        """
+        Generate a joint random draw from the Clayton copula.
+
+        Parameters
+        ----------
+        ugen : Generator[float, None, None]
+            A generator yielding independent standard uniform random numbers.
+
+        Returns
+        -------
+        pd.Series
+            A pandas Series representing a joint draw from the Clayton
+            copula. The index reflects the variable names, and non-independent
+            standard uniform draws are the values in the Series.
+            If no variable names were provided in the input data,
+            the variables will be named 'v0', 'v1', ..., reflecting the
+            oreder of the columns in the input data.
+        
+        """
+        v = stats.gamma.ppf(next(ugen), (1.0/self._theta))
+        retA = np.array([self._Ftilde(-math.log(next(ugen))/v)
+                         for i in range(self._K)])
+        return pd.Series(retA, index=self._names)
+
+
+class CopulaGumbel():
+    """
+    A Gumbel copula object. 
+
+    Parameters
+    ----------
+    udata : ArrayLike
+        Input array of probability values from individual marginal
+        distributions ("pseudo-observations") with variables in
+        columns and observations in rows.  That is, each column
+        represents the result of applying the fitted CDF of some marginal
+        distribution to the raw data for that variable.  The
+        values in each column should be in the range [0, 1]. Parameters are
+        fit using maximum likelihood.  This implementation accomodates
+        only positive dependence, so the fitted value for theta is
+        constrained to be > 1.0.
+    """
+
+    def __init__(self,
+                 udata: conversions.ArrayLike,
+                 ) -> None:
+        
+        # check that copulae package is installed
+        try:
+            import copulae
+        except ImportError as e:
+            raise ImportError("Optional dependency 'copulae' is required for "
+                              "CopulaGumbel. Install with `pip install "
+                              "copulae`.") from e
+
+        self._data = conversions.alToArray(udata)
+        self._names = conversions.alColNames(udata)
+        (self._M, self._K) = self._data.shape
+
+        # check that data are in (0, 1)
+        for k in range(self._K):
+            if not _goodUvec(self._data[:, k]):
+                raise ValueError(f"Column {k} of the input data, with name "
+                                 f"{self._names[k]}, has values that are not "
+                                 f"in the range (0, 1)")
+
+        # fit parameters
+        self._cop = copulae.archimedean.GumbelCopula()
+        self._cop.fit(self._data)
+        self._theta = max(self._cop.params, 1.0000038089)  # ensure theta > 1.0
+        if self._cop.params <= 1.0:
+            warnings.warn(f"The Gumbel copula implementation in funcsim "
+                          f"accomodates only positive dependence. The fitted "
+                          f"value for theta is {self._params}, implying "
+                          f"negative dependence.  A theta value of 1.0 is "
+                          f"being used rather that the fitted value, but this "
+                          f"implies no dependence among the variables. You "
+                          f"should probably choose a different dependence "
+                          f"representation for your data.",
+                          UserWarning)
+
+    def _Ftilde(self, t):
+        return math.exp(-(t**(1.0/self._theta)))
+
+    def draw(self,
+             ugen: Generator[float, None, None]
+             ) -> pd.Series:
+        """
+        Generate a joint random draw from the Gumbel copula.
+
+        Parameters
+        ----------
+        ugen : Generator[float, None, None]
+            A generator yielding independent standard uniform random numbers.
+
+        Returns
+        -------
+        pd.Series
+            A pandas Series representing a joint draw from the Clayton
+            copula. The index reflects the variable names, and non-independent
+            standard uniform draws are the values in the Series.
+            If no variable names were provided in the input data,
+            the variables will be named 'v0', 'v1', ..., reflecting the
+            oreder of the columns in the input data.
+        
+        """
+        gamma = math.cos(0.5 * math.pi / self._theta)**self._theta
+        alpha = 1.0 / self._theta
+        v = _skew_stable_draw(ugen, alpha, 1.0, gamma, 0.0)
+        retA = np.array([self._Ftilde(-math.log(next(ugen))/v)
+                         for i in range(self._K)])
+        return pd.Series(retA, index=self._names)

@@ -2,13 +2,13 @@ from scipy import stats
 import funcsim as fs
 
 
-def trial(draw):
+def trial(ugen):
     # function to perform one trial.
     # simulate one std. norm variable, and one Bernoilli variable
 
     # independent uniform draws
-    u1 = next(draw)
-    u2 = next(draw)
+    u1 = next(ugen)
+    u2 = next(ugen)
 
     # inverse CDF transformations
     eps = stats.norm.ppf(u1)
@@ -19,9 +19,16 @@ def trial(draw):
 
 
 def test_0():
-    out = fs.static(trial=trial, trials=500)
-    means = out.mean(dim='trials')
-    meanEps = float(means.loc['eps'])
-    meanB = float(means.loc['b'])
+    out = fs.simulate(f=trial, ntrials=500)
+    meanEps = float(out.sel(steps=0, variables="eps").mean())
+    meanB = float(out.sel(steps=0, variables="b").mean())
     assert abs(meanEps) < 0.01
     assert abs(meanB - 0.35) < 0.01
+
+
+def test_1():
+    out = fs.simulate(f=trial, ntrials=500, sampling='mc')
+    meanEps = float(out.sel(steps=0, variables="eps").mean())
+    meanB = float(out.sel(steps=0, variables="b").mean())
+    assert abs(meanEps) < 0.03
+    assert abs(meanB - 0.35) < 0.03

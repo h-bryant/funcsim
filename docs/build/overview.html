@@ -1,25 +1,27 @@
-
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html lang="en" data-content_root="./">
   <head>
     <meta charset="utf-8" />
-    <title>Overview &#8212; funcsim  documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/language_data.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Overview &#8212; funcsim 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=01f34227"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Reference" href="api_reference.html" />
     <link rel="prev" title="funcsim documentation" href="index.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
+
   
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  
 
   </head><body>
   
@@ -31,23 +33,23 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="overview">
-<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h1>
-<p>The basic idea is that all an end user can run a simulation after
+  <section id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h1>
+<p>This is a tool that allows an end user to run a simulation after
 simply writing a specially-crafted function that performs a single
 trial (for a static simulation) or that takes one step
-through time or space (for a recursive-dynamic simulation).</p>
-<div class="section" id="simple-static-simulation-example">
-<h2>Simple static simulation example<a class="headerlink" href="#simple-static-simulation-example" title="Permalink to this headline">¶</a></h2>
+through time (for a recursive-dynamic simulation).</p>
+<section id="simple-static-simulation-example">
+<h2>Simple static simulation example<a class="headerlink" href="#simple-static-simulation-example" title="Link to this heading">¶</a></h2>
 <p>For a static simulation, the trial function has the
 following form:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># function to perform one trial</span>
-<span class="k">def</span> <span class="nf">trial</span><span class="p">(</span><span class="n">draw</span><span class="p">):</span>
-    <span class="c1"># &#39;draw&#39; argument is required and must be the only argument</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">trial</span><span class="p">(</span><span class="n">ugen</span><span class="p">):</span>
+    <span class="c1"># &#39;ugen&#39; argument is required and must be the first argumnet</span>
 
     <span class="c1"># independent draws from U(0, 1)</span>
-    <span class="n">u1</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">)</span>
-    <span class="n">u2</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">)</span>
+    <span class="n">u1</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">ugen</span><span class="p">)</span>
+    <span class="n">u2</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">ugen</span><span class="p">)</span>
 
     <span class="c1"># do some kind of work</span>
     <span class="n">x</span> <span class="o">=</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">u1</span>
@@ -58,59 +60,64 @@ following form:</p>
 </pre></div>
 </div>
 <p>Any number of independent uniform draws can be taken.</p>
-<p>Then a simulation is performed by invoking the <code class="docutils literal notranslate"><span class="pre">static</span></code> function:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">funcsim</span> <span class="kn">as</span> <span class="nn">fs</span>
+<p>Then a simulation is performed by invoking the <code class="docutils literal notranslate"><span class="pre">simulate</span></code> function:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">funcsim</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">fs</span>
 
-<span class="n">da</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">static</span><span class="p">(</span><span class="n">trial</span><span class="o">=</span><span class="n">trial</span><span class="p">,</span> <span class="n">trials</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+<span class="n">da</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="n">trial</span><span class="p">,</span> <span class="n">ntrials</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Here, the value passed as the <code class="docutils literal notranslate"><span class="pre">trials</span></code> argument is the number of
-trials that will be performed.  The returned object is a
-2-dimensional <a class="reference external" href="http://xarray.pydata.org/">xarray</a>
-<code class="docutils literal notranslate"><span class="pre">DataArray</span></code> instance, with a first dimension named <code class="docutils literal notranslate"><span class="pre">trails</span></code>
-and a second dimension named <code class="docutils literal notranslate"><span class="pre">variables</span></code>.</p>
-</div>
-<div class="section" id="simple-recursive-dynamic-example">
-<h2>Simple recursive-dynamic example<a class="headerlink" href="#simple-recursive-dynamic-example" title="Permalink to this headline">¶</a></h2>
-<p>For problems that reflect movement through time or space,
+<p>Here, the value passed as the <code class="docutils literal notranslate"><span class="pre">ntrials</span></code> argument is the number of
+trials that will be performed.
+The output is a 3-dimensional <code class="docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> instance, with dimensions
+named <code class="docutils literal notranslate"><span class="pre">trials</span></code>, <code class="docutils literal notranslate"><span class="pre">variables</span></code>, and <code class="docutils literal notranslate"><span class="pre">steps</span></code>.
+For this simple static simulation, the <code class="docutils literal notranslate"><span class="pre">steps</span></code> dimension is unimportant,
+as the simulation does not reflect movement through time.</p>
+</section>
+<section id="simple-recursive-dynamic-example">
+<h2>Simple recursive-dynamic example<a class="headerlink" href="#simple-recursive-dynamic-example" title="Link to this heading">¶</a></h2>
+<p>For problems that reflect movement through time,
 a recursive-dynamic simulation is appropriate.  The user specifies a
-function describing one step forward, such as the one below.
-The <code class="docutils literal notranslate"><span class="pre">data</span></code> argument here reflects historical observations. It is a
-2-dimensional <code class="docutils literal notranslate"><span class="pre">DataArray</span></code> instance, with a first dimension named
-<code class="docutils literal notranslate"><span class="pre">steps</span></code> and a second dimension named <code class="docutils literal notranslate"><span class="pre">variables</span></code>.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">stats</span>
+function describing one step forward, as in the example below.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">stats</span>
 
-<span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">draw</span><span class="p">):</span>
-    <span class="c1"># take one step through time</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="n">ugen</span><span class="p">,</span> <span class="n">hist</span><span class="p">):</span>
+    <span class="c1"># Function to take one step through time. The &#39;ugen&#39; argument</span>
+    <span class="c1"># is first and is required as with the static simulation.</span>
+    <span class="c1"># The &#39;hist&#39; argument is needed if &#39;f&#39; refers to lagged values of</span>
+    <span class="c1"># some sort, as in this example.</span>
 
     <span class="c1"># value of &quot;p&quot; in the previous period</span>
-    <span class="n">plag</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">recall</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">lag</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">plag</span> <span class="o">=</span> <span class="n">hist</span><span class="o">.</span><span class="n">recall</span><span class="p">(</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">lag</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="c1"># do some kind of work</span>
-    <span class="n">pnew</span> <span class="o">=</span> <span class="mf">0.25</span> <span class="o">+</span> <span class="mf">0.9</span> <span class="o">*</span> <span class="n">plag</span> <span class="o">+</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">draw</span><span class="p">))</span>
+    <span class="n">pnew</span> <span class="o">=</span> <span class="mf">0.25</span> <span class="o">+</span> <span class="mf">0.9</span> <span class="o">*</span> <span class="n">plag</span> <span class="o">+</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">ugen</span><span class="p">))</span>
 
-    <span class="c1"># chronicle the new value of &quot;p&quot; in the historical record</span>
-    <span class="n">datanew</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">chron</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;p&quot;</span><span class="p">:</span> <span class="n">pnew</span><span class="p">})</span>
-
-    <span class="k">return</span> <span class="n">datanew</span>
+    <span class="c1"># return new value(s) for this step/time period</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;p&quot;</span><span class="p">:</span> <span class="n">pnew</span><span class="p">}</span>
 </pre></div>
 </div>
-<p>After specifying a <code class="docutils literal notranslate"><span class="pre">DataArray</span></code> containing historical data (here, called
-<code class="docutils literal notranslate"><span class="pre">data0</span></code>), the simulation is invoked thusly:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">out</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">recdyn</span><span class="p">(</span><span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">data0</span><span class="o">=</span><span class="n">data0</span><span class="p">,</span> <span class="n">steps</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">trials</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+<p>The <code class="docutils literal notranslate"><span class="pre">step</span></code> function above is relying on lagged values of the variable <code class="docutils literal notranslate"><span class="pre">p</span></code>.
+To accommodate this, we specify a 2-D <code class="docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> containing historical
+data (here, called <code class="docutils literal notranslate"><span class="pre">myhist</span></code>), with a first dimension named
+<code class="docutils literal notranslate"><span class="pre">steps</span></code> and a second dimension named <code class="docutils literal notranslate"><span class="pre">variables</span></code>, that we will pass to
+<code class="docutils literal notranslate"><span class="pre">simulate</span></code> via an argument named <code class="docutils literal notranslate"><span class="pre">hist0</span></code>.
+Then, a simulation reflecting 10 time steps can be performed thusly:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">out</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">recdyn</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">hist0</span><span class="o">=</span><span class="n">myhist</span><span class="p">,</span> <span class="n">nsteps</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>The output is a 3-dimensional <code class="docutils literal notranslate"><span class="pre">DataArray</span></code> instance, with dimensions named
-<code class="docutils literal notranslate"><span class="pre">trials</span></code>, <code class="docutils literal notranslate"><span class="pre">variables</span></code>, and <code class="docutils literal notranslate"><span class="pre">steps</span></code>.</p>
-</div>
-</div>
+<p>The output is again a 3-dimensional <code class="docutils literal notranslate"><span class="pre">xarray.DataArray</span></code> instance, with
+dimensions named <code class="docutils literal notranslate"><span class="pre">trials</span></code>, <code class="docutils literal notranslate"><span class="pre">variables</span></code>, and <code class="docutils literal notranslate"><span class="pre">steps</span></code>.
+However, it will now reflect multiple <code class="docutils literal notranslate"><span class="pre">steps</span></code>: ten simulated time steps plus
+however many historical observations were reflected in <code class="docutils literal notranslate"><span class="pre">data0</span></code>.</p>
+</section>
+</section>
 
 
           </div>
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <h1 class="logo"><a href="index.html">funcsim</a></h1>
 
@@ -121,14 +128,24 @@ The <code class="docutils literal notranslate"><span class="pre">data</span></co
 
 
 
-<h3>Navigation</h3>
-<p class="caption"><span class="caption-text">Contents:</span></p>
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Overview</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#simple-static-simulation-example">Simple static simulation example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#simple-recursive-dynamic-example">Simple recursive-dynamic example</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">API Reference</a></li>
 </ul>
 
 <div class="relations">
@@ -136,19 +153,10 @@ The <code class="docutils literal notranslate"><span class="pre">data</span></co
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
       <li>Previous: <a href="index.html" title="previous chapter">funcsim documentation</a></li>
+      <li>Next: <a href="api_reference.html" title="next chapter">API Reference</a></li>
   </ul></li>
 </ul>
 </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
 
 
 
@@ -162,11 +170,11 @@ The <code class="docutils literal notranslate"><span class="pre">data</span></co
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2017, Henry Bryant.
+      &#169;2017-2025, Henry Bryant.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
       <a href="_sources/overview.rst.txt"

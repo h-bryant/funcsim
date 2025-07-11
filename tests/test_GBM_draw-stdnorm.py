@@ -10,11 +10,11 @@ def gbm(s0, dt, mu, sig, eps):
     return s0 * math.exp((mu - 0.5 * sig**2) * dt + eps * sig * dt ** 0.5)
 
 
-def step(data, draw):
+def step(draw, data):
     # take one step through time
 
     # value of p in previous period
-    pLag1 = fs.recall(data, "p", lag=1)
+    pLag1 = data.recall("p", lag=1)
 
     # uniform draw --> standard normal draw
     eps = next(draw)
@@ -23,12 +23,11 @@ def step(data, draw):
     pNew = gbm(s0=pLag1, dt=1.0 / 12.0, mu=0.05, sig=0.10, eps=eps)
     cNew = max(0.0, pNew - 1.0)
 
-    # return updated price history
-    dataNew = fs.chron(data, {"p": pNew, "c": cNew})
-    return dataNew
+    # return new values for this step
+    return {"p": pNew, "c": cNew}
 
 
-def data0():
+def hist0():
     # set up existing/historical data
     steps = [0, 1, 2]
     variables = ["p", "c"]
@@ -39,7 +38,7 @@ def data0():
 
 
 def test_0():  # basic
-    out = fs.recdyn(step=step, data0=data0(), steps=10, trials=500,
+    out = fs.simulate(f=step, hist0=hist0(), nsteps=10, ntrials=500,
                     stdnorm=True)
     assert type(out) == xr.DataArray
     print(out)
@@ -48,20 +47,20 @@ def test_0():  # basic
 
 
 def test_1():  # use multi
-    out = fs.recdyn(step=step, data0=data0(), steps=10, trials=500, multi=True,
-                    stdnorm=True)
+    out = fs.simulate(f=step, hist0=hist0(), nsteps=10, ntrials=500,
+                    multi=True, stdnorm=True)
     assert type(out) == xr.DataArray
     assert abs(float(out[:, 0, 10].mean()) - 1.0234) < 0.01
 
 
 def test_2():  # alternative seed
-    out = fs.recdyn(step=step, data0=data0(), steps=10, trials=500, seed=123,
+    out = fs.simulate(f=step, hist0=hist0(), nsteps=10, ntrials=500, seed=123,
                     stdnorm=True)
     assert type(out) == xr.DataArray
     assert abs(float(out[:, 0, 10].mean()) - 1.0234) < 0.01
 
 
 def test_3():  # many steps (check that recursion does not bust stack)
-    out = fs.recdyn(step=step, data0=data0(), steps=2000, trials=10,
+    out = fs.simulate(f=step, hist0=hist0(), nsteps=2000, ntrials=10,
                     stdnorm=True)
     assert type(out) == xr.DataArray

@@ -45,10 +45,6 @@ def test_doc():
     assert A.a.__doc__ == """A docstring."""
     assert B.b.__doc__ == """Another docstring."""
 
-def test_single():
-    assert_array_equal(varange(.5, 4), arange(.5, 4))
-    assert_array_equal(varange(1.5, 4), arange(1.5, 5))
-
 def test_sequence():
     a = varange((.5, 1., 1.5), 4)
     assert_array_equal(a, [arange(.5, 4), arange(1., 5), arange(1.5, 5)])

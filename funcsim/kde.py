@@ -1,45 +1,114 @@
-import math
+import functools
+from typing import Union
 import numpy as np
 import pandas as pd
 import scipy
 import scipy.stats as stats
+import conversions
+
+
+def vectorized_method(func):
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        # vectorize the bound method (bound to `self`)
+        return np.vectorize(lambda *a, **k: func(self, *a, **k))(*args, **kwargs)
+    return wrapper
 
 
 class Kde():
-    # create PDF, CDF, and PPF functions via Gaussian KDE.
-    # "sample" should be one of the following
-    # types: list, tuple, numpy.array, or pandas.Series.
-    # "bw" is the bandwidth method or parameter.  Alternatives
-    # to bw="scott" are 'silverman' or a float
+    """
+    Univariate kernel density estimator (KDE).
 
-    # resulting object has methods analogous to a scipy "frozen" (parameterized)
-    # parametric distribution object: pdf(), cdf(), and ppf()
+    Parameters
+    ----------
+    data : conversions.VectorLike
+        1-D data vector (list, tuple, np.ndarray, xr.DataArray, or pd.Series).
+    bw : str or float, optional
+        Bandwidth selection method ('scott', 'silverman') or a positive
+        float to use as the bandwidth. Default is 'scott'.
+    """
+    def __init__(self,
+                 data : conversions.VectorLike,
+                 bw : Union[str, float] = 'scott'):
 
-    def __init__(self, sample, bw='scott'):
+        sampleA = conversions.vlToArray(data)
 
         # raw kde object
-        self.gkde = stats.gaussian_kde(sample, bw)
+        self.gkde = stats.gaussian_kde(sampleA, bw)
 
         # lower limit of integreation for CDF
-        self.cdf_low = float(min(sample)) - 1.0 * (max(sample) - min(sample))
+        self.cdf_low = float(min(sampleA)) - \
+            1.0 * (max(sampleA) - min(sampleA))
 
         # initial guess for PPF optimization: the sample mean
-        self.ppf_x0 = float(sum(sample)) / float(len(sample))
+        self.ppf_x0 = float(sum(sampleA)) / float(len(sampleA))
 
         # "bracket" for PPF root finding
-        self.ppf_low = float(min(sample)) - 3.0 * (max(sample) - min(sample))
-        self.ppf_high = float(max(sample)) + 3.0 * (max(sample) - min(sample))
+        self.ppf_low = float(min(sampleA)) - \
+            3.0 * (max(sampleA) - min(sampleA))
+        self.ppf_high = float(max(sampleA)) + \
+            3.0 * (max(sampleA) - min(sampleA))
 
-    def pdf(self, v):
-        # probability density function
+    @vectorized_method
+    def pdf(self,
+            v: float
+           ) -> float:
+        """
+        Probability density function of the KDE at value v.
+
+        Parameters
+        ----------
+        v : float
+            Value at which to evaluate the PDF.
+
+        Returns
+        -------
+        float
+            The estimated probability density at v.
+        """
         return float(self.gkde(v))
 
-    def cdf(self, v):
-        # cumulative distribution fucntion
+    @vectorized_method
+    def cdf(self,
+            v: float
+           ) -> float:
+        """
+        Cumulative distribution function of the KDE at value v.
+
+        Parameters
+        ----------
+        v : float
+            Value at which to evaluate the CDF.
+
+        Returns
+        -------
+        float
+            The estimated cumulative probability at v.
+        """
         return float(self.gkde.integrate_box_1d(self.cdf_low, v))
 
-    def ppf(self, u):
-        # numerical percent point function (inverse CDF)
+    @vectorized_method
+    def ppf(self,
+            u: float
+           ) -> float:
+        """
+        Numerical percent point function (inverse CDF) for the KDE.
+
+        Parameters
+        ----------
+        u : float
+            Probability value in the range [0.0, 1.0].
+
+        Returns
+        -------
+        float
+            The value x such that CDF(x) = u.
+
+        Raises
+        ------
+        ValueError
+            If u is not in [0.0, 1.0] or optimization fails.
+        """
         assert u >= 0.0 and u <= 1.0, \
             "u must be within the range [0.0, 1.0]"
 
@@ -97,7 +166,3 @@ class Kde():
             else:
                 msg = "numerical optimization for PPF failed"
                 raise ValueError(msg)
-
-
-def fitkde(sample, bw="scott"):
-    return Kde(sample, bw)

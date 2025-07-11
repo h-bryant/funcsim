@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>core &#8212; funcsim 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for core</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span> <span class="k">as</span> <span class="n">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">multicore</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">rdarrays</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">stats</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Generator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">inspect</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_arg_count</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+    <span class="n">sig</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">sig</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+
+    <span class="c1"># Count only parameters that are positional or keyword</span>
+    <span class="c1"># (excluding *args and **kwargs)</span>
+    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span>
+        <span class="mi">1</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">params</span>
+        <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">kind</span> <span class="ow">in</span> <span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">Parameter</span><span class="o">.</span><span class="n">POSITIONAL_ONLY</span><span class="p">,</span>
+                      <span class="n">inspect</span><span class="o">.</span><span class="n">Parameter</span><span class="o">.</span><span class="n">POSITIONAL_OR_KEYWORD</span><span class="p">,</span>
+                      <span class="n">inspect</span><span class="o">.</span><span class="n">Parameter</span><span class="o">.</span><span class="n">KEYWORD_ONLY</span><span class="p">)</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_checkhist0</span><span class="p">(</span><span class="n">hist0</span><span class="p">):</span>
+    <span class="c1"># check that user&#39;s hist0 seems sane.  Return list of variable names</span>
+    <span class="c1"># in hist0 order.</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hist0</span><span class="p">,</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;hist0&quot; must be an xarray.DataArray&#39;</span><span class="p">)</span>
+
+    <span class="c1"># check that hist0 has the right dimension names </span>
+    <span class="n">hist0Coords</span> <span class="o">=</span> <span class="n">hist0</span><span class="o">.</span><span class="n">coords</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">hist0Coords</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;hist0&quot; must have exactly two dimensions&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="s2">&quot;variables&quot;</span> <span class="ow">in</span> <span class="n">hist0Coords</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span>
+            <span class="s2">&quot;steps&quot;</span> <span class="ow">in</span> <span class="n">hist0Coords</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;hist0&quot; must have dimensions &quot;variables&quot; and &quot;steps&quot;&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Check for an appropriate index for the &#39;variables&#39; dimension</span>
+    <span class="n">stepsCoords</span> <span class="o">=</span> <span class="n">hist0Coords</span><span class="p">[</span><span class="s2">&quot;steps&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">stepsCoords</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)</span> <span class="ow">or</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">stepsCoords</span><span class="o">.</span><span class="n">to_index</span><span class="p">(),</span> <span class="n">pd</span><span class="o">.</span><span class="n">PeriodIndex</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;hist0&quot; must have either an integer index or a &#39;</span>
+                         <span class="s1">&#39;pandas PeriodIndex for the &quot;steps&quot; dimension&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">hist0Coords</span><span class="p">[</span><span class="s2">&quot;variables&quot;</span><span class="p">])</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_checkf</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">data0</span><span class="p">):</span>
+    <span class="c1"># Count number of times &#39;f&#39;, and any code &#39;f&#39; invokes, calls &#39;next(draw)&#39;</span>
+    <span class="c1"># If &#39;data0&#39; is None, infer that &#39;f&#39; is the &#39;trial&#39; func for a cross-sec sim</span>
+    <span class="c1"># If &#39;data0&#39; is a xr.DataArray, infer that &#39;f&#39; is &#39;step&#39; for rec. dyn. sim</span>
+    <span class="c1"># Also, check that f returns something that makes sense.</span>
+    <span class="n">fakeugen</span> <span class="o">=</span> <span class="n">_countgen</span><span class="p">()</span>
+
+    <span class="c1"># check that &#39;f&#39; returns a dict</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">fakeugen</span><span class="p">,</span> <span class="n">data0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">out</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;f&quot; function must return a dict&#39;</span><span class="p">)</span>
+
+    <span class="c1"># check that the dict returned by &#39;f&#39; has variable names as keys</span>
+    <span class="n">varnames</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="k">if</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span> <span class="k">else</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">varnames</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">varnames</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;The keys of the dictionary returned by &quot;f&quot; must be &#39;</span>
+                         <span class="s1">&#39;variable names as strings&#39;</span><span class="p">)</span>
+
+    <span class="n">calls</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">((</span><span class="nb">next</span><span class="p">(</span><span class="n">fakeugen</span><span class="p">)</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="mi">10</span><span class="o">**</span><span class="mi">4</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">calls</span><span class="p">,</span> <span class="n">varnames</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_countgen</span><span class="p">():</span>
+    <span class="c1"># dummy generator for counting calls but always returning approximately 0.5.</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">int</span><span class="p">(</span><span class="mi">10000</span><span class="p">):</span>
+        <span class="k">yield</span> <span class="mf">0.5</span> <span class="o">+</span> <span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">*</span> <span class="mi">10</span><span class="o">**-</span><span class="mi">4</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_makewgen</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">r</span><span class="p">):</span>
+    <span class="c1"># given an array &#39;w&#39; of indep. draws, where rows reflect variables</span>
+    <span class="c1"># and columns reflect trials, make a generator for trial &#39;r&#39; tha emits</span>
+    <span class="c1"># a number of draws equal to the number of RVs</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">w</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="k">yield</span> <span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">r</span><span class="p">]</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_strat</span><span class="p">(</span><span class="n">R</span><span class="p">):</span>
+    <span class="c1"># stratified sampling for a single uniformly distributed random variable.</span>
+    <span class="c1"># &#39;R&#39; (an int) is the number of draws to perform</span>
+    <span class="c1"># returns a numpy array of floats, each in the interval [0, 1).</span>
+    <span class="n">draws</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">R</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">R</span><span class="p">))</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">R</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">draws</span><span class="p">)</span>  <span class="c1"># warning: mutating &#39;draws&#39;</span>
+    <span class="k">return</span> <span class="n">draws</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_mcs</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
+    <span class="c1"># Monte Carlo sampling.  For each of K independent uniform (over the</span>
+    <span class="c1"># unit interval) random variables, create a sample of length R.</span>
+    <span class="c1"># &#39;K&#39; (an int) is the number of variables</span>
+    <span class="c1"># &#39;R&#39; (an int) is the number of trials</span>
+    <span class="c1"># returns a KxR numpy array containing draws</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([[</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">R</span><span class="p">)]</span>
+                           <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">K</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_lhs</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
+    <span class="c1"># Latin hypercube sampling.  For each of K independent uniform (over the</span>
+    <span class="c1"># unit interval) random variables, create a stratified sample of length R.</span>
+    <span class="c1"># &#39;K&#39; (an int) is the number of variables</span>
+    <span class="c1"># &#39;R&#39; (an int) is the number of trials</span>
+    <span class="c1"># returns a KxR numpy array containing draws</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([[</span><span class="n">_strat</span><span class="p">(</span><span class="n">R</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">K</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_extendIndex</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">nNewSteps</span><span class="p">):</span>
+    <span class="c1"># extend a &#39;steps&#39; index; should work for ints or pd.Period</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># no previous index; just use integers for the new index</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">nNewSteps</span><span class="p">))</span>
+    <span class="n">newIdx</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+    <span class="p">[</span><span class="n">newIdx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">newIdx</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nNewSteps</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">newIdx</span>
+
+
+<div class="viewcode-block" id="simulate">
+<a class="viewcode-back" href="../api_simulation.html#funcsim.simulate">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">simulate</span><span class="p">(</span><span class="n">f</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Generator</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
+                          <span class="n">Optional</span><span class="p">[</span><span class="n">rdarrays</span><span class="o">.</span><span class="n">RDdata</span><span class="p">]],</span>
+                       <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
+             <span class="n">ntrials</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">500</span><span class="p">,</span>
+             <span class="n">nsteps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+             <span class="n">hist0</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">multi</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+             <span class="n">seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
+             <span class="n">stdnorm</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+             <span class="n">sampling</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;lh&#39;</span>
+             <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Stochastic simulation.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    f : function</span>
+<span class="sd">        Function that performs a single trial in a static simulation or a s</span>
+<span class="sd">        single step through time in a recursive dynamic simulation.  Should take</span>
+<span class="sd">        &#39;ugen&#39; as a first argument in either case, where &#39;ugen&#39; will be a</span>
+<span class="sd">        generator that emits standard uniform draws (or standard normal draws,</span>
+<span class="sd">        if `stdnorm` is True) that will be passed to f by ``simulate``.</span>
+<span class="sd">        In the case of a recursive dynamic simulation that employs past values,</span>
+<span class="sd">        f should take &#39;data&#39; as a second argument, where this will be a type of</span>
+<span class="sd">        array that is also provided by ``simulate.`` This function should return</span>
+<span class="sd">        a dict with variable names (as strings) as keys and values for those</span>
+<span class="sd">        variables (as floats) as values.</span>
+<span class="sd">    ntrials : int, optional</span>
+<span class="sd">        The number of trials to perform.  Default is 500.</span>
+<span class="sd">    nsteps : int, optional</span>
+<span class="sd">        The number of steps to perform in each trial.  Default is 1.</span>
+<span class="sd">    hist0 : xarray.DataArray, optional</span>
+<span class="sd">        Initial and/or historical data relevant to the simulation.</span>
+<span class="sd">        Should have dimensions &#39;variables&#39; and &#39;steps&#39;.  Any lagged values</span>
+<span class="sd">        needed (recalled) by `f` must be in `hist0`.  The &#39;steps&#39; dimension</span>
+<span class="sd">        should have either an integer index or a pandas PeriodIndex.</span>
+<span class="sd">    multi : bool, optional</span>
+<span class="sd">        Use multiple processes/cores for the simulation. Default is False.</span>
+<span class="sd">    seed : int, optional</span>
+<span class="sd">        Seed for pseudo-random number generation. Default is 6.</span>
+<span class="sd">    stdnorm : book, optional</span>
+<span class="sd">        If False, ``next(draw)`` within `trialf` will return standard uniform</span>
+<span class="sd">        random draws. If True, ``next(draw)`` will return standard normal draws.</span>
+<span class="sd">        Default is False.</span>
+<span class="sd">    sampling : {&#39;lh&#39;, &#39;mc&#39;}, optional</span>
+<span class="sd">        If &#39;lh&#39;, Latin Hypercube sampling is employed.  If &#39;mc&#39;, simple</span>
+<span class="sd">        Monte Carlo sampling is employed.  Default is &#39;lh&#39;.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    xarray.DataArray</span>
+<span class="sd">        3-D xarray.DataArray with dimensions &#39;trials&#39;, &#39;variables&#39;, and &#39;steps&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">hist0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_checkhist0</span><span class="p">(</span><span class="n">hist0</span><span class="p">)</span>
+
+        <span class="c1"># check that we know how to cope with the types for the &#39;steps&#39; index</span>
+        <span class="n">sidx</span> <span class="o">=</span> <span class="n">hist0</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="s1">&#39;steps&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sidx</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="n">sidx</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">in</span> <span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Period</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;hist0&#39; should have either an integer index&quot;</span>
+                                 <span class="s2">&quot; or a pandas.PeriodIndex for the &#39;steps&#39; &quot;</span>
+                                 <span class="s2">&quot;dimension.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sidx</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># create an empty hist0.</span>
+        <span class="n">variables</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">steps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">hist0</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
+            <span class="n">dims</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;steps&quot;</span><span class="p">,</span> <span class="s2">&quot;variables&quot;</span><span class="p">),</span>
+            <span class="n">coords</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;steps&quot;</span><span class="p">:</span> <span class="n">steps</span><span class="p">,</span> <span class="s2">&quot;variables&quot;</span><span class="p">:</span> <span class="n">variables</span><span class="p">}</span>
+        <span class="p">)</span>
+
+    <span class="c1"># check for &#39;f&#39;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">Callable</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;f&quot; must be a callable function&#39;</span><span class="p">)</span>
+
+    <span class="c1"># infer number of arguments in &#39;f&#39;.  If it takes only a single arg, wrap it</span>
+    <span class="c1"># in an outer func that takes &quot;hist&quot; as a second arg</span>
+    <span class="n">numb_f_args</span> <span class="o">=</span> <span class="n">_get_arg_count</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">numb_f_args</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">stepf</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">draw</span><span class="p">,</span> <span class="n">hist</span><span class="p">:</span> <span class="n">f</span><span class="p">(</span><span class="n">draw</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">numb_f_args</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">stepf</span> <span class="o">=</span> <span class="n">f</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;f&quot; should take two arguments at most&#39;</span><span class="p">)</span>
+     
+    <span class="c1"># indexes for the final output xr.DataArray</span>
+    <span class="n">varNames</span> <span class="o">=</span> <span class="n">hist0</span><span class="o">.</span><span class="n">indexes</span><span class="p">[</span><span class="s1">&#39;variables&#39;</span><span class="p">]</span>
+    <span class="n">namePositionsPrelim</span> <span class="o">=</span> <span class="p">{</span><span class="n">nm</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">nm</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">varNames</span><span class="p">)}</span>
+    <span class="n">stepLabels</span> <span class="o">=</span> <span class="n">_extendIndex</span><span class="p">(</span><span class="n">sidx</span><span class="p">,</span> <span class="n">nsteps</span><span class="p">)</span>
+
+    <span class="c1"># create example data object in which data for one trail can accumulate</span>
+    <span class="n">dataPrelim</span> <span class="o">=</span> <span class="n">rdarrays</span><span class="o">.</span><span class="n">RDdata</span><span class="p">(</span><span class="n">hist0</span><span class="o">.</span><span class="n">to_masked_array</span><span class="p">(),</span>
+                                 <span class="n">nsteps</span><span class="p">,</span> <span class="n">namePositionsPrelim</span><span class="p">)</span>
+
+    <span class="c1"># infer number of random vars reflected in &#39;step&#39; fucntion</span>
+    <span class="c1"># and the variable names being returned by &#39;step&#39; and their order</span>
+    <span class="n">rvs</span><span class="p">,</span> <span class="n">stepfNames</span> <span class="o">=</span> <span class="n">_checkf</span><span class="p">(</span><span class="n">stepf</span><span class="p">,</span> <span class="n">copy</span><span class="p">(</span><span class="n">dataPrelim</span><span class="p">))</span>
+
+    <span class="c1"># specify that the data objects that accumulate data for each trial</span>
+    <span class="c1"># will reflect the union of the variables in &#39;hist0&#39; and the variables</span>
+    <span class="c1"># returned by &#39;step&#39;</span>
+    <span class="c1"># breakpoint()</span>
+    <span class="n">varNamesList</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">varNames</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">stepfNames</span> <span class="o">==</span> <span class="n">varNamesList</span><span class="p">:</span>
+        <span class="n">finalNames</span> <span class="o">=</span> <span class="n">varNamesList</span>
+        <span class="n">finalHist0</span> <span class="o">=</span> <span class="n">hist0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">finalNames</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">varNamesList</span><span class="p">)</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">stepfNames</span><span class="p">)))</span>
+        <span class="n">finalHist0</span> <span class="o">=</span> <span class="n">hist0</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">finalHist0</span> <span class="o">=</span> <span class="n">finalHist0</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">variables</span><span class="o">=</span><span class="n">finalNames</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+    <span class="c1"># create a DataArray to hold the data for one trial</span>
+    <span class="c1"># create example data object in which data for one trail can accumulate</span>
+    <span class="n">namePositions</span> <span class="o">=</span> <span class="p">{</span><span class="n">nm</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">nm</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">finalNames</span><span class="p">)}</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">rdarrays</span><span class="o">.</span><span class="n">RDdata</span><span class="p">(</span><span class="n">finalHist0</span><span class="o">.</span><span class="n">to_masked_array</span><span class="p">(),</span> <span class="n">nsteps</span><span class="p">,</span> <span class="n">namePositions</span><span class="p">)</span>
+
+    <span class="c1"># draws for all RVs in all time steps, w/ sampling stratified across trials</span>
+    <span class="k">if</span> <span class="n">rvs</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sampling</span> <span class="o">==</span> <span class="s1">&#39;lh&#39;</span><span class="p">:</span>    
+            <span class="n">u</span> <span class="o">=</span> <span class="n">_lhs</span><span class="p">(</span><span class="n">rvs</span> <span class="o">*</span> <span class="n">nsteps</span><span class="p">,</span> <span class="n">ntrials</span><span class="p">)</span>  <span class="c1"># np.array: (rvs*steps) x trials</span>
+        <span class="k">elif</span> <span class="n">sampling</span> <span class="o">==</span> <span class="s1">&#39;mc&#39;</span><span class="p">:</span>  
+            <span class="n">u</span> <span class="o">=</span> <span class="n">_mcs</span><span class="p">(</span><span class="n">rvs</span> <span class="o">*</span> <span class="n">nsteps</span><span class="p">,</span> <span class="n">ntrials</span><span class="p">)</span>  <span class="c1"># monte carlo</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;sampling must be &quot;lh&quot; or &quot;mc&quot;&#39;</span><span class="p">)</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="k">if</span> <span class="n">stdnorm</span> <span class="ow">is</span> <span class="kc">True</span> <span class="k">else</span> <span class="n">u</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">trial</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
+        <span class="n">wgen</span> <span class="o">=</span> <span class="n">_makewgen</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="k">if</span> <span class="n">rvs</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>  <span class="c1"># &#39;w&#39; gener. for trial &#39;r&#39;</span>
+        <span class="c1"># perform all time steps for one trial</span>
+        <span class="c1"># return _recurse(f=lambda x: step(x, wgen), x0=copy(data), S=steps)</span>
+        <span class="n">dataWorking</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nsteps</span><span class="p">):</span>
+            <span class="c1"># step &#39;s&#39; of trial &#39;r&#39;</span>
+            <span class="n">dataWorking</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">stepf</span><span class="p">(</span><span class="n">wgen</span><span class="p">,</span> <span class="n">dataWorking</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">dataWorking</span>
+
+    <span class="c1"># create and return 3-D output DataArray, with new dimension &#39;trials&#39;</span>
+    <span class="k">if</span> <span class="n">multi</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">multicore</span><span class="o">.</span><span class="n">parmap</span><span class="p">(</span><span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="n">trial</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">_a</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="n">ntrials</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[</span><span class="n">trial</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">_a</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ntrials</span><span class="p">)]</span>
+
+    <span class="n">prelim</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;trials&#39;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">ntrials</span><span class="p">))),</span>
+                                       <span class="p">(</span><span class="s1">&#39;variables&#39;</span><span class="p">,</span> <span class="n">finalNames</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="s1">&#39;steps&#39;</span><span class="p">,</span> <span class="n">stepLabels</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="n">prelim</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="s1">&#39;trials&#39;</span><span class="p">,</span> <span class="s1">&#39;variables&#39;</span><span class="p">,</span> <span class="s1">&#39;steps&#39;</span><span class="p">)</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">funcsim</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api_reference.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2017-2025, Henry Bryant.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

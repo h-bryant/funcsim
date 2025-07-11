@@ -1,11 +1,19 @@
 from __future__ import print_function
 import multiprocessing
 import sys
+import warnings
 
 if (sys.version_info > (3, 0)):
     import queue
 else:
     import Queue as queue
+
+
+def custom_warning_format(message, category, filename, lineno, file=None, line=None):
+    print(f"{category.__name__}: {message}")
+
+
+warnings.showwarning = custom_warning_format
 
 
 def fun(f, q_in, q_out):
@@ -17,10 +25,9 @@ def fun(f, q_in, q_out):
                 ret = f(x)
                 q_out.put((i, ret), True)
             except Exception as e:
-                msg = "WARNING: function passed to multi.parmap "
+                msg = "function passed to multi.parmap "
                 msg += "encountered an exception: "
-                print("%s\n%s" (msg, e), file=sys.stderr)
-                sys.stderr.flush()
+                warnings.warn(msg + str(e), RuntimeWarning)
                 q_out.put((i, None), True)
     except queue.Empty:
         sys.stdout.flush()
@@ -57,15 +64,13 @@ def parmap(f, X, nprocs=multiprocessing.cpu_count()):
 
     lost = len(sent) - len(res)
     if lost > 0:
-        print("WARNING: multi.parmap encountered %s lost jobs" % lost,
-              file=sys.stderr)
-        sys.stderr.flush()
+        msg = f"WARNING: multi.parmap encountered {lost} lost jobs"
+        warnings.warn(msg, RuntimeWarning)
 
     problems = sum([1 for i, x, in res if x is None])
     if problems > 0:
-        print("WARNING: multi.parmap encountered %s failed jobs" % problems,
-              file=sys.stderr)
-        sys.stderr.flush()
+        msg = f"WARNING: multi.parmap encountered {problems} failed jobs"
+        warnings.warn(msg, RuntimeWarning)
 
     ret = [x for i, x in sorted(res)]
     manager.shutdown()

@@ -8,18 +8,21 @@ Features:
 - painless multi-core simulations
 - highly flexible, and as simple as possible (but no more)
 - functional paradigm
-- python 2 and 3 compatible
 
 Developed using:
-- python 3.5.3
-- numpy 1.13.1
-- pandas 0.20.3
-- xarray 0.9.6
+- python >= 3.9
+- numpy 2.2.0
+- scipy 1.16.0
+- pandas 2.2.0
+- xarray 2025.4.0
+
+For optional functionality, additinoal packages are needed:
+- plotting: plotly
+- some copula typed: copulae
 
 Additionally, to run the demos, run tests, and build docs:
-- scipy 1.0.0
-- pytest 3.3.0
-- sphinx 1.6.5
+- pytest
+- sphinx, sphinx-autodoc-typehints
 
 ### building html docs
 From the top-level funcsim directory...
