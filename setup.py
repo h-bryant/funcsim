@@ -24,11 +24,11 @@ setuptools.setup(
     extras_require={
         "plotting": ["plotly>=6.0.0"],
         "copula": ['copulae>=0.8.0'],
-        "full": ["plotly>=6.0.0", "copulae>=0.8.0"],
+        "docs": ['sphinx', 'sphinx_autodoc_typehints'],
+        "full": ["plotly>=6.0.0", "copulae>=0.8.0", 'sphinx', 'sphinx_autodoc_typehints'],
     },
     test_requires=[
         'pytest',
-        'sphinx',
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
