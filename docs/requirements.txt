@@ -1,5 +1,5 @@
 copulae==0.7.9
-numpy==2.2.6
+numpy==2.0.2
 pandas==2.3.0
 plotly==6.1.2
 scipy==1.16.0
