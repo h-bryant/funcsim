@@ -79,12 +79,12 @@ To accommodate this, we specify a 2-D ``xarray.DataArray`` containing historical
 data (here, called ``myhist``), with a first dimension named 
 ``steps`` and a second dimension named ``variables``, that we will pass to
 ``simulate`` via an argument named ``hist0``.
-Then, a simulation reflecting 10 time steps can be performed thusly:
+Then, a simulation reflecting 10 time steps can be performed:
 
 
 .. code-block:: python
 
-    out = fs.recdyn(f=step, hist0=myhist, nsteps=10)
+    out = fs.simulate(f=step, hist0=myhist, nsteps=10)
 
 
 The output is again a 3-dimensional ``xarray.DataArray`` instance, with
