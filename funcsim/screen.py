@@ -378,7 +378,7 @@ def screen(data: conversions.VectorLike,
     if alpha <= 0 or alpha >= 1:
         raise ValueError("alpha must be in the range (0, 1)")
 
-    seriesA = conversions.vlToArray(series)
+    seriesA = conversions.vlToArray(data)
 
     df = pd.DataFrame({"obsnum": range(len(seriesA)),
                        "series": seriesA,
