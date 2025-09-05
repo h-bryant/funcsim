@@ -1,8 +1,8 @@
-Plotting
-========
+Miscellaneous Tools
+===================
 
 .. automodule:: funcsim
    :no-index:
-   :members: fan, twofuncs, histpdf, dblscat, qqplot
+   :members: edf, screen
    :undoc-members:
    :show-inheritance:

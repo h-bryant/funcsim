@@ -42,9 +42,9 @@ def fan(da: xr.DataArray,
     # conditional import of plotly
     try:
         import plotly.graph_objects as go
-    except ImportError as e:
-        raise ImportError("Optional dependency 'plotly' is required for all "
-                            "funcsim plotting fucntions. Install with "
+    except importerror as e:
+        raise importerror("optional dependency 'plotly' is required for all "
+                            "funcsim plotting fucntions. install with "
                             "`pip install plotly`.") from e
   
     # Validate input DataArray dimensions
@@ -533,3 +533,48 @@ def qqplot(data: conversions.VectorLike,
     fig.update_layout(width=width, height=height)
 
     return fig
+
+
+def show(fig,
+         width: int = 750,
+         height: int = 400):
+    """
+    Display a plotly plot in a Jupyter notebook.
+
+    Display a static version of a plotly figure that is able to be displayed
+    when a Jupyter notebook is rendered to a pdf.   
+
+    Parameters
+    ----------
+    fig : plotly.graph_objects.Figure
+        Plotly figure to be displayed
+    width : int
+        Width of the generated static image in pixels
+    height : int
+        Height of the generated static image in pixels
+
+    Returns
+    -------
+    IPython.display.Image
+        Static image reflecting the passed plotly figure. 
+    """
+
+    # conditional import of plotly
+    try:
+        import plotly.graph_objects as go
+    except ImportError as e:
+        raise ImportError("Optional dependency 'plotly' is required for all "
+                            "funcsim plotting functions. Install with "
+                            "`pip install plotly`.") from e
+
+    # conditional import of Ipython.display.Image
+    try:
+        from IPython.display import Image
+    except ImportError as e:
+        raise ImportError("Optional dependency 'Ipython' is required for "
+                            "funcsim.show(). Install with "
+                            "`pip install jupyter`.") from e
+    
+    image_bytes = fig.to_image(format='png', width=width,
+                               height=height, scale=1)
+    return Image(image_bytes)

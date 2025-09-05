@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kde &#8212; funcsim 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for kde</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">stats</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">conversions</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">vectorized_method</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+    <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">wrapper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># vectorize the bound method (bound to `self`)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="k">lambda</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">k</span><span class="p">:</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">k</span><span class="p">))(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">wrapper</span>
+
+
+<div class="viewcode-block" id="Kde">
+<a class="viewcode-back" href="../api_univariate_distributions.html#funcsim.Kde">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Kde</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Univariate kernel density estimator (KDE).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : conversions.VectorLike</span>
+<span class="sd">        1-D data vector (list, tuple, np.ndarray, xr.DataArray, or pd.Series).</span>
+<span class="sd">    bw : str or float, optional</span>
+<span class="sd">        Bandwidth selection method (&#39;scott&#39;, &#39;silverman&#39;) or a positive</span>
+<span class="sd">        float to use as the bandwidth. Default is &#39;scott&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">data</span> <span class="p">:</span> <span class="n">conversions</span><span class="o">.</span><span class="n">VectorLike</span><span class="p">,</span>
+                 <span class="n">bw</span> <span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;scott&#39;</span><span class="p">):</span>
+
+        <span class="n">sampleA</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">vlToArray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="c1"># raw kde object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gkde</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">gaussian_kde</span><span class="p">(</span><span class="n">sampleA</span><span class="p">,</span> <span class="n">bw</span><span class="p">)</span>
+
+        <span class="c1"># lower limit of integreation for CDF</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cdf_low</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">sampleA</span><span class="p">))</span> <span class="o">-</span> \
+            <span class="mf">1.0</span> <span class="o">*</span> <span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">sampleA</span><span class="p">)</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">sampleA</span><span class="p">))</span>
+
+        <span class="c1"># initial guess for PPF optimization: the sample mean</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ppf_x0</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">sampleA</span><span class="p">))</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sampleA</span><span class="p">))</span>
+
+        <span class="c1"># &quot;bracket&quot; for PPF root finding</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ppf_low</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">sampleA</span><span class="p">))</span> <span class="o">-</span> \
+            <span class="mf">3.0</span> <span class="o">*</span> <span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">sampleA</span><span class="p">)</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">sampleA</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ppf_high</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">sampleA</span><span class="p">))</span> <span class="o">+</span> \
+            <span class="mf">3.0</span> <span class="o">*</span> <span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">sampleA</span><span class="p">)</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">sampleA</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Kde.pdf">
+<a class="viewcode-back" href="../api_univariate_distributions.html#funcsim.Kde.pdf">[docs]</a>
+    <span class="nd">@vectorized_method</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">pdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">v</span><span class="p">:</span> <span class="nb">float</span>
+           <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Probability density function of the KDE at value v.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        v : float</span>
+<span class="sd">            Value at which to evaluate the PDF.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            The estimated probability density at v.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gkde</span><span class="p">(</span><span class="n">v</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="Kde.cdf">
+<a class="viewcode-back" href="../api_univariate_distributions.html#funcsim.Kde.cdf">[docs]</a>
+    <span class="nd">@vectorized_method</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">v</span><span class="p">:</span> <span class="nb">float</span>
+           <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Cumulative distribution function of the KDE at value v.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        v : float</span>
+<span class="sd">            Value at which to evaluate the CDF.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            The estimated cumulative probability at v.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gkde</span><span class="o">.</span><span class="n">integrate_box_1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cdf_low</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="Kde.ppf">
+<a class="viewcode-back" href="../api_univariate_distributions.html#funcsim.Kde.ppf">[docs]</a>
+    <span class="nd">@vectorized_method</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">ppf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">u</span><span class="p">:</span> <span class="nb">float</span>
+           <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Numerical percent point function (inverse CDF) for the KDE.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        u : float</span>
+<span class="sd">            Probability value in the range [0.0, 1.0].</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            The value x such that CDF(x) = u.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If u is not in [0.0, 1.0] or optimization fails.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">u</span> <span class="o">&gt;=</span> <span class="mf">0.0</span> <span class="ow">and</span> <span class="n">u</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">,</span> \
+            <span class="s2">&quot;u must be within the range [0.0, 1.0]&quot;</span>
+
+        <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">__version__</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># version for newer versions of scipy.optimize</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">result0</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">root_scalar</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">u</span><span class="p">,</span>
+                                                     <span class="n">x0</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ppf_x0</span><span class="p">,</span>
+                                                     <span class="n">fprime</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pdf</span><span class="p">,</span>
+                                                     <span class="n">bracket</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ppf_low</span><span class="p">,</span>
+                                                              <span class="bp">self</span><span class="o">.</span><span class="n">ppf_high</span><span class="p">),</span>
+                                                     <span class="c1"># method=&quot;bisect&quot;,</span>
+                                                     <span class="c1"># method=&quot;brentq&quot;,</span>
+                                                     <span class="c1"># method=&quot;brenth&quot;,</span>
+                                                     <span class="c1"># method=&quot;ridder&quot;,</span>
+                                                     <span class="c1"># method=&quot;toms748&quot;,</span>
+                                                     <span class="c1"># method=&quot;newton&quot;,</span>
+                                                     <span class="c1"># method=&quot;secant&quot;,</span>
+                                                     <span class="c1"># method=&quot;halley&quot;,</span>
+                                                     <span class="n">xtol</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">)</span>
+
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">u</span> <span class="o">&gt;</span> <span class="mf">0.98</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ppf_high</span>
+                <span class="k">elif</span> <span class="n">u</span> <span class="o">&lt;</span> <span class="mf">0.02</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ppf_low</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;kde ppf could not find solution&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">result0</span><span class="o">.</span><span class="n">converged</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">result0</span><span class="o">.</span><span class="n">root</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;numerical optimization for PPF failed&quot;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># scipy version is &lt; 1.0</span>
+            <span class="c1"># version that works with scipy 0.13.3</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">brentq</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">u</span><span class="p">,</span>
+                                                <span class="n">a</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ppf_low</span><span class="p">,</span>
+                                                <span class="n">b</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ppf_high</span><span class="p">,</span>
+                                                <span class="n">xtol</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">,</span>
+                                                <span class="n">full_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                                <span class="n">disp</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">u</span> <span class="o">&gt;</span> <span class="mf">0.98</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ppf_high</span>
+                <span class="k">elif</span> <span class="n">u</span> <span class="o">&lt;</span> <span class="mf">0.02</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ppf_low</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;kde ppf could not find solution&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">converged</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">x0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;numerical optimization for PPF failed&quot;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">funcsim</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api_reference.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2017-2025, Henry Bryant.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

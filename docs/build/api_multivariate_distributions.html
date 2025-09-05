@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Multivariate Distributions and Dependence &#8212; funcsim 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=01f34227"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Miscellaneous Tools" href="api_stattools.html" />
+    <link rel="prev" title="Univariate Distributions" href="api_univariate_distributions.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="multivariate-distributions-and-dependence">
+<h1>Multivariate Distributions and Dependence<a class="headerlink" href="#multivariate-distributions-and-dependence" title="Link to this heading">¶</a></h1>
+<section id="multivariate-distributions">
+<h2>Multivariate Distributions<a class="headerlink" href="#multivariate-distributions" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">MvKde</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'scott'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#MvKde"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A multivariate KDE distribution object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>ArrayLike</em>) – Input data array of with variables in columns and observations
+in rows.</p></li>
+<li><p><strong>bw</strong> (<em>str</em><em>, </em><em>optional</em>) – Bandwidth selection method, ‘scott’ or ‘silverman’.
+Default is ‘scott’.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#MvKde.draw"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate a joint random draw from the multivariate distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ugen</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator that yields independent standard uniform random numbers.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pandas Series representing a joint draw from the KDE.  The index
+values are the variable names, and the values are the random
+values.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">MvNorm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#MvNorm"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A multivariate normal distribution object. A vector of means
+and a covariance matrix are computed from the input data.  If the sample
+covariance matrix is not positive definite, the Higham
+method is used to calculate the nearest positive definite matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<em>ArrayLike</em>) – Input data array of with variables in columns and observations
+in rows.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#MvNorm.draw"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate a joint random draw from the multivariate distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ugen</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator yielding independent standard uniform random numbers.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pandas Series representing a joint draw from the KDE.  The index
+values are the variable names, and the values are the random
+values. If no variable names were provided in the input data,
+the variables will be named ‘v0’, ‘v1’, …, reflecting the
+oreder of the columns in the input data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="copulas">
+<h2>Copulas<a class="headerlink" href="#copulas" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">CopulaClayton</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">udata</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#CopulaClayton"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A Clayton copula object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>udata</strong> (<em>ArrayLike</em>) – Input array of probability values from individual marginal
+distributions (“pseudo-observations”) with variables in
+columns and observations in rows.  That is, each column
+represents the result of applying the fitted CDF of some marginal
+distribution to the raw data for that variable.  The
+values in each column should be in the range [0, 1]. Parameters are
+fit using maximum likelihood.  This implementation accomodates
+only positive dependence, so the fitted value for theta is
+constrained to be &gt;= 2.0.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#CopulaClayton.draw"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate a joint random draw from the Clayton copula.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ugen</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator yielding independent standard uniform random numbers.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pandas Series representing a joint draw from the Clayton
+copula. The index reflects the variable names, and non-independent
+standard uniform draws are the values in the Series.
+If no variable names were provided in the input data,
+the variables will be named ‘v0’, ‘v1’, …, reflecting the
+oreder of the columns in the input data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">CopulaGauss</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">udata</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#CopulaGauss"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A Gaussian copula object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>udata</strong> (<em>ArrayLike</em>) – Input array of probability values from individual marginal
+distributions (“pseudo-observations”) with variables in
+columns and observations in rows.  That is, each column
+represents the result of applying the fitted CDF of some marginal
+distribution to the raw data for that variable.  The
+values in each column should be in the range [0, 1]. The parameters
+are fit using the method of moments.  If the sample covariance
+matrix is not positive definite, the Higham method is used to
+calculate the nearest positive definite matrix.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#CopulaGauss.draw"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate a joint random draw from the Gaussian copula.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ugen</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator yielding independent standard uniform random numbers.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pandas Series representing a joint draw from the Gaussian copula.
+The index reflects the variable names, and non-independent
+standard uniform draws are the values in the Series.
+If no variable names were provided in the input data,
+the variables will be named ‘v0’, ‘v1’, …, reflecting the
+oreder of the columns in the input data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">CopulaGumbel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">udata</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#CopulaGumbel"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A Gumbel copula object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>udata</strong> (<em>ArrayLike</em>) – Input array of probability values from individual marginal
+distributions (“pseudo-observations”) with variables in
+columns and observations in rows.  That is, each column
+represents the result of applying the fitted CDF of some marginal
+distribution to the raw data for that variable.  The
+values in each column should be in the range [0, 1]. Parameters are
+fit using maximum likelihood.  This implementation accomodates
+only positive dependence, so the fitted value for theta is
+constrained to be &gt; 1.0.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#CopulaGumbel.draw"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate a joint random draw from the Gumbel copula.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ugen</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator yielding independent standard uniform random numbers.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pandas Series representing a joint draw from the Clayton
+copula. The index reflects the variable names, and non-independent
+standard uniform draws are the values in the Series.
+If no variable names were provided in the input data,
+the variables will be named ‘v0’, ‘v1’, …, reflecting the
+oreder of the columns in the input data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">CopulaStudent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">udata</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#CopulaStudent"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A Student’s t copula object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>udata</strong> (<em>ArrayLike</em>) – Input array of probability values from individual marginal
+distributions (“pseudo-observations”) with variables in
+columns and observations in rows.  That is, each column
+represents the result of applying the fitted CDF of some marginal
+distribution to the raw data for that variable.  The
+values in each column should be in the range [0, 1]. Parameters are
+fit using maximum likelihood.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#CopulaStudent.draw"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate a joint random draw from the Student’s t copula.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ugen</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator yielding independent standard uniform random numbers.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pandas Series representing a joint draw from the Student’s t
+copula. The index reflects the variable names, and non-independent
+standard uniform draws are the values in the Series.
+If no variable names were provided in the input data,
+the variables will be named ‘v0’, ‘v1’, …, reflecting the
+oreder of the columns in the input data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="miscellaneous-tools">
+<h2>Miscellaneous tools<a class="headerlink" href="#miscellaneous-tools" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">covtocorr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cov</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#covtocorr"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Convert a covariance matrix to a correlation matrix.</p>
+<p>This function takes a symmetric, positive definite covariance matrix
+and returns the corresponding correlation matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cov</strong> (<em>ArrayLike</em>) – Covariance matrix (square, symmetric).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pandas DataFrame representing the correlation matrix.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the input is not a valid covariance matrix.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The correlation matrix is computed by normalizing the covariance
+matrix by the standard deviations of each variable.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">imanconover</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spear</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vectors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imanconover.html#imanconover"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Induce a Spearman correlation stucture using the Iman &amp; Conover method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>spear</strong> (<em>ArrayLike</em>) – Desired Spearman correlation matrix (must be symetric and
+positive definite).</p></li>
+<li><p><strong>vectors</strong> (<em>list</em><em> of </em><em>VectorLike</em>) – List of vectors, each representing draws for one variable.</p></li>
+<li><p><strong>names</strong> (<em>list</em><em> of </em><em>str</em><em>, </em><em>optional</em>) – Column names for the output DataFrame. Defaults to v1, v2, …</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>DataFrame with one column for each vector/variable, where the
+data refelct the desired Spearman correlation structure.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+<p class="rubric">References</p>
+<p>Iman, R. L., &amp; Conover, W. J. (1980). Small sample sensitivity analysis
+techniques for computer models, with an application to risk assessment.
+Communications in Statistics - Theory and Methods, 9(17), 1749–1842.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">nearestpd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/nearby.html#nearestpd"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Return the nearest positive definite matrix to the input matrix.</p>
+<p>This function computes the nearest symmetric positive definite matrix
+(in the Frobenius norm) to the given matrix using an algorithm based on
+Higham (1988).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>array</strong> (<em>ArrayLike</em>) – Input matrix to be converted to the nearest positive definite matrix.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The nearest symmetric positive definite matrix, with a type matching
+the passed array.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ArrayLike</p>
+</dd>
+</dl>
+<p class="rubric">References</p>
+<p>Higham, N.J. (1988). Computing a nearest symmetric positive semidefinite
+matrix. Linear Algebra and its Applications, 103, 103-118.
+<a class="reference external" href="https://doi.org/10.1016/0024-3795(88)90223-6">https://doi.org/10.1016/0024-3795(88)90223-6</a></p>
+<p class="rubric">Notes</p>
+<p>This is a Python/Numpy port of John D’Errico’s <cite>nearestSPD</cite> MATLAB code.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">shrink</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/shrinkage.html#shrink"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Covariance shrinkage estimator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>ArrayLike</em>) – Data array with variables in columns and observations in rows.</p></li>
+<li><p><strong>target</strong> (<em>str</em>) – Shrinkage target, one of: ‘A’, ‘B’, ‘C’, ‘D’, ‘E’, ‘F’.  These
+correspond to different shrinkage estimation methods as defined in
+Shafer &amp; Strimmer, “A shrinkage approach to large-scale covariance
+matrix estimation and implications for Functional Genomics.”
+//Statistical Applications in Genetics and Molecular Biology//,
+vol 4(2005), issue 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The estimated covariance matrix, with a type matching the data array</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ArrayLike</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If target is not one of: ‘A’, ‘B’, ‘C’, ‘D’, ‘E’, ‘F’.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">spearman</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#spearman"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Calculate Spearman’s rank correlation coefficient and its 95% confidence
+interval.</p>
+<p>This function computes Spearman’s rho for two variables and returns the
+correlation coefficient along with the lower and upper bounds of the 95%
+confidence interval.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>array</strong> (<em>ArrayLike</em>) – Input data as an (N, 2) array-like object, where N is the number of
+observations and each column represents a variable.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A tuple (rho, ci), where rho is Spearman’s rank correlation coefficient,
+and ci is a tuple of (lower, upper) bounds for the 95% confidence
+interval.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple of (float, tuple of float)</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>AssertionError</strong> – If the input array does not have shape (N, 2).</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The confidence interval is computed using Fisher’s z-transformation.</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">funcsim</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="api_reference.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="api_simulation.html">Simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_univariate_distributions.html">Univariate Distributions</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Multivariate Distributions and Dependence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_stattools.html">Miscellaneous Tools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_eut.html">Expected Utility Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_cpt.html">Cumulative Prospect Theory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_plotting.html">Plotting</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="api_reference.html">API Reference</a><ul>
+      <li>Previous: <a href="api_univariate_distributions.html" title="previous chapter">Univariate Distributions</a></li>
+      <li>Next: <a href="api_stattools.html" title="next chapter">Miscellaneous Tools</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2017-2025, Henry Bryant.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/api_multivariate_distributions.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
