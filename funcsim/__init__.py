@@ -41,3 +41,14 @@ from cpt import weightPrelec2, cptBV
 from eut import eut, utilIsoelastic
 
 from plotting import fan, twofuncs, histpdf, dblscat, qqplot, show
+
+def version():
+    """
+    Return the current version of the funcsim package.
+
+    Returns
+    -------
+    str
+        The version string of the package (e.g., '0.1.4').
+    """
+    return "0.1.4"

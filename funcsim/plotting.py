@@ -1,4 +1,5 @@
 
+import os
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -535,28 +536,17 @@ def qqplot(data: conversions.VectorLike,
     return fig
 
 
-def show(fig,
-         width: int = 750,
-         height: int = 400):
+def show(fig):
     """
-    Display a plotly plot in a Jupyter notebook.
+    Flexibly display a plotly plot in a Jupyter notebook.
 
-    Display a static version of a plotly figure that is able to be displayed
-    when a Jupyter notebook is rendered to a pdf.   
+    Invokes plotly's fig.show() with a `renderer` argument set to the value
+    in the environment variable FUNCSIM_PLOTLY_RENDERER.
 
     Parameters
     ----------
     fig : plotly.graph_objects.Figure
-        Plotly figure to be displayed
-    width : int
-        Width of the generated static image in pixels
-    height : int
-        Height of the generated static image in pixels
-
-    Returns
-    -------
-    IPython.display.Image
-        Static image reflecting the passed plotly figure. 
+        Plotly figure to be displayed.
     """
 
     # conditional import of plotly
@@ -574,7 +564,6 @@ def show(fig,
         raise ImportError("Optional dependency 'Ipython' is required for "
                             "funcsim.show(). Install with "
                             "`pip install jupyter`.") from e
-    
-    image_bytes = fig.to_image(format='png', width=width,
-                               height=height, scale=1)
-    return Image(image_bytes)
+
+    # do the thing
+    fig.show(renderer=os.getenv("FUNCSIM_PLOTLY_RENDERER"))
