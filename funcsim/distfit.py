@@ -37,7 +37,7 @@ candidates = [
 	("Double Weibull",stats.dweibull,False,False),
 	("Erlang",stats.erlang,True,False),
 	("Exponential",stats.expon,True,False),
-	("Exponentially Modified Normal",stats.exponnorm,False,False),
+	("Expone. Modified Normal",stats.exponnorm,False,False),
 	("Exponentiated Weibull",stats.exponweib,True,False),
 	("Exponential Power",stats.exponpow,True,False),
 	("F",stats.f,True,False),
@@ -48,10 +48,7 @@ candidates = [
 	("Generalized Logistic",stats.genlogistic,False,False),
 	("Generalized Normal",stats.gennorm,False,False),
 	("Generalized Pareto",stats.genpareto,True,False),
-	("Generalized Pareto",stats.genpareto,True,True),
 	("Generalized Exponential",stats.genexpon,True,False),
-	("Generalized Extreme Value",stats.genextreme,True,True),
-	("Generalized Extreme Value",stats.genextreme,True,True),
 	("Generalized Extreme Value",stats.genextreme,True,True),
 	("Gauss Hypergeometric",stats.gausshyper,True,True),
 	("Gamma",stats.gamma,True,False),
@@ -76,10 +73,7 @@ candidates = [
 	("Johnson's S_B",stats.johnsonsb,True,True),
 	("Johnson's S_U",stats.johnsonsu,False,False),
 	("Four-parameter Kappa",stats.kappa4,False,False),
-	("Three-Parameter Kappa Distribution",stats.kappa3,True,False),
-	("Kolmogorov-Smirnov one-sided test stat dist",stats.ksone,True,True),
-	("Kolmogorov-Smirnov two-sided test stat dist",stats.kstwo,True,True),
-	("Limiting dist of scaled K-S two-sided test stat",stats.kstwobign,True,False),
+	("3-Param Kappa Distribution",stats.kappa3,True,False),
 	# ("Landau",stats.landau,False,False),
 	("Laplace",stats.laplace,False,False),
 	("Asymmetric Laplace",stats.laplace_asymmetric,False,False),
@@ -125,10 +119,9 @@ candidates = [
 	("Tukey lambda",stats.tukeylambda,True,True),
 	("Uniform",stats.uniform,True,True),
 	("Von Mises",stats.vonmises,True,True),
-	("Von Mises",stats.vonmises_line,True,True),
 	("Wald",stats.wald,True,False),
-	("Weibull Minimum Extreme Value",stats.weibull_min,True,False),
-	("Weibull Maximum Extreme Value",stats.weibull_max,False,True),
+	("Weibull Min Extreme Value",stats.weibull_min,True,False),
+	("Weibull Max Extreme Value",stats.weibull_max,False,True),
 	("Wrapped Cauchy",stats.wrapcauchy,True,True),
 ]
 
@@ -220,11 +213,11 @@ def _fstr(value, nchars=8):
 
 def _result_line(r, header=False):
     if header is True:
-        return ("                                    distribution,"
+        return ("                  distribution,"
                 "      BIC,      AIC, AD_p-val, CvM_p-val\n")
     else:
         return ("%s, %s, %s,   %s,   %s\n" %
-                (r.distName.rjust(48), _fstr(r.bic), _fstr(r.aic),
+                (r.distName.rjust(30), _fstr(r.bic), _fstr(r.aic),
                  _fstr(r.ad_pval, 6), _fstr(r.cvm_pval, 7)))
 
     

@@ -107,7 +107,7 @@ def simple_test(data, dist, args=(), stat=ad_stat, pdist=ad_unif,
         data = sort(data)
     statistic = stat(dist.cdf(data))
     pvalue = pdist(len(data)).sf(statistic)
-    return GofResult(statistic, pvalue)
+    return GofResult(float(statistic), float(pvalue))
 
 
 def kstest(data: conversions.VectorLike,
