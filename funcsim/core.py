@@ -42,7 +42,7 @@ def _checkhist0(hist0):
     
     # Check for an appropriate index for the 'variables' dimension
     stepsCoords = hist0Coords["steps"]
-    if not (np.issubdtype(stepsCoords.dtype, np.integer) or
+    if not (np.issubdtype(stepsCoords[0], np.integer) or
             isinstance(stepsCoords.to_index(), pd.PeriodIndex)):
         raise ValueError('"hist0" must have either an integer index or a '
                          'pandas PeriodIndex for the "steps" dimension')
