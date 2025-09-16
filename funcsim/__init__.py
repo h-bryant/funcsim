@@ -51,4 +51,4 @@ def version():
     str
         The version string of the package (e.g., '0.1.5').
     """
-    return "0.1.6"
+    return "0.1.7"

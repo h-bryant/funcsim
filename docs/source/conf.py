@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath('../../..'))  # Adjust path to find source co
 project = 'funcsim'
 author = 'Henry Bryant'
 copyright = '2017-2025, Henry Bryant'
-release = '0.1.0'
+release = '0.1.7'
 
 extensions = [
     'sphinx.ext.mathjax',

@@ -266,7 +266,7 @@ class MvNorm():
         # ensure covariance matrix is positive definite
         if not np.all(np.linalg.eigvals(self._sigma) > 0):
             # use the Higam method to ensure positive definiteness
-            self._sigma = nearby.nearestpd(self._data)
+            self._sigma = nearby.nearestpd(self._sigma)
 
         # get cholesky decomposition of covariance matrix
         self._A = np.linalg.cholesky(self._sigma)
