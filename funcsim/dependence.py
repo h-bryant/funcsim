@@ -260,13 +260,8 @@ class MvNorm():
         # fit mean and covariance
         self._mu = self._data.mean(axis=0)
 
-        # compute covariance matrix
-        self._sigma = np.cov(self._data, rowvar=False)
-
-        # ensure covariance matrix is positive definite
-        if not np.all(np.linalg.eigvals(self._sigma) > 0):
-            # use the Higam method to ensure positive definiteness
-            self._sigma = nearby.nearestpd(self._sigma)
+        # compute covariance matrix, ensure it is positive definite
+        self._sigma = nearby.nearestpd(np.cov(self._data, rowvar=False))
 
         # get cholesky decomposition of covariance matrix
         self._A = np.linalg.cholesky(self._sigma)
