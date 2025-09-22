@@ -435,14 +435,14 @@ def dblscat(a0: conversions.ArrayLike,
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
+        x=a1A[:, 0], y=a1A[:, 1], mode='markers',
+        marker=dict(color='grey', symbol='x', size=5),
+        name=n1
+    ))
+    fig.add_trace(go.Scatter(
         x=a0A[:, 0], y=a0A[:, 1], mode='markers',
         marker=dict(color='red', symbol='circle', size=8),
         name=n0
-    ))
-    fig.add_trace(go.Scatter(
-        x=a1A[:, 0], y=a1A[:, 1], mode='markers',
-        marker=dict(color='grey', symbol='x', size=8),
-        name=n1
     ))
     fig.update_layout(
         xaxis_title=varNames[0],
@@ -450,11 +450,6 @@ def dblscat(a0: conversions.ArrayLike,
         template="simple_white",
         legend=dict(x=0.01, y=0.99)
     )
-    fig.update_yaxes(
-        scaleanchor="x",
-        scaleratio=1
-    )
-
     if title != "":
         fig.update_layout(
             title=title,
