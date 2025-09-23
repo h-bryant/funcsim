@@ -9,6 +9,12 @@ import nearby
 import shapiro
 
 
+def custom_warning_format(message, category, filename, lineno, file=None, line=None):
+    print(f"{category.__name__}: {message}")
+
+warnings.showwarning = custom_warning_format
+
+
 def _goodUvec(uvec: np.ndarray) -> bool:
     # check that values in uvec are in (0, 1)
     return np.all((uvec > 0.0) & (uvec <1.0))
@@ -270,7 +276,7 @@ class MvNorm():
         for k in range(self._K):
             swp = shapiro.swtest(self._data[:, k])[1]
             if not swp > 0.05:
-                msg = (f"Warning: variable '{self._names[k]}' may not be "
+                msg = (f"variable '{self._names[k]}' may not be "
                        f" normally distributed. (Shapiro-Wilk p-value"
                        f"={swp:.3f})")
                 warnings.warn(msg, UserWarning)

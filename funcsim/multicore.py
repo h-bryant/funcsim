@@ -64,12 +64,12 @@ def parmap(f, X, nprocs=multiprocessing.cpu_count()):
 
     lost = len(sent) - len(res)
     if lost > 0:
-        msg = f"WARNING: multi.parmap encountered {lost} lost jobs"
+        msg = f"multi.parmap encountered {lost} lost jobs"
         warnings.warn(msg, RuntimeWarning)
 
     problems = sum([1 for i, x, in res if x is None])
     if problems > 0:
-        msg = f"WARNING: multi.parmap encountered {problems} failed jobs"
+        msg = f"multi.parmap encountered {problems} failed jobs"
         warnings.warn(msg, RuntimeWarning)
 
     ret = [x for i, x in sorted(res)]

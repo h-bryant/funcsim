@@ -2,6 +2,13 @@ import numpy as np
 import pandas as pd
 from scipy.stats import chi2, norm, beta
 import conversions
+import warnings
+
+
+def custom_warning_format(message, category, filename, lineno, file=None, line=None):
+    print(f"{category.__name__}: {message}")
+
+warnings.showwarning = custom_warning_format
 
 
 def runs_test(data, cutoff='median'):
@@ -92,7 +99,8 @@ def bartels_test(x, alternative="two.sided", pvalue_method="normal"):
     # Remove NaN values (if any)
     x = x[~np.isnan(x)]
     if len(x) != n:
-        print(f"Warning: Removed {n - len(x)} NaN values from the input data.")
+        msg = (f"Removed {n - len(x)} NaN values from the input data.")
+        warnings.warn(msg, UserWarning)
         n = len(x)
         if n < 4:
             raise ValueError("After removing NaNs, sample size is too small.")
@@ -174,9 +182,10 @@ def bartels_test(x, alternative="two.sided", pvalue_method="normal"):
         # but in a real-world scenario, you would need pre-computed tables
         # or more complex algorithms for small n.
         if n > 10:
-            print("Warning: Exact p-value calculation is only "
-                  "recommended for n <= 10." \
-                  "Using normal approximation instead.")
+            msg = ("Exact p-value calculation is only "
+                   "recommended for n <= 10." \
+                   "Using normal approximation instead.")
+            warnings.warn(msg, UserWarning)
             return bartels_test(x, alternative, pvalue_method="normal")
         else:
             raise NotImplementedError("Exact p-value calculation is "

@@ -1,7 +1,14 @@
+import warnings
 import numpy as np
 import pandas as pd
 import xarray as xr
 import conversions
+
+
+def custom_warning_format(message, category, filename, lineno, file=None, line=None):
+    print(f"{category.__name__}: {message}")
+
+warnings.showwarning = custom_warning_format
 
 
 def is_positive_definite(A):
@@ -70,6 +77,9 @@ def nearestpd(array):
     A3 = (A2 + A2.T) / 2
 
     if is_positive_definite(A3):
+        msg = ("Higham's (1988) first method was employed to compute "
+               "the pos. def. matrix nearest to the sample covariance matrix.")
+        warnings.warn(msg, UserWarning)
         return repackage(array, A3)
 
     # matrix is still not positive definite; try Higham's 2nd method
@@ -89,4 +99,7 @@ def nearestpd(array):
         mineig = np.min(np.real(np.linalg.eigvals(A3)))
         A3 += Id * (-mineig * k ** 2 + spacing)
         k += 1
+    msg = ("Higham's (1988) second method was employed to compute "
+            "the pos. def. matrix nearest to the sample covariance matrix.")
+    warnings.warn(msg, UserWarning)
     return repackage(array, A3)

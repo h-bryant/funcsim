@@ -8,6 +8,12 @@ from typing import Callable, Optional
 import conversions
 
 
+def custom_warning_format(message, category, filename, lineno, file=None, line=None):
+    print(f"{category.__name__}: {message}")
+
+warnings.showwarning = custom_warning_format
+
+
 def fan(da: xr.DataArray,
         varname: str,
         filepath: str = None,
@@ -63,7 +69,7 @@ def fan(da: xr.DataArray,
     dt = da.sel(variables=varname).to_pandas().transpose()
     
     if dt.empty:
-        warnings.warn(f"Warning: Data for variable '{varname}' is empty after "
+        warnings.warn(f"Data for variable '{varname}' is empty after "
                       f"selection and processing.", UserWarning)
         # Return an empty figure or handle as appropriate
         fig = go.Figure()
@@ -104,7 +110,7 @@ def fan(da: xr.DataArray,
                     
             except Exception as e:
                 # This might happen if conversion of an item fails unexpectedly.
-                warnings.warn(f"Warning: Attempted to convert an object-dtype "
+                warnings.warn(f"Attempted to convert an object-dtype "
                               f"index that might contain Periods, but an error "
                               f"occurred: {e}. Using original index for x-axis,"
                               f" which may lead to Plotly errors.", UserWarning)
