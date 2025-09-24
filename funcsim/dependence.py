@@ -208,12 +208,16 @@ class MvKde():
         smult = (4.0 / (self._K+2.0))**(2.0 / (self._K+4.0))
         self._silverman = smult * self._scott
 
-        if bw == 'scott' or bw is None:
-            self._bw = self._scott
-        elif bw == 'silverman':
-            self._bw = self._silverman
+        if type(bw) == str:
+            if bw == 'scott' or bw is None:
+                self._bw = self._scott
+            elif bw == 'silverman':
+                self._bw = self._silverman
         else:
             self._bw = bw
+
+        # cholestky decomp of bandwidth matrix
+        self._chol = nearby.nearestpd(self._bw)
 
     def draw(self,
              ugen: Generator[float, None, None]
@@ -234,12 +238,16 @@ class MvKde():
             values.
         """
         # hist obs about which we will sample
-        m = _rand_int(next(draw), self._M)
+        m = _rand_int(next(ugen), self._M)
 
         # means for this sample
         mu = self._data[m]
 
-        return normal(draw, self._bw, mu)
+        # generate joint standard normal draw from the obs m kernel
+        uvec = [next(ugen) for i in range(self._K)]
+        retA = mu + np.dot(self._chol, stats.norm.ppf(uvec))
+
+        return pd.Series(retA, index=self._names)
 
 
 class MvNorm():
