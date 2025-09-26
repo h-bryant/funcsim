@@ -199,8 +199,13 @@ class MvKde():
         self._names = conversions.alColNames(data)
         (self._M, self._K) = self._data.shape
 
-        # sample standard deviations
-        stdevs = data.std(axis=0)
+        # standardize data (store mean/std to undo later)
+        self._means = self._data.mean(axis=0)
+        self._stds  = self._data.std(axis=0)
+        self._stds[self._stds == 0.0] = 1.0   # for columns w/no variability
+        self._data = (self._data - self._means) / self._stds
+        self._data_std = self._data  # sample standard deviations
+        stdevs = self._data_std.std(axis=0)
 
         # rule-of-thumb bandwidths
         mult = self._M**(-1.0/(self._K+1.0))
@@ -214,7 +219,9 @@ class MvKde():
             elif bw == 'silverman':
                 self._bw = self._silverman
         else:
-            self._bw = bw
+            # convert user's H (orig. units) into std units: D^{-1} H D^{-1}
+            Dinv = np.diag(1.0 / self._stds)
+            self._bw = Dinv @ bw @ Dinv
 
         # cholestky decomp of bandwidth matrix
         self._chol = nearby.nearestpd(self._bw)
@@ -245,7 +252,10 @@ class MvKde():
 
         # generate joint standard normal draw from the obs m kernel
         uvec = [next(ugen) for i in range(self._K)]
-        retA = mu + np.dot(self._chol, stats.norm.ppf(uvec))
+        retA_std = mu + np.dot(self._chol, stats.norm.ppf(uvec))
+
+        # de-standardize back to original units
+        retA = self._means + self._stds * retA_std
 
         return pd.Series(retA, index=self._names)
 
