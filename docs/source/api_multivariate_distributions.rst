@@ -14,7 +14,7 @@ Copulas
 -------
 .. automodule:: funcsim
    :no-index:
-   :members: CopulaGauss, CopulaStudent, CopulaClayton, CopulaGumbel
+   :members: CopulaGauss, CopulaStudent, CopulaClayton, CopulaGumbel, CopulaFrank
    :undoc-members:
    :show-inheritance:
 

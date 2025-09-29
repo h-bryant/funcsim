@@ -5,11 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Multivariate Distributions and Dependence &#8212; funcsim 0.1.0 documentation</title>
+    <title>Multivariate Distributions and Dependence &#8212; funcsim 0.1.7 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
-    <script src="_static/documentation_options.js?v=01f34227"></script>
+    <script src="_static/documentation_options.js?v=ca7ad2ea"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -141,6 +141,48 @@ constrained to be &gt;= 2.0.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A pandas Series representing a joint draw from the Clayton
+copula. The index reflects the variable names, and non-independent
+standard uniform draws are the values in the Series.
+If no variable names were provided in the input data,
+the variables will be named ‘v0’, ‘v1’, …, reflecting the
+oreder of the columns in the input data.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">funcsim.</span></span><span class="sig-name descname"><span class="pre">CopulaFrank</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">udata</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#CopulaFrank"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A Frank copula object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>udata</strong> (<em>ArrayLike</em>) – Input array of probability values from individual marginal
+distributions (“pseudo-observations”) with variables in
+columns and observations in rows.  That is, each column
+represents the result of applying the fitted CDF of some marginal
+distribution to the raw data for that variable.  The
+values in each column should be in the range [0, 1]. Parameters are
+fit using maximum likelihood.  This implementation accomodates
+only positive dependence, so the fitted value for theta is
+constrained to be &gt;= 0.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">draw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ugen</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dependence.html#CopulaFrank.draw"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Generate a joint random draw from the Frank copula.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ugen</strong> (<em>Generator</em><em>[</em><em>float</em><em>, </em><em>None</em><em>, </em><em>None</em><em>]</em>) – A generator yielding independent standard uniform random numbers.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pandas Series representing a joint draw from the Frank
 copula. The index reflects the variable names, and non-independent
 standard uniform draws are the values in the Series.
 If no variable names were provided in the input data,
