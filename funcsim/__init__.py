@@ -12,6 +12,7 @@ from dependence import CopulaGauss
 from dependence import CopulaStudent
 from dependence import CopulaClayton
 from dependence import CopulaGumbel
+from dependence import CopulaFrank
 
 from imanconover import imanconover
 
@@ -51,4 +52,4 @@ def version():
     str
         The version string of the package (e.g., '0.1.5').
     """
-    return "0.1.11"
+    return "0.1.12"

@@ -636,3 +636,105 @@ class CopulaGumbel():
         retA = np.array([self._Ftilde(-math.log(next(ugen))/v)
                          for i in range(self._K)])
         return pd.Series(retA, index=self._names)
+
+
+class CopulaFrank():
+    """
+    A Frank copula object. 
+
+    Parameters
+    ----------
+    udata : ArrayLike
+        Input array of probability values from individual marginal
+        distributions ("pseudo-observations") with variables in
+        columns and observations in rows.  That is, each column
+        represents the result of applying the fitted CDF of some marginal
+        distribution to the raw data for that variable.  The
+        values in each column should be in the range [0, 1]. Parameters are
+        fit using maximum likelihood.  This implementation accomodates
+        only positive dependence, so the fitted value for theta is
+        constrained to be >= 0.
+    """
+
+    def __init__(self,
+                 udata: conversions.ArrayLike,
+                 ) -> None:
+        
+        # check that copulae package is installed
+        try:
+            import copulae
+        except ImportError as e:
+            raise ImportError("Optional dependency 'copulae' is required for "
+                              "CopulaFrank. Install with `pip install "
+                              "copulae`.") from e
+
+        self._data = conversions.alToArray(udata)
+        self._names = conversions.alColNames(udata)
+        (self._M, self._K) = self._data.shape
+
+        # check that data are in (0, 1)
+        for k in range(self._K):
+            if not _goodUvec(self._data[:, k]):
+                raise ValueError(f"Column {k} of the input data, with name "
+                                 f"{self._names[k]}, has values that are not "
+                                 f"in the range (0, 1)")
+
+        # fit parameters
+        self._cop = copulae.archimedean.FrankCopula()
+        self._cop.fit(self._data)
+        self._theta = self._cop.params
+
+        # ensure that theta is non-negative
+        self._theta = max(0.0, self._theta)
+
+        if self._cop.params <= 0.0:
+            warnings.warn(f"The Frank copula implementation in funcsim "
+                          f"accomodates only positive dependence. The fitted "
+                          f"value for theta is {self._params}, implying "
+                          f"negative dependence.  A theta value of 0.0 is "
+                          f"being used rather that the fitted value, but this "
+                          f"implies no dependence among the variables. You "
+                          f"should probably choose a different dependence "
+                          f"representation for your data.",
+                          UserWarning)
+
+    def draw(self,
+             ugen: Generator[float, None, None]
+             ) -> pd.Series:
+        """
+        Generate a joint random draw from the Frank copula.
+
+        Parameters
+        ----------
+        ugen : Generator[float, None, None]
+            A generator yielding independent standard uniform random numbers.
+
+        Returns
+        -------
+        pd.Series
+            A pandas Series representing a joint draw from the Frank
+            copula. The index reflects the variable names, and non-independent
+            standard uniform draws are the values in the Series.
+            If no variable names were provided in the input data,
+            the variables will be named 'v0', 'v1', ..., reflecting the
+            oreder of the columns in the input data.
+        
+        """
+        # Generate d uniform random variables
+        uA = np.array([next(ugen) for _ in range(self._K)])
+
+        # generate "frailty" variable random draw
+        uval = next(ugen)
+        try:
+            v = stats.logser.ppf(p=(1.0 - np.exp(-self._theta)), q=uval)
+        except RuntimeError:
+            # logser.ppf sometimes throws an error for some combinations of
+            # p and q, even though q values on either side of the problematic
+            # q value seem to work just fine...
+            v = stats.logser.ppf(p=(1.0 - np.exp(-self._theta)), q=(uval-0.01))
+
+        # generate final draws
+        retA = -1.0 / self._theta * np.log(1.0 + np.exp(-(-np.log(uA) / v))
+                                           * (np.exp(-self._theta) - 1.0))
+
+        return pd.Series(retA, index=self._names)
