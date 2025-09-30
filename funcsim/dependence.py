@@ -207,11 +207,13 @@ class MvKde():
         self._data_std = self._data  # sample standard deviations
         stdevs = self._data_std.std(axis=0)
 
-        # rule-of-thumb bandwidths
-        mult = self._M**(-1.0/(self._K+1.0))
+        # rule-of-thumb scott bandwidth
+        mult = self._M**(-1.0/(self._K+4.0))
         self._scott =  np.square(mult * np.diagflat(stdevs))
-        smult = (4.0 / (self._K+2.0))**(2.0 / (self._K+4.0))
-        self._silverman = smult * self._scott
+
+        # rule-of-thumb silverman bandwidth
+        smult = ((4.0 * self._M)/ (self._K+2.0))**(-1.0 / (self._K+4.0))
+        self._silverman = np.square(smult * np.diagflat(stdevs))
 
         if type(bw) == str:
             if bw == 'scott' or bw is None:
