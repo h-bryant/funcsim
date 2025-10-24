@@ -45,6 +45,11 @@ def eut(util: Callable[[float], float],
     """
     Compute expected utility and certainty equivalent income.
 
+    This can operate on an arbitrary utility function, numerically solving
+    for the certainty equivalent.  For isoelastic expected utiliy and
+    certainty equivalents, the function "eutIsoelastic" will be less
+    likely to suffer from numerical problems.
+
     Parameters
     ----------
     util : Callable
@@ -52,7 +57,7 @@ def eut(util: Callable[[float], float],
         and returns a float
     outcomes : VectorLike
         Sequence of monetary outcomes (all must be positive).
-    precition : float, optional
+    precision : float, optional
         Precision parameter used in solving for the certainty equivalent.
         The default value is 0.001
 
@@ -89,4 +94,62 @@ def eut(util: Callable[[float], float],
                                           rtol=precision)
     certequiv = solveout.root if solveout.converged is True else None
  
+    return EutResult(eutil, certequiv)
+
+
+def _isoelastic_inv(utility, crra):
+    # inverse isoelastic utility function: return the monetary outcome
+    # associated with a given "utility" level, given the constant
+    # relative risk aversion coefficient "crra"
+    assert type(utility) in [float, np.float64], \
+        "utility must be a float"
+    assert utility >= 0.0, "utility must be non-negative"
+    assert crra >= 0.0, "crra must be non-negative"
+    if crra == 1.0:
+        return math.exp(utility)
+    else:
+        return (1.0 + (1.0 - crra) * utility) ** (1.0 / (1.0 - crra))
+
+
+def eutIsoelastic(crra: float,
+                  outcomes: conversions.VectorLike,
+                 ) -> EutResult:
+    """
+    Compute expected isoelastic utility and certainty equivalent income.
+
+    Parameters
+    ----------
+    crra : float
+        Coefficient of relative risk aversion
+    outcomes : VectorLike
+        Sequence of monetary outcomes (all must be positive).
+
+    Returns
+    -------
+    EutResult
+        Named tuple with fields:
+
+        ExpectedValue : float
+            The mean isoelastic utility of the outcomes.
+        CertaintyEquiv : float
+            The certainty equivalent income.
+    """
+
+    # outcomes to numpy vec
+    outcomesA = conversions.vlToArray(outcomes)
+
+    # expected util
+    n = len(outcomes)
+    eutil = sum([utilIsoelastic(y, crra) for y in outcomesA]) / n
+
+    # find scaling factor such that min adjusted outcome is 1.0
+    scale = min(outcomesA)
+
+    # scale outcomes
+    soutA = outcomesA / scale
+
+    # certainty equiv: find C.E. such than U(C.E.) = E(U)
+    eutilScaled = sum(map(lambda v: utilIsoelastic(v, crra), soutA)) / n
+    certequiv = scale * _isoelastic_inv(eutilScaled, crra)
+
     return EutResult(eutil, certequiv)

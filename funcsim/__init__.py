@@ -39,7 +39,7 @@ from screen import screen
 from cpt import cpt, utilPower, utilNormLog, weightTK, weightPrelec1
 from cpt import weightPrelec2, cptBV
 
-from eut import eut, utilIsoelastic
+from eut import eut, utilIsoelastic, eutIsoelastic
 
 from plotting import fan, twofuncs, histpdf, dblscat, qqplot, show
 
@@ -52,4 +52,4 @@ def version():
     str
         The version string of the package (e.g., '0.1.5').
     """
-    return "0.1.13"
+    return "0.1.14"
