@@ -392,7 +392,7 @@ def cpt(utilFunc: Callable,
                                           x0=x0,
                                           x1=x1,
                                           maxiter=1000,
-                                          rtol=precision)
+                                          xtol=precision)
 
     # using ugly mutation to try to find certainty equivalent using
     # different sets of starting points
@@ -406,9 +406,9 @@ def cpt(utilFunc: Callable,
                    f" min(outcome)={min(outcomesList)}"
                    f" max(outcome)={max(outcomesList)}"
                    f" obj@minOutcome="
-                   f"{utilFunc(min(outcomesList) - refOutcome) - cptEval}"
+                   f"{utilFunc(min(outcomesList)) - cptEval}"
                    f" obj@maxOutcome="
-                   f"{utilFunc(max(outcomesList) - refOutcome) - cptEval}")
+                   f"{utilFunc(max(outcomesList)) - cptEval}")
             raise InferenceError(msg)
         result = trySolve(x0=min(outcomesList), x1=xtop)
 
@@ -463,4 +463,5 @@ def cptBV(outcomes: Iterable,
                                                         beta=0.953),
                outcomes=outcomes,
                refOutcome=refOutcome,
-               probabilities=probabilities)
+               probabilities=probabilities,
+               precision=0.0001)
