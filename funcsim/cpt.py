@@ -382,11 +382,11 @@ def cpt(utilFunc: Callable,
     cptEval = Vfpos + Vfneg
 
     # calculate certainty equiv: find ce such that
-    # utilFunc(ce - refOutcome) = cptEval
+    # utilFunc(ce) = cptEval
     def trySolve(x0, x1):
 
         def obj(x):
-            return utilFunc(x - refOutcome) - cptEval
+            return utilFunc(x) - cptEval
 
         return scipy.optimize.root_scalar(f=obj,
                                           x0=x0,
