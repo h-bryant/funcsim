@@ -413,7 +413,7 @@ def cpt(utilFunc: Callable,
         result = trySolve(x0=min(outcomesList), x1=xtop)
 
     # return if we found the certainty equivalent
-    certEquiv = result.root
+    certEquiv = refOutcome + result.root
     return CptResult(ExpectedValue=cptEval, CertaintyEquiv=certEquiv)
 
 
