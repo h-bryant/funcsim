@@ -46,6 +46,21 @@ def test_ct_1():
     assert u_test_results["anderson_darling_pval"] > 0.03
 
 
+def test_ct_2():
+    udata = np.random.random(size=(1000, 5))
+    ct = fs.CopulaStudent(udata)
+
+    def f(ugen):
+        draw = ct.draw(ugen)
+        return {"rain": draw.v0, "temp": draw.v1, "v2": draw.v2,
+                "v3": draw.v3, "v4": draw.v4}
+
+    sampl = fs.simulate(f=f, ntrials=2000).sel(steps=0).values
+    assert sampl.shape == (2000, 5)
+    u_test_results = fs.utests(sampl[:,0])
+    assert u_test_results["anderson_darling_pval"] > 0.03
+
+
 def test_cc_0():
     udata = np.random.random(size=(1000, 2))
     cc = fs.CopulaClayton(udata)

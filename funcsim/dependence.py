@@ -429,7 +429,7 @@ class CopulaStudent():
                                  f"in the range (0, 1)")
 
         # fit parameters
-        self._cop = copulae.elliptical.StudentCopula()
+        self._cop = copulae.elliptical.StudentCopula(dim=self._K)
         self._cop.fit(self._data)
         self._rho = self._cop.sigma
         self._nu = self._cop.params.df
