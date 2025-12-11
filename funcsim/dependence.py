@@ -17,7 +17,7 @@ warnings.showwarning = custom_warning_format
 
 def _goodUvec(uvec: np.ndarray) -> bool:
     # check that values in uvec are in (0, 1)
-    return np.all((uvec > 0.0) & (uvec <1.0))
+    return bool(np.all((uvec > 0.0) & (uvec <1.0)))
 
 
 def _memoize(f):
