@@ -506,7 +506,7 @@ class CopulaClayton():
                                  f"in the range (0, 1)")
 
         # fit parameters
-        self._cop = copulae.archimedean.ClaytonCopula()
+        self._cop = copulae.archimedean.ClaytonCopula(dim=self._K)
         self._cop.fit(self._data)
         self._theta = max(self._cop.params, 2.000)
         if self._cop.params < 2.00:
@@ -593,7 +593,7 @@ class CopulaGumbel():
                                  f"in the range (0, 1)")
 
         # fit parameters
-        self._cop = copulae.archimedean.GumbelCopula()
+        self._cop = copulae.archimedean.GumbelCopula(dim=self._K)
         self._cop.fit(self._data)
         self._theta = max(self._cop.params, 1.0000038089)  # ensure theta > 1.0
         if self._cop.params <= 1.0:
@@ -682,7 +682,7 @@ class CopulaFrank():
                                  f"in the range (0, 1)")
 
         # fit parameters
-        self._cop = copulae.archimedean.FrankCopula()
+        self._cop = copulae.archimedean.FrankCopula(dim=self._K)
         self._cop.fit(self._data)
         self._theta = self._cop.params
 
