@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="funcsim",
-    version="0.1.20",
+    version="0.2.0",
     license="bsd-3-clause",
     author="Henry Bryant",
     author_email="henry@tamu.edu",
@@ -23,13 +23,9 @@ setuptools.setup(
     ],
     extras_require={
         "plotting": ["plotly>=6.0.0", "jupyter"],
-        "copula": ['copulae>=0.8.0'],
         "docs": ['sphinx', 'sphinx_autodoc_typehints'],
-        "full": ["plotly>=6.0.0", "copulae>=0.8.0", 'sphinx', 'sphinx_autodoc_typehints'],
+        "full": ["plotly>=6.0.0", 'sphinx', 'sphinx_autodoc_typehints'],
     },
-    test_requires=[
-        'pytest',
-    ],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Programming Language :: Python :: 3",

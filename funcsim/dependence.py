@@ -5,6 +5,7 @@ from scipy import stats
 from typing import Generator, Optional, Tuple
 import warnings
 import conversions
+import copfit
 import nearby
 import shapiro
 
@@ -401,21 +402,14 @@ class CopulaStudent():
         columns and observations in rows.  That is, each column
         represents the result of applying the fitted CDF of some marginal
         distribution to the raw data for that variable.  The
-        values in each column should be in the range [0, 1]. Parameters are
-        fit using maximum likelihood.
+        values in each column should be in the range [0, 1]. The correlation
+        matrix is fit by pairwise Kendall's-tau inversion, and the degrees
+        of freedom are then fit by profile maximum likelihood.
     """
 
     def __init__(self,
                  udata: conversions.ArrayLike,
                  ) -> None:
-        
-        # check that copulae package is installed
-        try:
-            import copulae
-        except ImportError as e:
-            raise ImportError("Optional dependency 'copulae' is required for "
-                              "CopulaStudent. Install with `pip install "
-                              "copulae`.") from e
 
         self._data = conversions.alToArray(udata)
         self._names = conversions.alColNames(udata)
@@ -429,10 +423,10 @@ class CopulaStudent():
                                  f"in the range (0, 1)")
 
         # fit parameters
-        self._cop = copulae.elliptical.StudentCopula(dim=self._K)
-        self._cop.fit(self._data)
-        self._rho = self._cop.sigma
-        self._nu = self._cop.params.df
+        (self._rho, self._nu) = copfit.fit_student(self._data)
+
+        # cholesky decomposition of the correlation matrix, for draws
+        self._A = np.linalg.cholesky(self._rho)
 
     def draw(self,
              ugen: Generator[float, None, None]
@@ -457,7 +451,7 @@ class CopulaStudent():
         
         """
         uvec = [next(ugen) for i in range(self._K)]
-        z = np.dot(self._rho, stats.norm.ppf(uvec))
+        z = np.dot(self._A, stats.norm.ppf(uvec))
         chi2 = stats.chi2.ppf(next(ugen), df=self._nu)
         mult = (self._nu / chi2)**0.5
         retA = stats.t.cdf(mult * z, df=self._nu)
@@ -479,20 +473,12 @@ class CopulaClayton():
         values in each column should be in the range [0, 1]. Parameters are
         fit using maximum likelihood.  This implementation accomodates
         only positive dependence, so the fitted value for theta is
-        constrained to be >= 2.0.
+        constrained to be > 0.
     """
 
     def __init__(self,
                  udata: conversions.ArrayLike,
                  ) -> None:
-        
-        # check that copulae package is installed
-        try:
-            import copulae
-        except ImportError as e:
-            raise ImportError("Optional dependency 'copulae' is required for "
-                              "CopulaClayton. Install with `pip install "
-                              "copulae`.") from e
 
         self._data = conversions.alToArray(udata)
         self._names = conversions.alColNames(udata)
@@ -506,16 +492,15 @@ class CopulaClayton():
                                  f"in the range (0, 1)")
 
         # fit parameters
-        self._cop = copulae.archimedean.ClaytonCopula(dim=self._K)
-        self._cop.fit(self._data)
-        self._theta = max(self._cop.params, 2.000)
-        if self._cop.params < 2.00:
+        (self._theta, taub, clamped) = copfit.fit_clayton(self._data)
+        if clamped:
             warnings.warn(f"The Clayton copula implementation in funcsim "
-                          f"accomodates only positive dependence. The fitted "
-                          f"value for theta is {self._theta}, implying "
-                          f"negative dependence.  A theta value of 2.0 is "
-                          f"being used rather that the fitted value, but this "
-                          f"implies no dependence among the variables. You "
+                          f"accomodates only positive dependence, but the "
+                          f"data exhibit negative dependence (mean pairwise "
+                          f"Kendall's tau = {taub:.3f}).  A theta value of "
+                          f"{copfit.THETA_MIN_CLAYTON} is being used rather "
+                          f"than a fitted value, which implies (near) "
+                          f"independence among the variables. You "
                           f"should probably choose a different dependence "
                           f"representation for your data.",
                           UserWarning)
@@ -572,14 +557,6 @@ class CopulaGumbel():
     def __init__(self,
                  udata: conversions.ArrayLike,
                  ) -> None:
-        
-        # check that copulae package is installed
-        try:
-            import copulae
-        except ImportError as e:
-            raise ImportError("Optional dependency 'copulae' is required for "
-                              "CopulaGumbel. Install with `pip install "
-                              "copulae`.") from e
 
         self._data = conversions.alToArray(udata)
         self._names = conversions.alColNames(udata)
@@ -593,16 +570,15 @@ class CopulaGumbel():
                                  f"in the range (0, 1)")
 
         # fit parameters
-        self._cop = copulae.archimedean.GumbelCopula(dim=self._K)
-        self._cop.fit(self._data)
-        self._theta = max(self._cop.params, 1.0000038089)  # ensure theta > 1.0
-        if self._cop.params <= 1.0:
+        (self._theta, taub, clamped) = copfit.fit_gumbel(self._data)
+        if clamped:
             warnings.warn(f"The Gumbel copula implementation in funcsim "
-                          f"accomodates only positive dependence. The fitted "
-                          f"value for theta is {self._params}, implying "
-                          f"negative dependence.  A theta value of 1.0 is "
-                          f"being used rather that the fitted value, but this "
-                          f"implies no dependence among the variables. You "
+                          f"accomodates only positive dependence, but the "
+                          f"data exhibit negative dependence (mean pairwise "
+                          f"Kendall's tau = {taub:.3f}).  A theta value of "
+                          f"(approximately) 1.0 is being used rather than a "
+                          f"fitted value, which implies (near) independence "
+                          f"among the variables. You "
                           f"should probably choose a different dependence "
                           f"representation for your data.",
                           UserWarning)
@@ -624,13 +600,13 @@ class CopulaGumbel():
         Returns
         -------
         pd.Series
-            A pandas Series representing a joint draw from the Clayton
+            A pandas Series representing a joint draw from the Gumbel
             copula. The index reflects the variable names, and non-independent
             standard uniform draws are the values in the Series.
             If no variable names were provided in the input data,
             the variables will be named 'v0', 'v1', ..., reflecting the
             oreder of the columns in the input data.
-        
+
         """
         gamma = math.cos(0.5 * math.pi / self._theta)**self._theta
         alpha = 1.0 / self._theta
@@ -655,20 +631,12 @@ class CopulaFrank():
         values in each column should be in the range [0, 1]. Parameters are
         fit using maximum likelihood.  This implementation accomodates
         only positive dependence, so the fitted value for theta is
-        constrained to be >= 0.
+        constrained to be > 0.
     """
 
     def __init__(self,
                  udata: conversions.ArrayLike,
                  ) -> None:
-        
-        # check that copulae package is installed
-        try:
-            import copulae
-        except ImportError as e:
-            raise ImportError("Optional dependency 'copulae' is required for "
-                              "CopulaFrank. Install with `pip install "
-                              "copulae`.") from e
 
         self._data = conversions.alToArray(udata)
         self._names = conversions.alColNames(udata)
@@ -682,20 +650,15 @@ class CopulaFrank():
                                  f"in the range (0, 1)")
 
         # fit parameters
-        self._cop = copulae.archimedean.FrankCopula(dim=self._K)
-        self._cop.fit(self._data)
-        self._theta = self._cop.params
-
-        # ensure that theta is non-negative
-        self._theta = max(0.0, self._theta)
-
-        if self._cop.params <= 0.0:
+        (self._theta, taub, clamped) = copfit.fit_frank(self._data)
+        if clamped:
             warnings.warn(f"The Frank copula implementation in funcsim "
-                          f"accomodates only positive dependence. The fitted "
-                          f"value for theta is {self._params}, implying "
-                          f"negative dependence.  A theta value of 0.0 is "
-                          f"being used rather that the fitted value, but this "
-                          f"implies no dependence among the variables. You "
+                          f"accomodates only positive dependence, but the "
+                          f"data exhibit negative dependence (mean pairwise "
+                          f"Kendall's tau = {taub:.3f}).  A theta value of "
+                          f"{copfit.THETA_MIN_FRANK} is being used rather "
+                          f"than a fitted value, which implies (near) "
+                          f"independence among the variables. You "
                           f"should probably choose a different dependence "
                           f"representation for your data.",
                           UserWarning)
@@ -733,7 +696,8 @@ class CopulaFrank():
             # logser.ppf sometimes throws an error for some combinations of
             # p and q, even though q values on either side of the problematic
             # q value seem to work just fine...
-            v = stats.logser.ppf(p=(1.0 - np.exp(-self._theta)), q=(uval-0.01))
+            v = stats.logser.ppf(p=(1.0 - np.exp(-self._theta)),
+                                 q=max(uval - 0.01, 1e-12))
 
         # generate final draws
         retA = -1.0 / self._theta * np.log(1.0 + np.exp(-(-np.log(uA) / v))

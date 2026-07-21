@@ -13,12 +13,14 @@ Developed using:
 - python >= 3.9
 - numpy 2.2.0
 - scipy 1.16.0
-- pandas 2.2.0
+- pandas 2.2.0 (pandas 2.2+ and 3.x are both supported)
 - xarray 2025.4.0
+
+Copulas (Gaussian, Student's t, Clayton, Gumbel, and Frank) are supported
+natively; no additional packages are required.
 
 For optional functionality, additinoal packages are needed:
 - plotting: plotly
-- some copula typed: copulae
 
 Additionally, to run the demos, run tests, and build docs:
 - pytest
