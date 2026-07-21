@@ -10,7 +10,7 @@ Features:
 - functional paradigm
 
 Developed using:
-- python >= 3.9
+- python >= 3.10
 - numpy 2.2.0
 - scipy 1.16.0
 - pandas 2.2.0 (pandas 2.2+ and 3.x are both supported)

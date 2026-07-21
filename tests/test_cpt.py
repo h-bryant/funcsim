@@ -31,9 +31,9 @@ def test_aleks_example():
     )
     assert isinstance(result.ExpectedValue, float)
     assert isinstance(result.CertaintyEquiv, float)
-    # CptResult(ExpectedValue=0.5142746670673448, CertaintyEquiv=4.733729209057415)
+    # CptResult(ExpectedValue=0.5142746670673448, CertaintyEquiv=0.4696914446573119)
     np.testing.assert_allclose(result.ExpectedValue, 0.5142746670673448, rtol=1e-9)
-    np.testing.assert_allclose(result.CertaintyEquiv, 4.733729209057415, rtol=1e-9)
+    np.testing.assert_allclose(result.CertaintyEquiv, 0.4696914446573119, rtol=1e-9)
 
 def test_no_probs_nonunique_outcomes_nonzero_ref():
     result = cpt(
@@ -45,9 +45,9 @@ def test_no_probs_nonunique_outcomes_nonzero_ref():
     )
     assert isinstance(result.ExpectedValue, float)
     assert isinstance(result.CertaintyEquiv, float)
-    # CptResult(ExpectedValue=0.22542186628262106, CertaintyEquiv=12.135541394014753)
+    # CptResult(ExpectedValue=0.22542186628262106, CertaintyEquiv=10.183978989181892)
     np.testing.assert_allclose(result.ExpectedValue, 0.22542186628262106, rtol=1e-9)
-    np.testing.assert_allclose(result.CertaintyEquiv, 12.135541394014753, rtol=1e-9)
+    np.testing.assert_allclose(result.CertaintyEquiv, 10.183978989181892, rtol=1e-9)
 
 def test_bouchoiuicha_vieider_2017():
     result = cpt(
@@ -60,9 +60,9 @@ def test_bouchoiuicha_vieider_2017():
     )
     assert isinstance(result.ExpectedValue, float)
     assert isinstance(result.CertaintyEquiv, float)
-    # CptResult(ExpectedValue=-22352.784861502496, CertaintyEquiv=110125.74923511136)
+    # CptResult(ExpectedValue=-22352.784861502496, CertaintyEquiv=90065.42895044334)
     np.testing.assert_allclose(result.ExpectedValue, -22352.784861502496, rtol=1e-9)
-    np.testing.assert_allclose(result.CertaintyEquiv, 110125.74923511136, rtol=1e-9)
+    np.testing.assert_allclose(result.CertaintyEquiv, 90065.42895044334, rtol=1e-9)
 
 def test_no_probs_nonunique_outcomes_nonzero_ref_2():
     result = cpt(
@@ -75,9 +75,9 @@ def test_no_probs_nonunique_outcomes_nonzero_ref_2():
     )
     assert isinstance(result.ExpectedValue, float)
     assert isinstance(result.CertaintyEquiv, float)
-    # CptResult(ExpectedValue=-3563.361982439633, CertaintyEquiv=103982.99776749458)
+    # CptResult(ExpectedValue=-3563.361982439633, CertaintyEquiv=95674.89084135325)
     np.testing.assert_allclose(result.ExpectedValue, -3563.361982439633, rtol=1e-9)
-    np.testing.assert_allclose(result.CertaintyEquiv, 103982.99776749458, rtol=1e-9)
+    np.testing.assert_allclose(result.CertaintyEquiv, 95674.89084135325, rtol=1e-9)
 
 def test_no_probs_nonunique_outcomes_nonzero_ref_3():
     result = cpt(
@@ -90,6 +90,6 @@ def test_no_probs_nonunique_outcomes_nonzero_ref_3():
     )
     assert isinstance(result.ExpectedValue, float)
     assert isinstance(result.CertaintyEquiv, float)
-    # CptResult(ExpectedValue=-8.163190700673397, CertaintyEquiv=103.9829977674946)
+    # CptResult(ExpectedValue=-8.163190700673397, CertaintyEquiv=95.67489084135325)
     np.testing.assert_allclose(result.ExpectedValue, -8.163190700673397, rtol=1e-9)
-    np.testing.assert_allclose(result.CertaintyEquiv, 103.9829977674946, rtol=1e-9)
+    np.testing.assert_allclose(result.CertaintyEquiv, 95.67489084135325, rtol=1e-9)

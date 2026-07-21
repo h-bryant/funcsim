@@ -14,7 +14,8 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/h-bryant/funcsim",
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
+    python_requires=">=3.10",
     install_requires=[ 
         'numpy>=2.2.0',
         'pandas>=2.2.0',

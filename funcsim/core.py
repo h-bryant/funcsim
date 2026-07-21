@@ -1,3 +1,4 @@
+import functools
 import sys
 from copy import deepcopy as copy
 import numpy as np
@@ -118,6 +119,25 @@ def _lhs(K, R):
     return np.concatenate([[_strat(R)] for i in range(K)], axis=0)
 
 
+def _stepf_1arg(f, draw, hist):
+    # adapter giving a two-argument signature to a user step/trial function
+    # that takes only 'draw'.  Defined at module level (rather than as a
+    # lambda) so that it can be pickled for spawn-based multiprocessing
+    return f(draw)
+
+
+def _trial(r, w, rvs, data, stepf, nsteps):
+    # perform all time steps for trial 'r' and return the trial's data
+    # array.  Defined at module level (rather than as a closure) so that it
+    # can be pickled for spawn-based multiprocessing
+    wgen = _makewgen(w, r) if rvs > 0 else None  # 'w' gener. for trial 'r'
+    dataWorking = copy(data)
+    for s in range(nsteps):
+        # step 's' of trial 'r'
+        dataWorking.append(stepf(wgen, dataWorking))
+    return dataWorking._a
+
+
 def _extendIndex(idx, nNewSteps):
     # extend a 'steps' index; should work for ints or pd.Period
     if len(idx) == 0:  # no previous index; just use integers for the new index
@@ -165,6 +185,9 @@ def simulate(f: Callable[[Generator[int, float, None],
         should have either an integer index or a pandas PeriodIndex.
     multi : bool, optional
         Use multiple processes/cores for the simulation. Default is False.
+        When True, `f` must be picklable (e.g., defined at the top level of
+        a module, not inside another function), because worker processes
+        are spawned on most platforms.
     seed : int, optional
         Seed for pseudo-random number generation. Default is 6.
     stdnorm : book, optional
@@ -209,7 +232,7 @@ def simulate(f: Callable[[Generator[int, float, None],
     # in an outer func that takes "hist" as a second arg
     numb_f_args = _get_arg_count(f)
     if numb_f_args == 1:
-        stepf = lambda draw, hist: f(draw)
+        stepf = functools.partial(_stepf_1arg, f)
     elif numb_f_args == 2:
         stepf = f
     else:
@@ -247,31 +270,26 @@ def simulate(f: Callable[[Generator[int, float, None],
     data = rdarrays.RDdata(finalHist0.to_masked_array(), nsteps, namePositions)
 
     # draws for all RVs in all time steps, w/ sampling stratified across trials
+    w = None
     if rvs > 0:
         np.random.seed(seed)
-        if sampling == 'lh':    
+        if sampling == 'lh':
             u = _lhs(rvs * nsteps, ntrials)  # np.array: (rvs*steps) x trials
-        elif sampling == 'mc':  
+        elif sampling == 'mc':
             u = _mcs(rvs * nsteps, ntrials)  # monte carlo
         else:
             raise ValueError('sampling must be "lh" or "mc"')
         w = stats.norm.ppf(u) if stdnorm is True else u
 
-    def trial(r):
-        wgen = _makewgen(w, r) if rvs > 0 else None  # 'w' gener. for trial 'r'
-        # perform all time steps for one trial
-        # return _recurse(f=lambda x: step(x, wgen), x0=copy(data), S=steps)
-        dataWorking = copy(data)
-        for s in range(nsteps):
-            # step 's' of trial 'r'
-            dataWorking.append(stepf(wgen, dataWorking))
-        return dataWorking
+    # picklable single-trial function (for spawn-based multiprocessing)
+    trial = functools.partial(_trial, w=w, rvs=rvs, data=data,
+                              stepf=stepf, nsteps=nsteps)
 
     # create and return 3-D output DataArray, with new dimension 'trials'
     if multi is True:
-        out = multicore.parmap(lambda r: trial(r)._a, range(ntrials))
+        out = multicore.parmap(trial, range(ntrials))
     else:
-        out = [trial(r)._a for r in range(ntrials)]
+        out = [trial(r) for r in range(ntrials)]
 
     prelim = xr.DataArray(out, coords=[('trials', list(range(ntrials))),
                                        ('variables', finalNames),

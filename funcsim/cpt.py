@@ -316,10 +316,8 @@ def cpt(utilFunc: Callable,
         Probabilities for each outcome. If None, outcomes are assumed
         equally likely.
     precision : float, optional
-        Precision for numerically finding the certainty equivalent.
-        Default is 1.0, which is suitable for outcomes with magnitudes up to
-        perhaps 100,000.  For outcomes with smaller maximum magnitudes, smaller
-        values for precision should probably be used.
+        Retained for backward compatibility; no longer used.  The certainty
+        equivalent is now solved to full floating-point precision.
 
     Returns
     -------
@@ -381,39 +379,34 @@ def cpt(utilFunc: Callable,
     Vfneg = pairsToVf(neg_pairs, weightFuncLosses)
     cptEval = Vfpos + Vfneg
 
-    # calculate certainty equiv: find ce such that
-    # utilFunc(ce) = cptEval
-    def trySolve(x0, x1):
+    # calculate certainty equiv: find the unique ce (in gain/loss terms)
+    # such that utilFunc(ce) = cptEval.  utilFunc is strictly increasing,
+    # so bracket the root (expanding the bracket if needed, since decision
+    # weights need not sum to one) and solve with Brent's method
+    def obj(x):
+        return utilFunc(x) - cptEval
 
-        def obj(x):
-            return utilFunc(x) - cptEval
+    lo = min(out)
+    hi = max(out)
+    span = max(hi - lo, 1.0)
+    for _ in range(100):
+        if obj(lo) <= 0.0 and obj(hi) >= 0.0:
+            break
+        if obj(lo) > 0.0:
+            lo -= span
+        if obj(hi) < 0.0:
+            hi += span
+        span *= 2.0
+    else:
+        msg = (f"could not bracket the certainty equivalent:"
+               f" cpt value={cptEval}"
+               f" obj@{lo}={obj(lo)}"
+               f" obj@{hi}={obj(hi)}")
+        raise InferenceError(msg)
 
-        return scipy.optimize.root_scalar(f=obj,
-                                          x0=x0,
-                                          x1=x1,
-                                          maxiter=1000,
-                                          xtol=precision)
+    root = scipy.optimize.brentq(f=obj, a=lo, b=hi, maxiter=200)
 
-    # using ugly mutation to try to find certainty equivalent using
-    # different sets of starting points
-    decrement = 0.05 * (max(outcomesList) - min(outcomesList))
-    xtop = max(outcomesList)
-    result = trySolve(x0=min(outcomesList), x1=xtop)
-    while result.converged is False:
-        xtop = xtop - decrement
-        if xtop <= min(outcomesList):
-            msg = (f"could not find certainty equivalent"
-                   f" min(outcome)={min(outcomesList)}"
-                   f" max(outcome)={max(outcomesList)}"
-                   f" obj@minOutcome="
-                   f"{utilFunc(min(outcomesList)) - cptEval}"
-                   f" obj@maxOutcome="
-                   f"{utilFunc(max(outcomesList)) - cptEval}")
-            raise InferenceError(msg)
-        result = trySolve(x0=min(outcomesList), x1=xtop)
-
-    # return if we found the certainty equivalent
-    certEquiv = refOutcome + result.root
+    certEquiv = refOutcome + root
     return CptResult(ExpectedValue=cptEval, CertaintyEquiv=certEquiv)
 
 
