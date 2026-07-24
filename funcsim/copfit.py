@@ -25,7 +25,7 @@ from typing import Callable, Tuple
 import numpy as np
 from scipy import integrate, optimize, special, stats
 
-import nearby
+from . import nearby
 
 
 # clip pseudo-observations away from 0 and 1 to keep quantile transforms
@@ -67,6 +67,11 @@ def taumatrix(u: np.ndarray) -> np.ndarray:
 
 def taubar(u: np.ndarray) -> float:
     # mean pairwise Kendall's tau
+    if u.ndim != 2 or u.shape[1] < 2:
+        # with a single column there are no pairs: the mean of an empty
+        # set is NaN, which would slip past the negative-dependence gates
+        raise ValueError("copula fitting requires at least two variables "
+                         "(columns) in the pseudo-observation array")
     tm = taumatrix(u)
     iu = np.triu_indices(tm.shape[0], k=1)
     return float(tm[iu].mean())
@@ -174,13 +179,18 @@ def gumbel_theta0(tau: float) -> float:
 
 def frank_theta0(tau: float) -> float:
     # Kendall's-tau inversion for Frank: solve
-    # tau(theta) = 1 - (4/theta) (1 - D_1(theta)) numerically
+    # tau(theta) = 1 - (4/theta) (1 - D_1(theta)) numerically.
+    # tau(theta) is increasing in theta, so test which side of the
+    # bracket tau falls outside of before calling brentq (assuming the
+    # failure direction, as this once did, returned theta = _THETA_MAX
+    # -- maximal dependence -- for near-zero tau)
     t = min(tau, 0.96)
     f = lambda th: 1.0 - (4.0 / th) * (1.0 - _debye1(th)) - t
-    try:
-        theta = optimize.brentq(f, 1e-6, 200.0)
-    except ValueError:
-        theta = _THETA_MAX  # tau beyond the bracket: strongest dependence
+    if f(1e-6) >= 0.0:    # tau at or below tau(1e-6): weakest dependence
+        return THETA_MIN_FRANK
+    if f(200.0) <= 0.0:   # tau at or above tau(200): strongest dependence
+        return _THETA_MAX
+    theta = optimize.brentq(f, 1e-6, 200.0)
     return min(max(theta, THETA_MIN_FRANK), _THETA_MAX)
 
 

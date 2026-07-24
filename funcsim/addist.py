@@ -12,7 +12,7 @@ from __future__ import division
 from numpy import exp, log, sqrt
 from scipy.stats import rv_continuous
 
-from vect import vectorize
+from .vect import vectorize
 
 
 class ad_unif_gen(rv_continuous):

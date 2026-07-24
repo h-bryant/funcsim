@@ -42,9 +42,14 @@ def simulator(stat, samples, precision, rounds):
         ks10[94]  # 0.409...
     """
     rounds = int(rounds)
+    precision = int(precision)
+    if rounds <= 0 or precision <= 0 or rounds % precision != 0:
+        # a non-multiple would silently shift every returned quantile
+        raise ValueError("'rounds' must be a positive multiple of "
+                         "'precision'")
     data = random_sample(size=(rounds, samples))
     data.sort(axis=1)
     stats = fromiter((stat(d) for d in data), float, rounds)
     stats.sort()
-    step = int(rounds / precision)
+    step = rounds // precision
     return stats[step:rounds:step]

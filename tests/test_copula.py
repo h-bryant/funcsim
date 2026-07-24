@@ -6,7 +6,7 @@ import pytest
 from scipy import stats
 
 import funcsim as fs
-import copfit  # importable once funcsim has been imported
+from funcsim import copfit
 
 
 # ---------------------------------------------------------------------------

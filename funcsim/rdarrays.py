@@ -60,11 +60,13 @@ class RDdata():
         MissingValue
             If the requested value is not available.
         """
-        try:
-            ret = self._a[self._namePos[varname],
-                          self._histSteps + self._currStep - lag]
-        except KeyError:
+        # bound-check the position explicitly: a negative index would
+        # silently wrap around and return a wrong value
+        pos = self._histSteps + self._currStep - lag
+        if varname not in self._namePos or pos < 0 or pos >= self._totSteps:
             ret = np.nan
+        else:
+            ret = self._a[self._namePos[varname], pos]
         if np.isnan(ret):
             if self._currStep == 0:
                 raise MissingValue(f'In the 1st time step in the '

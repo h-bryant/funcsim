@@ -1,11 +1,7 @@
 import numpy as np
 import xarray as xr
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                             "../"))
-import rdarrays as rd
-import conversions
+from funcsim import rdarrays as rd
+from funcsim import conversions
 
 
 def test_rda():

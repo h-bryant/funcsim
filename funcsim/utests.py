@@ -1,8 +1,9 @@
+import numpy as np
 from scipy import stats
-from ecdfgof import kstest
-from ecdfgof import adtest
-from ecdfgof import cvmtest
-import conversions
+from .ecdfgof import kstest
+from .ecdfgof import adtest
+from .ecdfgof import cvmtest
+from . import conversions
 from typing import Dict, Any
 
 
@@ -41,9 +42,12 @@ def utests(sample: conversions.VectorLike) -> Dict[str, Any]:
     ad_pval = adtest(sample_np, stats.uniform())[1]
     cvm_pval = cvmtest(sample_np, stats.uniform())[1]
 
-    # chi-squared-based test (Cook, Gelman, Rubin)
+    # chi-squared-based test (Cook, Gelman, Rubin).  clip away from the
+    # boundaries, where norm.ppf is infinite and would otherwise force a
+    # false-rejection p-value of exactly 0.0
     N = len(sample_np)
-    stat = sum(map(lambda x: stats.norm().ppf(x)**2.0, sample_np))
+    clipped = np.clip(sample_np, 1e-15, 1.0 - 1e-15)
+    stat = float(np.sum(stats.norm.ppf(clipped) ** 2.0))
     cgr_pval = 1.0 - stats.chi2.cdf(stat, N)
 
     return {"cook_gelman_rubin_pval": cgr_pval,

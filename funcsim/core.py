@@ -4,8 +4,8 @@ from copy import deepcopy as copy
 import numpy as np
 import pandas as pd
 import xarray as xr
-import multicore
-import rdarrays
+from . import multicore
+from . import rdarrays
 from scipy import stats
 from collections.abc import Callable, Generator
 from typing import Optional
@@ -41,12 +41,14 @@ def _checkhist0(hist0):
             "steps" in hist0Coords.keys()):
         raise ValueError('"hist0" must have dimensions "variables" and "steps"')
     
-    # Check for an appropriate index for the 'variables' dimension
+    # Check for an appropriate index for the 'steps' dimension (an empty
+    # index is fine: it is equivalent to passing no history)
     stepsCoords = hist0Coords["steps"]
-    if not (np.issubdtype(stepsCoords[0], np.integer) or
-            isinstance(stepsCoords.to_index(), pd.PeriodIndex)):
-        raise ValueError('"hist0" must have either an integer index or a '
-                         'pandas PeriodIndex for the "steps" dimension')
+    if len(stepsCoords) > 0:
+        if not (np.issubdtype(stepsCoords[0], np.integer) or
+                isinstance(stepsCoords.to_index(), pd.PeriodIndex)):
+            raise ValueError('"hist0" must have either an integer index or a '
+                             'pandas PeriodIndex for the "steps" dimension')
 
     return list(hist0Coords["variables"])
 
@@ -91,32 +93,35 @@ def _makewgen(w, r):
         i += 1
 
 
-def _strat(R):
+def _strat(R, rng):
     # stratified sampling for a single uniformly distributed random variable.
     # 'R' (an int) is the number of draws to perform
+    # 'rng' is a numpy random Generator
     # returns a numpy array of floats, each in the interval [0, 1).
-    draws = (np.arange(0, R) + np.random.uniform(0.0, 1.0, R)) / float(R)
-    np.random.shuffle(draws)  # warning: mutating 'draws'
+    draws = (np.arange(0, R) + rng.uniform(0.0, 1.0, R)) / float(R)
+    rng.shuffle(draws)  # warning: mutating 'draws'
     return draws
 
 
-def _mcs(K, R):
+def _mcs(K, R, rng):
     # Monte Carlo sampling.  For each of K independent uniform (over the
     # unit interval) random variables, create a sample of length R.
     # 'K' (an int) is the number of variables
     # 'R' (an int) is the number of trials
+    # 'rng' is a numpy random Generator
     # returns a KxR numpy array containing draws
-    return np.concatenate([[np.random.uniform(0.0, 1.0, R)]
+    return np.concatenate([[rng.uniform(0.0, 1.0, R)]
                            for i in range(K)], axis=0)
 
 
-def _lhs(K, R):
+def _lhs(K, R, rng):
     # Latin hypercube sampling.  For each of K independent uniform (over the
     # unit interval) random variables, create a stratified sample of length R.
     # 'K' (an int) is the number of variables
     # 'R' (an int) is the number of trials
+    # 'rng' is a numpy random Generator
     # returns a KxR numpy array containing draws
-    return np.concatenate([[_strat(R)] for i in range(K)], axis=0)
+    return np.concatenate([[_strat(R, rng)] for i in range(K)], axis=0)
 
 
 def _stepf_1arg(f, draw, hist):
@@ -124,6 +129,13 @@ def _stepf_1arg(f, draw, hist):
     # that takes only 'draw'.  Defined at module level (rather than as a
     # lambda) so that it can be pickled for spawn-based multiprocessing
     return f(draw)
+
+
+_FIXED_DRAWS_MSG = (
+    "the number of times 'f' calls next(draw) must be fixed -- the same "
+    "in every step and trial, independent of the data -- because draws "
+    "are pre-allocated across trials for stratified sampling. 'f' "
+    "consumed a different number of draws than in the initial probe.")
 
 
 def _trial(r, w, rvs, data, stepf, nsteps):
@@ -134,7 +146,15 @@ def _trial(r, w, rvs, data, stepf, nsteps):
     dataWorking = copy(data)
     for s in range(nsteps):
         # step 's' of trial 'r'
-        dataWorking.append(stepf(wgen, dataWorking))
+        try:
+            dataWorking.append(stepf(wgen, dataWorking))
+        except StopIteration:
+            # 'f' asked for more draws than were pre-allocated
+            raise RuntimeError(_FIXED_DRAWS_MSG) from None
+    if wgen is not None and next(wgen, None) is not None:
+        # 'f' consumed fewer draws than were pre-allocated, which would
+        # silently misalign the stratified draws across steps and trials
+        raise RuntimeError(_FIXED_DRAWS_MSG)
     return dataWorking._a
 
 
@@ -206,10 +226,18 @@ def simulate(f: Callable[[Generator[int, float, None],
     if hist0 is not None:
         _checkhist0(hist0)
 
+        # normalize dim order: downstream code (RDdata) assumes steps as
+        # rows and variables as columns, but _checkhist0 validates dim
+        # names only, so accept either ordering here
+        hist0 = hist0.transpose("steps", "variables")
+
         # check that we know how to cope with the types for the 'steps' index
         sidx = hist0.indexes['steps']
         if len(sidx) > 0:
-            if not type(sidx[0]) in [pd.Period, np.int64]:
+            # accept any integer flavor (np.int32, Python int, ...), not
+            # only np.int64 exactly
+            if not (isinstance(sidx[0], pd.Period)
+                    or np.issubdtype(type(sidx[0]), np.integer)):
                 raise ValueError("'hist0' should have either an integer index"
                                  " or a pandas.PeriodIndex for the 'steps' "
                                  "dimension.")
@@ -260,7 +288,9 @@ def simulate(f: Callable[[Generator[int, float, None],
         finalNames = varNamesList
         finalHist0 = hist0
     else:
-        finalNames = list(set(varNamesList).union(set(stepfNames)))
+        # ordered dedupe: a set union would make the output variable
+        # order vary across interpreter runs
+        finalNames = list(dict.fromkeys(varNamesList + stepfNames))
         finalHist0 = hist0.copy()
         finalHist0 = finalHist0.reindex(variables=finalNames, fill_value=np.nan)
 
@@ -272,21 +302,24 @@ def simulate(f: Callable[[Generator[int, float, None],
     # draws for all RVs in all time steps, w/ sampling stratified across trials
     w = None
     if rvs > 0:
-        np.random.seed(seed)
+        # local generator: seeding the global numpy RNG would clobber the
+        # caller's random state
+        rng = np.random.default_rng(seed)
         if sampling == 'lh':
-            u = _lhs(rvs * nsteps, ntrials)  # np.array: (rvs*steps) x trials
+            u = _lhs(rvs * nsteps, ntrials, rng)  # (rvs*steps) x trials
         elif sampling == 'mc':
-            u = _mcs(rvs * nsteps, ntrials)  # monte carlo
+            u = _mcs(rvs * nsteps, ntrials, rng)  # monte carlo
         else:
             raise ValueError('sampling must be "lh" or "mc"')
-        w = stats.norm.ppf(u) if stdnorm is True else u
+        # plain truthiness: 'is True' would silently ignore numpy bools
+        w = stats.norm.ppf(u) if stdnorm else u
 
     # picklable single-trial function (for spawn-based multiprocessing)
     trial = functools.partial(_trial, w=w, rvs=rvs, data=data,
                               stepf=stepf, nsteps=nsteps)
 
     # create and return 3-D output DataArray, with new dimension 'trials'
-    if multi is True:
+    if multi:
         out = multicore.parmap(trial, range(ntrials))
     else:
         out = [trial(r) for r in range(ntrials)]

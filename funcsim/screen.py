@@ -1,14 +1,8 @@
 import numpy as np
 import pandas as pd
-from scipy.stats import chi2, norm, beta
-import conversions
+from scipy.stats import chi2, norm, beta, rankdata
+from . import conversions
 import warnings
-
-
-def custom_warning_format(message, category, filename, lineno, file=None, line=None):
-    print(f"{category.__name__}: {message}")
-
-warnings.showwarning = custom_warning_format
 
 
 def runs_test(data, cutoff='median'):
@@ -106,8 +100,9 @@ def bartels_test(x, alternative="two.sided", pvalue_method="normal"):
             raise ValueError("After removing NaNs, sample size is too small.")
 
 
-    # Calculate ranks
-    ranks = np.argsort(np.argsort(x)) + 1  # +1 to make ranks 1-based
+    # Calculate ranks (midranks for ties, so the p-value does not depend
+    # on the input order of tied values)
+    ranks = rankdata(x)
 
     # Calculate the RVN statistic (Rank von Neumann Ratio)
     numerator = np.sum((ranks[:-1] - ranks[1:])**2)
@@ -206,14 +201,9 @@ def bartels_test(x, alternative="two.sided", pvalue_method="normal"):
     }
 
 
-def adf_test_no_const(series, max_lag=0, n_sim=1000, seed=42):
-    """
-    Augmented Dickey-Fuller test for H0: series is non-stationary (no constant)
-    Returns (t_stat, p_value).
-    """
-    np.random.seed(seed)
-    y = np.asarray(series)
-    y = y[~np.isnan(y)]
+def _adf_tstat(y, max_lag, det):
+    # ADF regression t-statistic on the lagged level.  'det' selects the
+    # deterministic terms: "n" none, "c" constant, "ct" constant + trend
     dy = np.diff(y)
     y_lag = y[:-1]
     X = y_lag.reshape(-1, 1)
@@ -223,96 +213,68 @@ def adf_test_no_const(series, max_lag=0, n_sim=1000, seed=42):
             lagged = np.roll(dy, i)
             lagged[:i] = 0
             X = np.column_stack((X, lagged))
+    # Add deterministic terms ahead of the stochastic regressors
+    if det == "c":
+        X = np.column_stack((np.ones(len(X)), X))
+    elif det == "ct":
+        X = np.column_stack((np.ones(len(X)),
+                             np.arange(len(X), dtype=float), X))
+    elif det != "n":
+        raise ValueError('det must be one of "n", "c", or "ct"')
     dy = dy[max_lag:]
     X = X[max_lag:]
-    # OLS regression (no constant)
+    # OLS regression
     beta, _, _, _ = np.linalg.lstsq(X, dy, rcond=None)
     y_pred = X @ beta
     se = np.sqrt(np.sum((dy - y_pred) ** 2) / (len(dy) - X.shape[1]))
     var_beta = se ** 2 * np.linalg.inv(X.T @ X)
-    t_stat = beta[0] / np.sqrt(var_beta[0, 0])
+    k = {"n": 0, "c": 1, "ct": 2}[det]  # position of the lagged level
+    return beta[k] / np.sqrt(var_beta[k, k])
 
-    # Simulate null distribution (random walk)
+
+def _adf_test(series, det, max_lag=0, n_sim=1000, seed=42):
+    # simulated-null ADF test; returns (t_stat, p_value).  a local
+    # generator is used so the caller's global random state is untouched
+    rng = np.random.default_rng(seed)
+    y = np.asarray(series, dtype=float)
+    y = y[~np.isnan(y)]
+    t_stat = _adf_tstat(y, max_lag, det)
+
+    # simulate the null distribution (driftless random walk, fit with the
+    # same deterministic terms as the test regression)
     n = len(y)
-    sim_stats = []
-    for _ in range(n_sim):
-        rw = np.cumsum(np.random.normal(size=n))
-        d_rw = np.diff(rw)
-        rw_lag = rw[:-1]
-        X_sim = rw_lag.reshape(-1, 1)
-        if max_lag > 0:
-            for i in range(1, max_lag+1):
-                lagged = np.roll(d_rw, i)
-                lagged[:i] = 0
-                X_sim = np.column_stack((X_sim, lagged))
-        d_rw = d_rw[max_lag:]
-        X_sim = X_sim[max_lag:]
-        beta_sim, _, _, _ = np.linalg.lstsq(X_sim, d_rw, rcond=None)
-        y_pred_sim = X_sim @ beta_sim
-        se_sim = np.sqrt(np.sum((d_rw - y_pred_sim) ** 2) /
-                         (len(d_rw) - X_sim.shape[1]))
-        var_beta_sim = se_sim ** 2 * np.linalg.inv(X_sim.T @ X_sim)
-        t_sim = beta_sim[0] / np.sqrt(var_beta_sim[0, 0])
-        sim_stats.append(t_sim)
-    sim_stats = np.array(sim_stats)
-    p_value = np.mean(sim_stats < t_stat)
+    sim_stats = np.array([_adf_tstat(np.cumsum(rng.normal(size=n)),
+                                     max_lag, det)
+                          for _ in range(n_sim)])
+    p_value = float(np.mean(sim_stats < t_stat))
     return t_stat, p_value
+
+
+def adf_test_no_const(series, max_lag=0, n_sim=1000, seed=42):
+    """
+    Augmented Dickey-Fuller test with no deterministic terms.
+    H0: series has a unit root; alternative: zero-mean stationarity.
+    Returns (t_stat, p_value).
+    """
+    return _adf_test(series, "n", max_lag, n_sim, seed)
 
 
 def adf_test_with_const(series, max_lag=0, n_sim=1000, seed=42):
     """
-    Augmented Dickey-Fuller test for H0: series is not trend
-    stationary (constant included).  Returns (t_stat, p_value).
+    Augmented Dickey-Fuller test with a constant.
+    H0: series has a unit root; alternative: level stationarity
+    (stationary around a constant).  Returns (t_stat, p_value).
     """
-    np.random.seed(seed)
-    y = np.asarray(series)
-    y = y[~np.isnan(y)]
-    dy = np.diff(y)
-    y_lag = y[:-1]
-    X = y_lag.reshape(-1, 1)
-    # Add lagged differences if max_lag > 0
-    if max_lag > 0:
-        for i in range(1, max_lag+1):
-            lagged = np.roll(dy, i)
-            lagged[:i] = 0
-            X = np.column_stack((X, lagged))
-    # Add constant
-    X = np.column_stack((np.ones(len(X)), X))
-    dy = dy[max_lag:]
-    X = X[max_lag:]
-    # OLS regression (with constant)
-    beta, _, _, _ = np.linalg.lstsq(X, dy, rcond=None)
-    y_pred = X @ beta
-    se = np.sqrt(np.sum((dy - y_pred) ** 2) / (len(dy) - X.shape[1]))
-    var_beta = se ** 2 * np.linalg.inv(X.T @ X)
-    t_stat = beta[1] / np.sqrt(var_beta[1, 1])
+    return _adf_test(series, "c", max_lag, n_sim, seed)
 
-    # Simulate null distribution (random walk with constant)
-    n = len(y)
-    sim_stats = []
-    for _ in range(n_sim):
-        rw = np.cumsum(np.random.normal(size=n))
-        d_rw = np.diff(rw)
-        rw_lag = rw[:-1]
-        X_sim = rw_lag.reshape(-1, 1)
-        if max_lag > 0:
-            for i in range(1, max_lag+1):
-                lagged = np.roll(d_rw, i)
-                lagged[:i] = 0
-                X_sim = np.column_stack((X_sim, lagged))
-        X_sim = np.column_stack((np.ones(len(X_sim)), X_sim))
-        d_rw = d_rw[max_lag:]
-        X_sim = X_sim[max_lag:]
-        beta_sim, _, _, _ = np.linalg.lstsq(X_sim, d_rw, rcond=None)
-        y_pred_sim = X_sim @ beta_sim
-        se_sim = np.sqrt(np.sum((d_rw - y_pred_sim) ** 2) /
-                         (len(d_rw) - X_sim.shape[1]))
-        var_beta_sim = se_sim ** 2 * np.linalg.inv(X_sim.T @ X_sim)
-        t_sim = beta_sim[1] / np.sqrt(var_beta_sim[1, 1])
-        sim_stats.append(t_sim)
-    sim_stats = np.array(sim_stats)
-    p_value = np.mean(sim_stats < t_stat)
-    return t_stat, p_value
+
+def adf_test_const_trend(series, max_lag=0, n_sim=1000, seed=42):
+    """
+    Augmented Dickey-Fuller test with a constant and a linear trend.
+    H0: series has a unit root; alternative: trend stationarity
+    (stationary around a linear trend).  Returns (t_stat, p_value).
+    """
+    return _adf_test(series, "ct", max_lag, n_sim, seed)
 
 
 def white_test(residuals, exog):
@@ -332,15 +294,24 @@ def white_test(residuals, exog):
     y_hat = X @ beta
     SSR = ((y_hat - res2.mean()) ** 2).sum()
     LM = n * SSR / ((res2 - res2.mean()) ** 2).sum()
-    df = X.shape[1] - 1
+    # degrees of freedom: number of linearly independent regressors in the
+    # auxiliary regression, excluding the constant (rank counts the constant
+    # once, no matter how many redundant/constant columns were generated)
+    df = np.linalg.matrix_rank(X) - 1
     pval = 1 - chi2.cdf(LM, df)
     return pval
 
 
 def ljung_box(residuals, lags=3):
-    n = len(residuals)
-    acfs = [np.corrcoef(residuals[:-k], residuals[k:])[0, 1] if k > 0 else 1
-            for k in range(lags+1)]
+    x = np.asarray(residuals, dtype=float)
+    n = len(x)
+    # standard ACF estimator: full-sample mean and variance in the
+    # denominator (trimmed-segment Pearson correlations are not the
+    # statistic the Ljung-Box null distribution assumes)
+    xd = x - x.mean()
+    denom = np.sum(xd ** 2)
+    acfs = [1.0] + [float(np.sum(xd[k:] * xd[:-k]) / denom)
+                    for k in range(1, lags + 1)]
     Qs = []
     for h in range(1, lags+1):
         Q = n * (n+2) * np.sum([acfs[k]**2 / (n-k) for k in range(1, h+1)])
@@ -390,8 +361,7 @@ def screen(data: conversions.VectorLike,
     seriesA = conversions.vlToArray(data)
 
     df = pd.DataFrame({"obsnum": range(len(seriesA)),
-                       "series": seriesA,
-                       "const": np.ones(len(seriesA))})
+                       "series": seriesA})
 
     X = np.column_stack([np.ones(len(seriesA)), df["obsnum"]])
     y = df["series"].values
@@ -399,12 +369,14 @@ def screen(data: conversions.VectorLike,
     y_hat = X @ beta
     resid = y - y_hat
 
-    # ADF tests
+    # ADF tests: line A has no deterministic terms; line B includes a
+    # constant and linear trend, so it is a genuine trend-stationarity test
     p_adf = adf_test_no_const(seriesA, max_lag=2, n_sim=1000, seed=42)[1]
-    p_adf_t = adf_test_with_const(seriesA, max_lag=2, n_sim=1000, seed=42)[1]
+    p_adf_t = adf_test_const_trend(seriesA, max_lag=2, n_sim=1000, seed=42)[1]
 
-    # White test for heteroskedasticity
-    p_white = white_test(resid, df[["obsnum", "const"]])
+    # White test for heteroskedasticity (constant is added inside
+    # white_test; passing it as an exog column would inflate the df)
+    p_white = white_test(resid, df[["obsnum"]])
 
     # Ljung-Box test for autocorrelation
     p_lb = ljung_box(resid, lags=3)
@@ -413,12 +385,16 @@ def screen(data: conversions.VectorLike,
     p_ww = runs_test(seriesA, cutoff='median')[1]
     p_bartel = bartels_test(seriesA)["p_value"]
 
-    ret = (f'Screening series at the {int(100.0 * alpha)}% level:\n\n'
+    # formatted ADF p-values (hoisted: a replacement field spanning a
+    # newline inside an f-string requires PEP 701, i.e. Python >= 3.12)
+    adf_frmt = _frmt(p_adf, alpha, reject_is_good=True)
+    adf_t_frmt = _frmt(p_adf_t, alpha, reject_is_good=True)
+
+    ret = (f'Screening series at the {100.0 * alpha:g}% level:\n\n'
            f"  A) H0: series is not stationary (ADF)\n"
-           f"           p-value: {_frmt(p_adf, alpha, reject_is_good=True)}\n\n"
+           f"           p-value: {adf_frmt}\n\n"
            f"  B) H0: series is not trend stationary (ADF)\n"
-           f"           p-value: {_frmt(p_adf_t, alpha,
-                                        reject_is_good=True)}\n\n"
+           f"           p-value: {adf_t_frmt}\n\n"
            f"  C) H0: homoskedasticity (White's)\n"
            f"           p-value: {_frmt(p_white, alpha)}\n\n"
            f"  D) H0: no first-order autocorrelation (Ljung-Box)\n"

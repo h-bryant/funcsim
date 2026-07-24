@@ -4,43 +4,15 @@ import pandas as pd
 from scipy import stats
 from typing import Generator, Optional, Tuple
 import warnings
-import conversions
-import copfit
-import nearby
-import shapiro
-
-
-def custom_warning_format(message, category, filename, lineno, file=None, line=None):
-    print(f"{category.__name__}: {message}")
-
-warnings.showwarning = custom_warning_format
+from . import conversions
+from . import copfit
+from . import nearby
+from . import shapiro
 
 
 def _goodUvec(uvec: np.ndarray) -> bool:
     # check that values in uvec are in (0, 1)
     return bool(np.all((uvec > 0.0) & (uvec <1.0)))
-
-
-def _memoize(f):
-    # custom memoization decorator for _makeA, which works around the
-    # fact that a numpy array is not inherently hashable
-    class memodict(dict):
-        def __init__(self, f):
-            self.f = f
-
-        def __call__(self, sig):
-            key = hash(sig.tobytes())
-            if key not in self.keys():
-                self[key] = self.f(sig)
-            return self[key]
-
-    return memodict(f)
-
-
-@_memoize
-def _makeA(sigma):
-    # get cholesky decomp of a covar matrix, after some sanity checks
-    return np.linalg.cholesky(sigma)
 
 
 def _checkcov(cov, name):
@@ -55,7 +27,40 @@ def _checkcov(cov, name):
 def _rand_int(u, M):
     # given a standard uniform draw "u", select a
     # random integer from a length "M" sequece: 0, 1, ..., M-1
-    return int(min(math.floor((M)*u), M))
+    # (clamp at M - 1 so that u == 1.0 cannot index out of range)
+    return int(min(math.floor(M * u), M - 1))
+
+
+def _logser_draw(theta: float, u1: float, u2: float) -> float:
+    # draw from the logarithmic-series distribution with parameter
+    # p = 1 - exp(-theta), given two independent standard uniform draws,
+    # via Kemp's "LK" algorithm.  Working directly with log(1 - p) = -theta
+    # keeps the sampler exact and finite even when p rounds to 1.0 in
+    # floats (theta > ~37), where stats.logser breaks down; the O(1) cost
+    # also avoids logser.ppf's O(k) scan, which is impractically slow for
+    # theta > ~20.
+    #
+    # Kemp, A. W. (1981). Efficient generation of logarithmically
+    # distributed pseudo-random variables. Applied Statistics, 30(3),
+    # 249-253.
+
+    # clip draws away from {0, 1} so the logs below stay finite
+    u1 = min(max(u1, 1e-300), 1.0 - 1e-16)
+    u2 = min(max(u2, 1e-300), 1.0 - 1e-16)
+
+    p = -math.expm1(-theta)  # p rounding to exactly 1.0 is harmless here
+    if u2 >= p:
+        return 1.0
+    x = theta * u1
+    q = -math.expm1(-x)  # q = 1 - (1 - p)**u1
+    if u2 <= q * q:
+        # log(q), using log1p(-exp(-x)) where q itself would round to 1.0
+        logq = (math.log(q) if x <= 0.6931471805599453
+                else math.log1p(-math.exp(-x)))
+        return max(1.0, math.floor(1.0 + math.log(u2) / logq))
+    elif u2 >= q:
+        return 1.0
+    return 2.0
 
 
 def _skew_stable_draw(draw, alpha, beta, gamma, delta):
@@ -188,9 +193,10 @@ class MvKde():
     data : ArrayLike
         Input data array of with variables in columns and observations
         in rows.
-    bw : str, optional
-        Bandwidth selection method, 'scott' or 'silverman'.
-        Default is 'scott'.    
+    bw : str or ArrayLike, optional
+        Bandwidth selection method ('scott' or 'silverman'), or a K-by-K
+        bandwidth covariance matrix in the units of the data.
+        Default is 'scott'.
     """
     def __init__(self,
                  data: conversions.ArrayLike,
@@ -216,18 +222,26 @@ class MvKde():
         smult = ((4.0 * self._M)/ (self._K+2.0))**(-1.0 / (self._K+4.0))
         self._silverman = np.square(smult * np.diagflat(stdevs))
 
-        if type(bw) == str:
-            if bw == 'scott' or bw is None:
-                self._bw = self._scott
-            elif bw == 'silverman':
-                self._bw = self._silverman
+        if bw is None or bw == 'scott':
+            self._bw = self._scott
+        elif bw == 'silverman':
+            self._bw = self._silverman
+        elif isinstance(bw, str):
+            raise ValueError(f"unknown bandwidth method '{bw}'; expected "
+                             f"'scott', 'silverman', or a "
+                             f"{self._K}-by-{self._K} bandwidth matrix")
         else:
+            H = np.asarray(bw, dtype=float)
+            if H.shape != (self._K, self._K):
+                raise ValueError(f"a bandwidth matrix must have shape "
+                                 f"({self._K}, {self._K}); got {H.shape}")
             # convert user's H (orig. units) into std units: D^{-1} H D^{-1}
             Dinv = np.diag(1.0 / self._stds)
-            self._bw = Dinv @ bw @ Dinv
+            self._bw = Dinv @ H @ Dinv
 
-        # cholestky decomp of bandwidth matrix
-        self._chol = nearby.nearestpd(self._bw)
+        # cholesky decomp of the bandwidth (covariance) matrix, so that
+        # draws apply covariance H (not H @ H.T)
+        self._chol = np.linalg.cholesky(nearby.nearestpd(self._bw))
 
     def draw(self,
              ugen: Generator[float, None, None]
@@ -359,11 +373,25 @@ class CopulaGauss():
                                  f"{self._names[k]}, has values that are not "
                                  f"in the range (0, 1)")
 
-        # standardize the data
-        self._z = pd.DataFrame(stats.norm.ppf(self._data), columns=self._names)
+        # normal scores of the pseudo-observations
+        self._z = stats.norm.ppf(self._data)
 
-        # fit MV normal dist to the standardized data
-        self._mvnorm = MvNorm(self._z)
+        # a Gaussian copula's only parameter is a correlation matrix: the
+        # mean is zero and the diagonal is one by construction, so fit
+        # second moments about zero and normalize to unit diagonal
+        # (fitting a full MvNorm here would let imperfect pseudo-
+        # observations distort the uniform marginals of the draws)
+        m2 = (self._z.T @ self._z) / float(self._M)
+        d = np.sqrt(np.diag(m2))
+        corr = m2 / np.outer(d, d)
+        corr = nearby.nearestpd(0.5 * (corr + corr.T))
+        s = np.sqrt(np.diag(corr))
+        corr = corr / np.outer(s, s)  # renormalize to unit diagonal
+        np.fill_diagonal(corr, 1.0)
+        self._rho = corr
+
+        # cholesky decomposition of the correlation matrix, for draws
+        self._A = np.linalg.cholesky(self._rho)
 
     def draw(self,
              ugen: Generator[float, None, None]
@@ -385,9 +413,11 @@ class CopulaGauss():
             If no variable names were provided in the input data,
             the variables will be named 'v0', 'v1', ..., reflecting the
             oreder of the columns in the input data.
-        
+
         """
-        return self._mvnorm.draw(ugen).apply(stats.norm.cdf)
+        uvec = [next(ugen) for i in range(self._K)]
+        z = np.dot(self._A, stats.norm.ppf(uvec))
+        return pd.Series(stats.norm.cdf(z), index=self._names)
 
 
 class CopulaStudent():
@@ -530,7 +560,11 @@ class CopulaClayton():
             oreder of the columns in the input data.
         
         """
-        v = stats.gamma.ppf(next(ugen), (1.0/self._theta))
+        # floor the gamma frailty: for large theta the shape parameter is
+        # tiny and the ppf underflows to 0.0 for small u, which would
+        # raise ZeroDivisionError below.  the floored value yields the
+        # correct limiting draw (all components near 0)
+        v = max(stats.gamma.ppf(next(ugen), (1.0/self._theta)), 1e-300)
         retA = np.array([self._Ftilde(-math.log(next(ugen))/v)
                          for i in range(self._K)])
         return pd.Series(retA, index=self._names)
@@ -688,19 +722,20 @@ class CopulaFrank():
         # Generate d uniform random variables
         uA = np.array([next(ugen) for _ in range(self._K)])
 
-        # generate "frailty" variable random draw
-        uval = next(ugen)
-        try:
-            v = stats.logser.ppf(p=(1.0 - np.exp(-self._theta)), q=uval)
-        except RuntimeError:
-            # logser.ppf sometimes throws an error for some combinations of
-            # p and q, even though q values on either side of the problematic
-            # q value seem to work just fine...
-            v = stats.logser.ppf(p=(1.0 - np.exp(-self._theta)),
-                                 q=max(uval - 0.01, 1e-12))
+        # log-series "frailty" draw via Kemp's algorithm (exactly two
+        # uniform draws, so the total draw count stays fixed)
+        v = _logser_draw(self._theta, next(ugen), next(ugen))
 
-        # generate final draws
-        retA = -1.0 / self._theta * np.log(1.0 + np.exp(-(-np.log(uA) / v))
-                                           * (np.exp(-self._theta) - 1.0))
+        # final draws: -log(1 - (1 - exp(-theta)) * uA**(1/v)) / theta,
+        # evaluated in log space so that huge frailty values (which are
+        # routine for large theta) cannot round uA**(1/v) to 1.0 and
+        # produce infs or NaNs
+        with np.errstate(divide="ignore"):
+            t = -np.log(uA) / v  # >= 0
+            # log(1 - exp(-t)), split at log(2) for accuracy (log1mexp)
+            log1mexp_t = np.where(t <= 0.6931471805599453,
+                                  np.log(-np.expm1(-t)),
+                                  np.log1p(-np.exp(-t)))
+        retA = -np.logaddexp(log1mexp_t, -t - self._theta) / self._theta
 
         return pd.Series(retA, index=self._names)

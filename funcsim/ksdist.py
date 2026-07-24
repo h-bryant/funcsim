@@ -17,7 +17,7 @@ from numpy import (arange, dot, exp, fmax, fromfunction, identity, log, modf,
 from scipy.special import gamma, gammaln, smirnov
 from scipy.stats import rv_continuous
 
-from vect import varange, vectorize
+from .vect import varange, vectorize
 
 
 class ks_unif_gen(rv_continuous):

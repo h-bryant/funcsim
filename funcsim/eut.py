@@ -3,7 +3,7 @@ import numpy as np
 import scipy
 from collections import namedtuple
 from typing import Callable
-import conversions
+from . import conversions
 
 
 # container for results
@@ -17,7 +17,7 @@ def utilIsoelastic(y, crra):
     Parameters
     ----------
     y : float
-        Monetary outcome (must be >= 1.0).
+        Monetary outcome (must be positive).
     crra : float
         Constant relative risk aversion coefficient (must be non-negative).
 
@@ -25,10 +25,17 @@ def utilIsoelastic(y, crra):
     -------
     float
         Isoelastic utility value for the given outcome and CRRA.
+
+    Raises
+    ------
+    ValueError
+        If y is not positive or crra is negative.
     """
-    assert type(y) in [float, np.float64], f"y (={y}) must be a float"
-    assert y >= 1.0, "y must be >= one"
-    assert crra >= 0.0, "crra must be non-negative"
+    y = float(y)  # accept ints and numpy scalars
+    if y <= 0.0:
+        raise ValueError(f"y (={y}) must be positive")
+    if crra < 0.0:
+        raise ValueError("crra must be non-negative")
     if crra == 1.0:
         ret = math.log(y)
     else:
@@ -72,11 +79,12 @@ def eut(util: Callable[[float], float],
             The certainty equivalent income.
     """
     
-    # outcomes to numpy vec 
+    # outcomes to numpy vec
     outcomesA = conversions.vlToArray(outcomes)
 
-    # expected util
-    n = len(outcomes)
+    # expected util.  use the flattened array's length: len() of the
+    # original input can be wrong (e.g., 1 for a (1, N) array)
+    n = len(outcomesA)
     eutil = float(np.sum(np.vectorize(util)(outcomesA)) / n)
 
     # certainty equiv: find C.E. such than U(C.E.) = E(U)
@@ -92,19 +100,25 @@ def eut(util: Callable[[float], float],
                                           x1=(meanOutcome * 0.99),
                                           maxiter=1000,
                                           rtol=precision)
-    certequiv = solveout.root if solveout.converged is True else None
- 
-    return EutResult(eutil, certequiv)
+    if not solveout.converged:
+        # raise rather than returning None where a float is promised
+        raise RuntimeError("numerical solution for the certainty "
+                           "equivalent did not converge; consider a looser "
+                           "'precision' or check that 'util' is strictly "
+                           "increasing over the range of outcomes")
+
+    return EutResult(eutil, float(solveout.root))
 
 
 def _isoelastic_inv(utility, crra):
     # inverse isoelastic utility function: return the monetary outcome
     # associated with a given "utility" level, given the constant
     # relative risk aversion coefficient "crra"
-    assert type(utility) in [float, np.float64], \
-        "utility must be a float"
-    assert utility >= 0.0, "utility must be non-negative"
-    assert crra >= 0.0, "crra must be non-negative"
+    utility = float(utility)
+    if utility < 0.0:
+        raise ValueError("utility must be non-negative")
+    if crra < 0.0:
+        raise ValueError("crra must be non-negative")
     if crra == 1.0:
         return math.exp(utility)
     else:
@@ -138,8 +152,9 @@ def eutIsoelastic(crra: float,
     # outcomes to numpy vec
     outcomesA = conversions.vlToArray(outcomes)
 
-    # expected util
-    n = len(outcomes)
+    # expected util.  use the flattened array's length: len() of the
+    # original input can be wrong (e.g., 1 for a (1, N) array)
+    n = len(outcomesA)
     eutil = sum([utilIsoelastic(y, crra) for y in outcomesA]) / n
 
     # find scaling factor such that min adjusted outcome is 1.0

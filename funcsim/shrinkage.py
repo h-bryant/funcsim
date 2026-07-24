@@ -9,7 +9,7 @@ import itertools
 import numpy as np
 import pandas as pd
 import xarray as xr
-import conversions
+from . import conversions
 
 
 def _wtilde(x, i, j):
@@ -176,11 +176,9 @@ def _target_f(x):
     # //Portfolio Management//, 30(2004): 110-119
     s = np.cov(x, rowvar=False)
     idx = range(len(s))
-    corr = np.corrcoef(s)
-    if len(corr) < len(s):  # calculate corr mat by hand from sample cov mat
-        d = np.sqrt(np.diag(np.diag(s)))
-        dinv = np.linalg.inv(d)
-        corr = np.dot(np.dot(dinv, s), dinv)
+    # sample correlation matrix, from the sample covariance matrix
+    dinv = np.diag(1.0 / np.sqrt(np.diag(s)))
+    corr = dinv @ s @ dinv
     off_diag = [corr[i, j] for i, j in itertools.product(idx, idx) if i != j]
     rbar = sum(off_diag) / float(len(off_diag))
 
@@ -196,7 +194,12 @@ def _target_f(x):
         if i != j:
             lam_num += _var_s(x, i, j) - rbar * _f(x, i, j)
             lam_denom += (s[i, j] - rbar * (s[i, i] * s[j, j])**0.5)**2.0
-    lam = max(0, min(1.0, lam_num / lam_denom))
+    if lam_denom == 0.0:
+        # sample covariance already matches the constant-correlation
+        # target exactly, so any shrinkage intensity yields vcv == s
+        lam = 0.0
+    else:
+        lam = max(0, min(1.0, lam_num / lam_denom))
 
     # return combination of 's' and target mat
     vcv = lam * t + (1-lam) * s
@@ -244,12 +247,21 @@ def shrink(data: conversions.ArrayLike,
 
     sig = target_map[target](a_np)[0]
 
-    # return the same type of array that was passed
+    # return the same type of array that was passed.  the result is a
+    # p-by-p covariance matrix, so both axes are labeled with the
+    # variable (column) labels of the input, not the observation index
     if isinstance(data, pd.DataFrame):
-        df = pd.DataFrame(data=sig, index=data.index, columns=data.columns)
+        df = pd.DataFrame(data=sig, index=data.columns, columns=data.columns)
         return df
     elif isinstance(data, xr.DataArray):
-        da = data.copy(data=sig)
+        coldim = str(data.dims[-1])
+        if coldim in data.coords:
+            varnames = np.asarray(data.coords[coldim].values)
+        else:
+            varnames = np.arange(sig.shape[0])
+        da = xr.DataArray(sig,
+                          dims=(coldim, coldim + "_"),
+                          coords={coldim: varnames, coldim + "_": varnames})
         return da
     else:
         return sig

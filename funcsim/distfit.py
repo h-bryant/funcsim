@@ -5,15 +5,9 @@ import scipy.stats as stats
 from scipy.stats._distn_infrastructure import rv_continuous, rv_discrete
 import numpy as np
 import warnings
-from ecdfgof import adtest, cvmtest
-import conversions
+from .ecdfgof import adtest, cvmtest
+from . import conversions
 from typing import Optional
-
-
-def custom_warning_format(message, category, filename, lineno, file=None, line=None):
-    print(f"{category.__name__}: {message}")
-
-warnings.showwarning = custom_warning_format
 
 
 # "name","scipy_name","lower_limit","upper_limit
@@ -162,9 +156,9 @@ def fit(data: conversions.VectorLike,
         aic : float
             Akaike Information Criterion for the fit.
         ad_pval : float
-            Anderson-Darling test p-value.
+            Anderson-Darling heuristic goodness-of-fit score (see Notes).
         cvm_pval : float
-            Cramer-von Mises test p-value.
+            Cramer-von Mises heuristic goodness-of-fit score (see Notes).
         dist : scipy.stats.rv_continuous
             The frozen fitted distribution object.
         distName : str
@@ -173,15 +167,27 @@ def fit(data: conversions.VectorLike,
     Notes
     -----
     The function uses maximum likelihood estimation for parameter fitting.
-    Goodness-of-fit is assessed using Anderson-Darling and Kolmogorov-Smirnov
-    tests.
+    Goodness of fit is assessed using the Anderson-Darling and
+    Cramer-von Mises statistics.
+
+    The `ad_pval` and `cvm_pval` values are computed from tests that assume
+    a fully specified (a priori) null distribution, but the parameters here
+    are estimated from the same sample being tested.  Consequently these
+    values systematically overstate goodness of fit (the Lilliefors
+    problem) and are *not* valid p-values.  Treat them only as heuristic
+    scores for comparing candidate distributions with equal numbers of
+    parameters; do not use them for formal hypothesis tests.
     """
 
     dataA = conversions.vlToArray(data)
 
     with warnings.catch_warnings(record=True) as w:
-        # warnings.simplefilter("always", category=RuntimeWarning)
         warnings.simplefilter("always")
+        # deprecation chatter from third-party libraries is not evidence
+        # of a bad fit; do not let it disqualify a candidate
+        warnings.simplefilter("ignore", DeprecationWarning)
+        warnings.simplefilter("ignore", PendingDeprecationWarning)
+        warnings.simplefilter("ignore", FutureWarning)
 
         # fit distribution using maximum likelihood
         params = scipydist.fit(data)
@@ -203,8 +209,17 @@ def fit(data: conversions.VectorLike,
 
 
 def _fit_all(data, dist_list):
-    results = list(map(lambda x: fit(data, x[1], x[0]), dist_list))
-    return sorted(results, key=lambda r: r.bic)  # lowest BIC to highest
+    # fit every candidate, isolating failures so that one distribution
+    # raising (e.g., scipy.stats.FitError) cannot abort the comparison
+    results = []
+    failures = []
+    for name, dist, *_ in dist_list:
+        try:
+            results.append(fit(data, dist, name))
+        except Exception as e:
+            failures.append((name, e))
+    results = sorted(results, key=lambda r: r.bic)  # lowest BIC to highest
+    return results, failures
 
 
 def _fstr(value, nchars=8):
@@ -214,7 +229,7 @@ def _fstr(value, nchars=8):
 def _result_line(r, header=False):
     if header is True:
         return ("                  distribution,"
-                "      BIC,      AIC, AD_p-val, CvM_p-val\n")
+                "      BIC,      AIC, AD_score, CvM_score\n")
     else:
         return ("%s, %s, %s,   %s,   %s\n" %
                 (r.distName.rjust(30), _fstr(r.bic), _fstr(r.aic),
@@ -254,8 +269,16 @@ def compare(data: conversions.VectorLike,
     Notes
     -----
     For reliable results, at least 50 observations are recommended. The summary
-    includes BIC, AIC, Cramer-von Mises p-value, and Anderson-Darling
-    p-value for each distribution.
+    includes BIC, AIC, and Anderson-Darling and Cramer-von Mises heuristic
+    scores for each distribution.
+
+    The AD_score and CvM_score columns are nominal p-values from tests that
+    assume a fully specified (a priori) null distribution, but the
+    parameters are estimated from the same sample being tested.  These
+    values therefore systematically overstate goodness of fit (the
+    Lilliefors problem) and are *not* valid p-values.  Use them only as
+    heuristic scores for ranking candidate distributions; rankings by BIC
+    or AIC additionally account for differing numbers of parameters.
     """
     dataA = conversions.vlToArray(data)
     
@@ -266,7 +289,7 @@ def compare(data: conversions.VectorLike,
         warnings.warn(msg, UserWarning)
     dist_list = [d for d in candidates if d[2] == lowerLimit and
                  d[3] == upperLimit]
-    results = _fit_all(dataA, dist_list)
+    results, failures = _fit_all(dataA, dist_list)
     results_edit = [r for r in results if len(r.warnings) == 0]
     for r in results:
         if len(r.warnings) > 0:
@@ -274,6 +297,11 @@ def compare(data: conversions.VectorLike,
 				   f"while fitting the {r.distName} distribution. "
                    f"It will not be included in the results.")
             warnings.warn(msg, RuntimeWarning)
+    for name, exc in failures:
+        msg = (f"fitting the {name} distribution raised "
+               f"{type(exc).__name__}: {exc}. It will not be included "
+               f"in the results.")
+        warnings.warn(msg, RuntimeWarning)
     lines = [_result_line(None, header=True)] + \
         list(map(_result_line, results_edit))
     return "".join(lines)

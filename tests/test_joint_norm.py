@@ -2,7 +2,7 @@ import funcsim as fs
 import numpy as np
 import pandas as pd
 from scipy import stats
-from core import simulate
+from funcsim.core import simulate
 
 
 def test_MvNorm():

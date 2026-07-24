@@ -27,7 +27,10 @@ def test_0():
 
 
 def test_1():
-    out = fs.simulate(f=trial, ntrials=500, sampling='mc')
+    # unstratified 'mc' sampling: use enough trials that the +/- 0.03
+    # tolerances are at least ~2 standard errors wide (se of meanEps is
+    # 1/sqrt(ntrials); se of meanB is sqrt(0.35 * 0.65 / ntrials))
+    out = fs.simulate(f=trial, ntrials=5000, sampling='mc')
     meanEps = float(out.sel(steps=0, variables="eps").mean())
     meanB = float(out.sel(steps=0, variables="b").mean())
     assert abs(meanEps) < 0.03

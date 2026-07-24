@@ -1,4 +1,4 @@
-import conversions
+from . import conversions
 from typing import Callable
 
 

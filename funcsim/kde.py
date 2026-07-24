@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import scipy
 import scipy.stats as stats
-import conversions
+from . import conversions
 
 
 def vectorized_method(func):
@@ -25,7 +25,9 @@ class Kde():
         1-D data vector (list, tuple, np.ndarray, xr.DataArray, or pd.Series).
     bw : str or float, optional
         Bandwidth selection method ('scott', 'silverman') or a positive
-        float to use as the bandwidth. Default is 'scott'.
+        float to use as the bandwidth (the standard deviation of the
+        Gaussian kernel), in the same units as the data.
+        Default is 'scott'.
     """
     def __init__(self,
                  data : conversions.VectorLike,
@@ -33,12 +35,14 @@ class Kde():
 
         sampleA = conversions.vlToArray(data)
 
-        # raw kde object
+        # raw kde object.  a numeric bw is the kernel standard deviation
+        # in data units; scipy's float bw_method is instead a factor
+        # multiplied by the sample std. dev., so convert
+        if isinstance(bw, (int, float)) and not isinstance(bw, bool):
+            if bw <= 0.0:
+                raise ValueError("a numeric 'bw' must be positive")
+            bw = float(bw) / float(np.std(sampleA, ddof=1))
         self.gkde = stats.gaussian_kde(sampleA, bw)
-
-        # lower limit of integreation for CDF
-        self.cdf_low = float(min(sampleA)) - \
-            1.0 * (max(sampleA) - min(sampleA))
 
         # initial guess for PPF optimization: the sample mean
         self.ppf_x0 = float(sum(sampleA)) / float(len(sampleA))
@@ -48,6 +52,11 @@ class Kde():
             3.0 * (max(sampleA) - min(sampleA))
         self.ppf_high = float(max(sampleA)) + \
             3.0 * (max(sampleA) - min(sampleA))
+
+        # x tolerance for PPF root finding, proportional to the data
+        # scale (an absolute tolerance would make ppf meaningless for
+        # data on scales much smaller than the tolerance)
+        self.ppf_xtol = max((self.ppf_high - self.ppf_low) * 1e-9, 1e-300)
 
     @vectorized_method
     def pdf(self,
@@ -85,7 +94,10 @@ class Kde():
         float
             The estimated cumulative probability at v.
         """
-        return float(self.gkde.integrate_box_1d(self.cdf_low, v))
+        # integrate from -inf (not from an arbitrary finite cutoff, which
+        # loses tail mass); clip to [0, 1] against numerical error
+        raw = self.gkde.integrate_box_1d(-np.inf, v)
+        return float(min(1.0, max(0.0, raw)))
 
     @vectorized_method
     def ppf(self,
@@ -109,8 +121,8 @@ class Kde():
         ValueError
             If u is not in [0.0, 1.0] or optimization fails.
         """
-        assert u >= 0.0 and u <= 1.0, \
-            "u must be within the range [0.0, 1.0]"
+        if u < 0.0 or u > 1.0:
+            raise ValueError("u must be within the range [0.0, 1.0]")
 
         if int(scipy.__version__[0]) > 0:
             # version for newer versions of scipy.optimize
@@ -128,7 +140,7 @@ class Kde():
                                                      # method="newton",
                                                      # method="secant",
                                                      # method="halley",
-                                                     xtol=0.0001)
+                                                     xtol=self.ppf_xtol)
 
             except ValueError:
                 if u > 0.98:
@@ -150,7 +162,7 @@ class Kde():
                 (x0, r) = scipy.optimize.brentq(f=lambda x: self.cdf(x) - u,
                                                 a=self.ppf_low,
                                                 b=self.ppf_high,
-                                                xtol=0.0001,
+                                                xtol=self.ppf_xtol,
                                                 full_output=True,
                                                 disp=True)
             except ValueError:

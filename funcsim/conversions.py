@@ -35,33 +35,24 @@ def vlValidate(vl: VectorLike) -> bool:
     bool
         True if the input is a vector-like object, False otherwise.
     """
-    if isinstance(vl, (list, tuple, pd.Series)):
-        return True
-    elif isinstance(vl, np.ndarray):
+    if not isinstance(vl, (list, tuple, pd.Series, np.ndarray, xr.DataArray,
+                           pd.DataFrame)):
+        return False
+    # apply the same dimensionality rules to every container type, so
+    # that a nested list is judged exactly like the equivalent 2-D array
+    # (nested lists used to be accepted blindly and silently flattened)
+    try:
         a = np.asarray(vl)
-        if a.ndim > 2:
+    except ValueError:  # ragged nested sequence
+        return False
+    if a.dtype == object:  # ragged or otherwise non-numeric structure
+        return False
+    if a.ndim > 2:
+        return False
+    if a.ndim == 2:
+        if not (a.shape[0] == 1 or a.shape[1] == 1):
             return False
-        if a.ndim == 2:
-            if not (a.shape[0] == 1 or a.shape[1] == 1):
-                return False
-        return True
-    elif isinstance(vl, xr.DataArray):
-        a = np.asarray(vl)
-        if a.ndim > 2:
-            return False
-        if a.ndim == 2:
-            if not (a.shape[0] == 1 or a.shape[1] == 1):
-                return False
-        return True
-    elif isinstance(vl, pd.DataFrame):  
-        a = np.asarray(vl)
-        if a.ndim > 2:
-            return False
-        if a.ndim == 2:
-            if not (a.shape[0] == 1 or a.shape[1] == 1):
-                return False
-        return True            
-    return False
+    return True
     
 
 def vlToArray(vl: VectorLike) -> NDArray:
@@ -160,7 +151,11 @@ def vlCoords(vl: VectorLike) -> pd.Index:
     if not vlValidate(vl):
         raise ValueError("argument passed is not a vector-like object")
     if isinstance(vl, (list, tuple)):
-        return pd.Index(list(range(max(shape(vl)))))
+        return pd.Index(list(range(len(vl))))
+    if isinstance(vl, pd.DataFrame):
+        if vl.shape[1] == 1:  # single column: vector runs down the rows
+            return vl.index
+        return vl.columns     # single row: vector runs along the columns
     if isinstance(vl, (np.ndarray)):
         if vl.ndim == 1:
             return pd.Index(list(range(len(vl))))

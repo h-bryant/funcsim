@@ -4,7 +4,7 @@ from typing import List, Optional
 import numpy as np
 import pandas as pd
 from scipy import stats
-import conversions
+from . import conversions
 
 
 def _vdw(i, N):
@@ -20,30 +20,23 @@ def _vdw_row(N):
     return np.array(list(map(lambda i: _vdw(i, N), range(1, N+1))))
 
 
-def _shuffle(a):
-    # return a shuffle of the one-dimensional np.array "v" without mutating
-    assert isinstance(a, np.ndarray) and len(a.shape) == 1
-    return np.array(list(map(lambda t: t[1],
-                             sorted(zip(np.random.random(len(a)), a)))))
-
-
 def _arrange(example, values):
     # arrange the items in "values" in the same rank order
     # as the items in "example". Basically, this IC step 7 for a single row
     assert len(example) == len(values)
 
-    # ranks of the items in "example"
-    desired_ranks = stats.rankdata(example)
+    # ordinal ranks of the items in "example" (ordinal, rather than the
+    # default average, so that tied values cannot collapse the ranks)
+    desired_ranks = stats.rankdata(example, method="ordinal").astype(int)
 
-    # map so we can look up the values in "values" by their corresponding rank
-    value_map = dict(zip(stats.rankdata(values), values))
-
-    return np.array(list(map(lambda rank: value_map[rank], desired_ranks)))
+    # the value holding rank r is element r-1 of the sorted values
+    return np.sort(np.asarray(values))[desired_ranks - 1]
 
 
 def imanconover(spear: conversions.ArrayLike,
                 vectors: List[conversions.VectorLike],
                 names: List[str] = [],
+                seed: Optional[int] = None,
                 )-> pd.DataFrame:
 
     """
@@ -58,6 +51,9 @@ def imanconover(spear: conversions.ArrayLike,
         List of vectors, each representing draws for one variable.
     names : list of str, optional
         Column names for the output DataFrame. Defaults to v1, v2, ...
+    seed : int, optional
+        Seed for the pseudo-random shuffling of scores.  If None (the
+        default), fresh entropy is used and results vary across calls.
 
     Returns
     -------
@@ -91,10 +87,14 @@ def imanconover(spear: conversions.ArrayLike,
     vdw_scores = _vdw_row(N)
 
     # IC step 4
-    R_ind = np.array(list(map(lambda i: _shuffle(vdw_scores), range(K))))
+    rng = np.random.default_rng(seed)
+    R_ind = np.array([rng.permutation(vdw_scores) for _ in range(K)])
 
-    # IC step 5
-    R = L.dot(R_ind)
+    # IC steps 5 & 6: remove the incidental sample correlation of the
+    # shuffled score matrix (variance-reduction step 6 of Iman & Conover),
+    # then impose the target correlation
+    E = np.corrcoef(R_ind)
+    R = L @ np.linalg.inv(np.linalg.cholesky(E)) @ R_ind
 
     # IC step 7
     array = np.array(list(map(_arrange, R, vectors))).transpose()

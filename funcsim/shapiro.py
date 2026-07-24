@@ -1,5 +1,5 @@
 import scipy.stats as stats
-import conversions
+from . import conversions
 
 
 def swtest(data: conversions.VectorLike) -> tuple:

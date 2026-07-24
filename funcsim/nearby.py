@@ -2,13 +2,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import xarray as xr
-import conversions
-
-
-def custom_warning_format(message, category, filename, lineno, file=None, line=None):
-    print(f"{category.__name__}: {message}")
-
-warnings.showwarning = custom_warning_format
+from . import conversions
 
 
 def is_positive_definite(A):
@@ -27,7 +21,7 @@ def repackage(orig, newA):
         df = pd.DataFrame(data=newA, index=orig.index, columns=orig.columns)
         return df
     elif isinstance(orig, xr.DataArray):
-        da = data.copy(data=newA)
+        da = orig.copy(data=newA)
         return da
     else:
         return newA

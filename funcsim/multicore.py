@@ -1,19 +1,13 @@
-from __future__ import print_function
 import multiprocessing
+import queue
 import sys
-import warnings
-
-if (sys.version_info > (3, 0)):
-    import queue
-else:
-    import Queue as queue
 
 
-def custom_warning_format(message, category, filename, lineno, file=None, line=None):
-    print(f"{category.__name__}: {message}")
-
-
-warnings.showwarning = custom_warning_format
+class _JobError:
+    # picklable marker carrying a worker exception message back to the
+    # parent process
+    def __init__(self, msg):
+        self.msg = msg
 
 
 def fun(f, q_in, q_out):
@@ -25,10 +19,9 @@ def fun(f, q_in, q_out):
                 ret = f(x)
                 q_out.put((i, ret), True)
             except Exception as e:
-                msg = "function passed to multi.parmap "
-                msg += "encountered an exception: "
-                warnings.warn(msg + str(e), RuntimeWarning)
-                q_out.put((i, None), True)
+                # report the failure to the parent, which will raise;
+                # swallowing it here would silently corrupt the results
+                q_out.put((i, _JobError(f"{type(e).__name__}: {e}")), True)
     except queue.Empty:
         sys.stdout.flush()
         sys.exit(0)
@@ -62,16 +55,18 @@ def parmap(f, X, nprocs=multiprocessing.cpu_count()):
     except queue.Empty:
         pass
 
+    manager.shutdown()
+
+    # any failed or lost job invalidates the whole result set; raise (as
+    # single-process mode would) rather than passing None values through
+    errors = [x for _, x in res if isinstance(x, _JobError)]
+    if errors:
+        raise RuntimeError(f"multicore.parmap: {len(errors)} of {len(sent)} "
+                           f"jobs raised an exception; first error: "
+                           f"{errors[0].msg}")
     lost = len(sent) - len(res)
     if lost > 0:
-        msg = f"multi.parmap encountered {lost} lost jobs"
-        warnings.warn(msg, RuntimeWarning)
+        raise RuntimeError(f"multicore.parmap: {lost} of {len(sent)} jobs "
+                           f"were lost (worker process died?)")
 
-    problems = sum([1 for i, x, in res if x is None])
-    if problems > 0:
-        msg = f"multi.parmap encountered {problems} failed jobs"
-        warnings.warn(msg, RuntimeWarning)
-
-    ret = [x for i, x in sorted(res)]
-    manager.shutdown()
-    return ret
+    return [x for i, x in sorted(res)]

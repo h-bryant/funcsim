@@ -31,10 +31,9 @@ def trial(draw):
 
 
 def test_1():
-    # superfluous data0
-    out = fs.simulate(f=trial, ntrials=500, hist0=data0(), sampling='mc')
+    # superfluous data0.  unstratified 'mc' sampling: use enough trials
+    # that the +/- 0.03 tolerance is several standard errors wide
+    out = fs.simulate(f=trial, ntrials=5000, hist0=data0(), sampling='mc')
     meanB = float(out.sel(variables="b", steps=3).mean(dim="trials"))
     print(meanB)
     assert abs(meanB - 0.35) < 0.03
-
-test_1()

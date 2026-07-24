@@ -5,13 +5,7 @@ import pandas as pd
 import xarray as xr
 import warnings
 from typing import Callable, Optional
-import conversions
-
-
-def custom_warning_format(message, category, filename, lineno, file=None, line=None):
-    print(f"{category.__name__}: {message}")
-
-warnings.showwarning = custom_warning_format
+from . import conversions
 
 
 def fan(da: xr.DataArray,
@@ -49,10 +43,10 @@ def fan(da: xr.DataArray,
     # conditional import of plotly
     try:
         import plotly.graph_objects as go
-    except importerror as e:
-        raise importerror("optional dependency 'plotly' is required for all "
-                            "funcsim plotting fucntions. install with "
-                            "`pip install plotly`.") from e
+    except ImportError as e:
+        raise ImportError("optional dependency 'plotly' is required for all "
+                          "funcsim plotting functions. install with "
+                          "`pip install plotly`.") from e
   
     # Validate input DataArray dimensions
     if not all(dim in da.dims for dim in ["trials", "variables", "steps"]):
@@ -64,9 +58,14 @@ def fan(da: xr.DataArray,
         raise ValueError(f"Variable '{varname}' not found in DataArray's "
                          f"'variables' coordinate.")
 
-    # Select the specified variable and convert to a pandas DataFrame
-    # Transpose so that 'steps' becomes the index and 'trials' become columns
-    dt = da.sel(variables=varname).to_pandas().transpose()
+    # Select the specified variable and convert to a pandas DataFrame with
+    # 'steps' as the index and 'trials' as columns.  The dim order is
+    # enforced explicitly: checking presence alone would silently chart
+    # wrong values for a transposed input DataArray
+    dt = (da.sel(variables=varname)
+            .transpose("trials", "steps")
+            .to_pandas()
+            .transpose())
     
     if dt.empty:
         warnings.warn(f"Data for variable '{varname}' is empty after "
@@ -550,21 +549,6 @@ def show(fig):
         Plotly figure to be displayed.
     """
 
-    # conditional import of plotly
-    try:
-        import plotly.graph_objects as go
-    except ImportError as e:
-        raise ImportError("Optional dependency 'plotly' is required for all "
-                            "funcsim plotting functions. Install with "
-                            "`pip install plotly`.") from e
-
-    # conditional import of Ipython.display.Image
-    try:
-        from IPython.display import Image
-    except ImportError as e:
-        raise ImportError("Optional dependency 'Ipython' is required for "
-                            "funcsim.show(). Install with "
-                            "`pip install jupyter`.") from e
-
-    # do the thing
+    # do the thing ('fig' is already a plotly figure, so no imports are
+    # needed here)
     fig.show(renderer=os.getenv("FUNCSIM_PLOTLY_RENDERER"))

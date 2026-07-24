@@ -5,7 +5,7 @@ import itertools
 from collections import namedtuple
 from typing import Optional, Callable, Iterable
 import scipy
-import conversions
+from . import conversions
 import types
 
 
@@ -31,10 +31,10 @@ def utilPower(x: float,
         The outcome value.
     alpha : float, optional
         Risk aversion parameter for gains (default is 0.88).
-        Must be in [0.0, 1.0].
+        Must be in (0.0, 1.0].
     beta : float, optional
         Risk aversion parameter for losses (default is 0.88).
-        Must be in [0.0, 1.0].
+        Must be in (0.0, 1.0].
     lamb : float, optional
         Loss aversion parameter (default is 2.25).
         Must be >= 1.0.
@@ -46,26 +46,29 @@ def utilPower(x: float,
 
     Notes
     -----
-    For x >= 0, utility is x**alpha (or log(x) if alpha == 0).
-    For x < 0, utility is -lamb * (-x)**beta (or -lamb * log(-x) if beta == 0).
+    For x >= 0, utility is x**alpha.
+    For x < 0, utility is -lamb * (-x)**beta.
+    Values of exactly zero for alpha or beta are rejected: the log forms
+    sometimes substituted at zero are discontinuous at a zero outcome and
+    non-monotone through it, which breaks the certainty-equivalent solver.
     Default parameter values are from Tversky and Kahneman (1992).
     """
     if not isinstance(alpha, float):
-        raise ValueError('alpha must be a float between 0.0 and 1.0')
-    if alpha < 0.0 or alpha > 1.0:
-        raise ValueError('alpha must be between 0.0 and 1.0')
+        raise ValueError('alpha must be a float in (0.0, 1.0]')
+    if alpha <= 0.0 or alpha > 1.0:
+        raise ValueError('alpha must be in (0.0, 1.0]')
     if not isinstance(beta, float):
-        raise ValueError('beta must be a float between 0.0 and 1.0')
-    if beta < 0.0 or beta > 1.0:
-        raise ValueError('beta must be between 0.0 and 1.0')
+        raise ValueError('beta must be a float in (0.0, 1.0]')
+    if beta <= 0.0 or beta > 1.0:
+        raise ValueError('beta must be in (0.0, 1.0]')
     if not isinstance(lamb, float):
         raise ValueError('lamb must be a float >= 1.0')
     if lamb < 1.0:
         raise ValueError('lamb must be greater or equal to 1.0')
 
     if x >= 0.0:
-        return math.log(x) if alpha == 0.0 else x**alpha
-    return -lamb * math.log(-x) if beta == 0.0 else -lamb * (-x)**beta
+        return x**alpha
+    return -lamb * (-x)**beta
 
 
 def utilNormLog(x: float,
@@ -342,8 +345,12 @@ def cpt(utilFunc: Callable,
     solving utilFunc(C.E. - refOutcome) = CPT value.
     """
     if probabilities is not None:
+        probabilities = list(probabilities)  # materialize any iterator
         if min(probabilities) < 0.0:
             raise ValueError('probabilities must be non-negative')
+        if not math.isclose(sum(probabilities), 1.0, rel_tol=1e-9):
+            raise ValueError(f'probabilities must sum to 1.0 '
+                             f'(got {sum(probabilities)})')
 
     # outcomes as a list
     if isinstance(outcomes, types.GeneratorType):

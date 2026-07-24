@@ -42,16 +42,12 @@ from collections import namedtuple
 from functools import partial
 
 from numpy import arange, log, sort, clip
-from six import string_types
 from scipy.stats import distributions
 
-import conversions
-# from .addist import ad_unif
-# from .cvmdist import cvm_unif
-# from .ksdist import ks_unif
-from addist import ad_unif
-from cvmdist import cvm_unif
-from ksdist import ks_unif
+from . import conversions
+from .addist import ad_unif
+from .cvmdist import cvm_unif
+from .ksdist import ks_unif
 
 GofResult = namedtuple('GofResult', ('statistic', 'pvalue'))
 
@@ -80,12 +76,13 @@ def ad_stat(data):
     """
     Calculates the Anderson-Darling statistic for sorted values from U(0, 1).
 
-    The statistic is not defined if any of the values is exactly 0 or 1. You
-    will get infinity as a result and a divide-by-zero warning for such values.
-    The warning can be silenced or raised using numpy.errstate(divide=...).
+    The statistic is not defined if any of the values is exactly 0 or 1;
+    such values are clipped at float resolution (1e-15), yielding a very
+    large but finite statistic.  Clipping any tighter than that would blunt
+    exactly the tail sensitivity that the statistic exists to provide.
     """
     samples = len(data)
-    data_edit = clip(data, 0.0001, 0.9999)
+    data_edit = clip(data, 1e-15, 1.0 - 1e-15)
     factors = arange(1, 2 * samples, 2)
     return -samples - (factors *
                        log(data_edit * (1 - data_edit[::-1]))).sum() / samples
@@ -96,13 +93,13 @@ def simple_test(data, dist, args=(), stat=ad_stat, pdist=ad_unif,
     """
     Tests goodness of fit of data to dist using a distribution-free statistic.
     """
-    if isinstance(data, string_types):
+    if isinstance(data, str):
         # Auto-generating samples from a named distribution is not supported.
         raise AttributeError("Data should be an array or list of values.")
-    if isinstance(dist, string_types):
+    if isinstance(dist, str):
         dist = getattr(distributions, dist)(*args)
     elif args:
-        dist = dist(args)
+        dist = dist(*args)
     if not assume_sorted:
         data = sort(data)
     statistic = stat(dist.cdf(data))

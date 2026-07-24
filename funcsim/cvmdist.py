@@ -13,7 +13,7 @@ from numpy import arange, dot, exp, newaxis, pi, tensordot
 from scipy.special import gamma, kv
 from scipy.stats import rv_continuous
 
-from vect import varange, vectorize
+from .vect import varange, vectorize
 
 
 class cvm_unif_gen(rv_continuous):
