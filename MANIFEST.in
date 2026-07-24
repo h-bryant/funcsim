@@ -1,0 +1,3 @@
+# keep the sdist aligned with the wheel: tests are not part of the
+# distributed package
+prune tests

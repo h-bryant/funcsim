@@ -15,7 +15,8 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/h-bryant/funcsim",
     packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
-    python_requires=">=3.10",
+    # scipy>=1.16 requires Python >= 3.11, so that is our floor as well
+    python_requires=">=3.11",
     install_requires=[ 
         'numpy>=2.2.0',
         'pandas>=2.2.0',
