@@ -75,7 +75,10 @@ class Kde():
         float
             The estimated probability density at v.
         """
-        return float(self.gkde(v))
+        # gaussian_kde returns a length-1 array for a scalar input, and
+        # NumPy >= 2.5 raises TypeError on float() of any array that is
+        # not 0-dimensional, so index out the single element first
+        return float(self.gkde(v)[0])
 
     @vectorized_method
     def cdf(self,
