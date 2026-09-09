@@ -3,6 +3,6 @@ Miscellaneous Tools
 
 .. automodule:: funcsim
    :no-index:
-   :members: edf, screen, version
+   :members: screen, version
    :undoc-members:
    :show-inheritance:

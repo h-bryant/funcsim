@@ -1,12 +1,15 @@
 Univariate Distributions
 ========================
 
-Functionality for univariate distribution fitting and testing. It includes methods for kernel density estimation, goodness-of-fit tests, and various statistical tests.
+Tools for choosing, fitting, and testing univariate distributions, and for
+representing a distribution nonparametrically.  See
+:doc:`guide_distributions` for a narrative introduction with examples.
 
-Distibution fitting
--------------------
+Distribution fitting
+--------------------
 
 .. automodule:: funcsim
+   :no-index:
    :members: compare, fit
    :undoc-members:
    :show-inheritance:
@@ -22,13 +25,11 @@ Goodness-of-fit tests
    :show-inheritance:
 
 
-Distibution representations
----------------------------
+Nonparametric distribution representations
+------------------------------------------
 
 .. automodule:: funcsim
    :no-index:
-   :members: Kde
+   :members: Kde, edf
    :undoc-members:
    :show-inheritance:
-
-

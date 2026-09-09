@@ -53,7 +53,7 @@ def eut(util: Callable[[float], float],
     Compute expected utility and certainty equivalent income.
 
     This can operate on an arbitrary utility function, numerically solving
-    for the certainty equivalent.  For isoelastic expected utiliy and
+    for the certainty equivalent.  For isoelastic expected utility and
     certainty equivalents, the function "eutIsoelastic" will be less
     likely to suffer from numerical problems.
 
@@ -74,7 +74,7 @@ def eut(util: Callable[[float], float],
         Named tuple with fields:
 
         ExpectedValue : float
-            The mean isoelastic utility of the outcomes.
+            The mean utility of the outcomes.
         CertaintyEquiv : float
             The certainty equivalent income.
     """

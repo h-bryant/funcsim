@@ -191,12 +191,17 @@ class MvKde():
     Parameters
     ----------
     data : ArrayLike
-        Input data array of with variables in columns and observations
+        Input data array with variables in columns and observations
         in rows.
     bw : str or ArrayLike, optional
         Bandwidth selection method ('scott' or 'silverman'), or a K-by-K
         bandwidth covariance matrix in the units of the data.
         Default is 'scott'.
+
+    Notes
+    -----
+    Each call to :meth:`draw` consumes K + 1 values from ``ugen``, where K
+    is the number of variables.
     """
     def __init__(self,
                  data: conversions.ArrayLike,
@@ -287,8 +292,14 @@ class MvNorm():
     Parameters
     ----------
     data : ArrayLike
-        Input data array of with variables in columns and observations
+        Input data array with variables in columns and observations
         in rows.
+
+    Notes
+    -----
+    Each call to :meth:`draw` consumes K values from ``ugen``, where K is
+    the number of variables.  A warning is issued for any variable whose
+    Shapiro-Wilk test rejects normality at the 5% level.
     """
     def __init__(self,
                  data: conversions.ArrayLike,
@@ -330,11 +341,12 @@ class MvNorm():
         Returns
         -------
         pd.Series
-            A pandas Series representing a joint draw from the KDE.  The index
-            values are the variable names, and the values are the random
-            values. If no variable names were provided in the input data,
+            A pandas Series representing a joint draw from the multivariate
+            normal distribution.  The index values are the variable names,
+            and the values are the random values.  If no variable names were
+            provided in the input data,
             the variables will be named 'v0', 'v1', ..., reflecting the
-            oreder of the columns in the input data.
+            order of the columns in the input data.
         """
         uvec = [next(ugen) for i in range(self._K)]
         retA = self._mu + np.dot(self._A, stats.norm.ppf(uvec))
@@ -353,10 +365,15 @@ class CopulaGauss():
         columns and observations in rows.  That is, each column
         represents the result of applying the fitted CDF of some marginal
         distribution to the raw data for that variable.  The
-        values in each column should be in the range [0, 1]. The parameters
-        are fit using the method of moments.  If the sample covariance
-        matrix is not positive definite, the Higham method is used to
-        calculate the nearest positive definite matrix.
+        values in each column should be in the range (0, 1). The correlation
+        matrix is fit using the method of moments on the normal scores of
+        the pseudo-observations.  If it is not positive definite, the Higham
+        method is used to calculate the nearest positive definite matrix.
+
+    Notes
+    -----
+    Each call to :meth:`draw` consumes K values from ``ugen``, where K is
+    the number of variables.
     """
 
     def __init__(self,
@@ -412,7 +429,7 @@ class CopulaGauss():
             standard uniform draws are the values in the Series.
             If no variable names were provided in the input data,
             the variables will be named 'v0', 'v1', ..., reflecting the
-            oreder of the columns in the input data.
+            order of the columns in the input data.
 
         """
         uvec = [next(ugen) for i in range(self._K)]
@@ -432,9 +449,14 @@ class CopulaStudent():
         columns and observations in rows.  That is, each column
         represents the result of applying the fitted CDF of some marginal
         distribution to the raw data for that variable.  The
-        values in each column should be in the range [0, 1]. The correlation
+        values in each column should be in the range (0, 1). The correlation
         matrix is fit by pairwise Kendall's-tau inversion, and the degrees
-        of freedom are then fit by profile maximum likelihood.
+        of freedom are then fit by profile maximum pseudo-likelihood.
+
+    Notes
+    -----
+    Each call to :meth:`draw` consumes K + 1 values from ``ugen``, where K
+    is the number of variables.
     """
 
     def __init__(self,
@@ -477,7 +499,7 @@ class CopulaStudent():
             standard uniform draws are the values in the Series.
             If no variable names were provided in the input data,
             the variables will be named 'v0', 'v1', ..., reflecting the
-            oreder of the columns in the input data.
+            order of the columns in the input data.
         
         """
         uvec = [next(ugen) for i in range(self._K)]
@@ -500,10 +522,18 @@ class CopulaClayton():
         columns and observations in rows.  That is, each column
         represents the result of applying the fitted CDF of some marginal
         distribution to the raw data for that variable.  The
-        values in each column should be in the range [0, 1]. Parameters are
-        fit using maximum likelihood.  This implementation accomodates
+        values in each column should be in the range (0, 1). The dependence
+        parameter theta is fit by maximum pseudo-likelihood, starting from
+        the Kendall's-tau inversion estimate.  This implementation accommodates
         only positive dependence, so the fitted value for theta is
         constrained to be > 0.
+
+    Notes
+    -----
+    Each call to :meth:`draw` consumes K + 1 values from ``ugen``, where K
+    is the number of variables.  If the data exhibit negative dependence
+    (mean pairwise Kendall's tau <= 0), theta is set to its minimum
+    (near independence) and a warning is issued.
     """
 
     def __init__(self,
@@ -525,7 +555,7 @@ class CopulaClayton():
         (self._theta, taub, clamped) = copfit.fit_clayton(self._data)
         if clamped:
             warnings.warn(f"The Clayton copula implementation in funcsim "
-                          f"accomodates only positive dependence, but the "
+                          f"accommodates only positive dependence, but the "
                           f"data exhibit negative dependence (mean pairwise "
                           f"Kendall's tau = {taub:.3f}).  A theta value of "
                           f"{copfit.THETA_MIN_CLAYTON} is being used rather "
@@ -557,7 +587,7 @@ class CopulaClayton():
             standard uniform draws are the values in the Series.
             If no variable names were provided in the input data,
             the variables will be named 'v0', 'v1', ..., reflecting the
-            oreder of the columns in the input data.
+            order of the columns in the input data.
         
         """
         # floor the gamma frailty: for large theta the shape parameter is
@@ -582,10 +612,18 @@ class CopulaGumbel():
         columns and observations in rows.  That is, each column
         represents the result of applying the fitted CDF of some marginal
         distribution to the raw data for that variable.  The
-        values in each column should be in the range [0, 1]. Parameters are
-        fit using maximum likelihood.  This implementation accomodates
+        values in each column should be in the range (0, 1). The dependence
+        parameter theta is fit by maximum pseudo-likelihood, starting from
+        the Kendall's-tau inversion estimate.  This implementation accommodates
         only positive dependence, so the fitted value for theta is
         constrained to be > 1.0.
+
+    Notes
+    -----
+    Each call to :meth:`draw` consumes K + 2 values from ``ugen``, where K
+    is the number of variables.  If the data exhibit negative dependence
+    (mean pairwise Kendall's tau <= 0), theta is set to its minimum
+    (near independence) and a warning is issued.
     """
 
     def __init__(self,
@@ -607,7 +645,7 @@ class CopulaGumbel():
         (self._theta, taub, clamped) = copfit.fit_gumbel(self._data)
         if clamped:
             warnings.warn(f"The Gumbel copula implementation in funcsim "
-                          f"accomodates only positive dependence, but the "
+                          f"accommodates only positive dependence, but the "
                           f"data exhibit negative dependence (mean pairwise "
                           f"Kendall's tau = {taub:.3f}).  A theta value of "
                           f"(approximately) 1.0 is being used rather than a "
@@ -639,7 +677,7 @@ class CopulaGumbel():
             standard uniform draws are the values in the Series.
             If no variable names were provided in the input data,
             the variables will be named 'v0', 'v1', ..., reflecting the
-            oreder of the columns in the input data.
+            order of the columns in the input data.
 
         """
         gamma = math.cos(0.5 * math.pi / self._theta)**self._theta
@@ -662,10 +700,18 @@ class CopulaFrank():
         columns and observations in rows.  That is, each column
         represents the result of applying the fitted CDF of some marginal
         distribution to the raw data for that variable.  The
-        values in each column should be in the range [0, 1]. Parameters are
-        fit using maximum likelihood.  This implementation accomodates
+        values in each column should be in the range (0, 1). The dependence
+        parameter theta is fit by maximum pseudo-likelihood, starting from
+        the Kendall's-tau inversion estimate.  This implementation accommodates
         only positive dependence, so the fitted value for theta is
         constrained to be > 0.
+
+    Notes
+    -----
+    Each call to :meth:`draw` consumes K + 2 values from ``ugen``, where K
+    is the number of variables.  If the data exhibit negative dependence
+    (mean pairwise Kendall's tau <= 0), theta is set to its minimum
+    (near independence) and a warning is issued.
     """
 
     def __init__(self,
@@ -687,7 +733,7 @@ class CopulaFrank():
         (self._theta, taub, clamped) = copfit.fit_frank(self._data)
         if clamped:
             warnings.warn(f"The Frank copula implementation in funcsim "
-                          f"accomodates only positive dependence, but the "
+                          f"accommodates only positive dependence, but the "
                           f"data exhibit negative dependence (mean pairwise "
                           f"Kendall's tau = {taub:.3f}).  A theta value of "
                           f"{copfit.THETA_MIN_FRANK} is being used rather "
@@ -716,7 +762,7 @@ class CopulaFrank():
             standard uniform draws are the values in the Series.
             If no variable names were provided in the input data,
             the variables will be named 'v0', 'v1', ..., reflecting the
-            oreder of the columns in the input data.
+            order of the columns in the input data.
         
         """
         # Generate d uniform random variables

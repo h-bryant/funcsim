@@ -216,12 +216,19 @@ def shrink(data: conversions.ArrayLike,
     data : ArrayLike
         Data array with variables in columns and observations in rows.
     target : str
-        Shrinkage target, one of: 'A', 'B', 'C', 'D', 'E', 'F'.  These
-        correspond to different shrinkage estimation methods as defined in
-        Shafer & Strimmer, "A shrinkage approach to large-scale covariance
-        matrix estimation and implications for Functional Genomics."
-        //Statistical Applications in Genetics and Molecular Biology//,
-        vol 4(2005), issue 1.
+        Shrinkage target, one of 'A' through 'F', following Table 2 of
+        Schafer and Strimmer (2005):
+
+        - 'A': diagonal, unit variance
+        - 'B': diagonal, common variance
+        - 'C': common variance and common covariance
+        - 'D': diagonal, unequal variance
+        - 'E': perfect positive correlation
+        - 'F': constant correlation
+
+        Targets 'B', 'E', and 'F' originate in Ledoit and Wolf (2003,
+        2004).  The shrinkage intensity is estimated analytically in each
+        case.
 
     Returns
     -------
@@ -232,6 +239,13 @@ def shrink(data: conversions.ArrayLike,
     ------
     ValueError
         If target is not one of: 'A', 'B', 'C', 'D', 'E', 'F'.
+
+    References
+    ----------
+    Schafer, J., & Strimmer, K. (2005). A shrinkage approach to large-scale
+    covariance matrix estimation and implications for functional genomics.
+    Statistical Applications in Genetics and Molecular Biology, 4(1),
+    Article 32.
     """
     if target not in ['A', 'B', 'C', 'D', 'E', 'F']:
         raise ValueError("target must be one of: A, B, C, D, E, F") 

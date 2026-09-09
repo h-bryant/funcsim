@@ -183,17 +183,20 @@ def simulate(f: Callable[[Generator[int, float, None],
 
     Parameters
     ----------
-    f : function
-        Function that performs a single trial in a static simulation or a s
-        single step through time in a recursive dynamic simulation.  Should take
-        'ugen' as a first argument in either case, where 'ugen' will be a
-        generator that emits standard uniform draws (or standard normal draws,
-        if `stdnorm` is True) that will be passed to f by ``simulate``.
-        In the case of a recursive dynamic simulation that employs past values,
-        f should take 'data' as a second argument, where this will be a type of
-        array that is also provided by ``simulate.`` This function should return
-        a dict with variable names (as strings) as keys and values for those
-        variables (as floats) as values.
+    f : callable
+        Function that performs a single trial in a static simulation, or a
+        single step through time in a recursive-dynamic simulation.  Its first
+        argument (conventionally ``ugen``) receives a generator that emits
+        independent standard uniform draws (or standard normal draws, if
+        `stdnorm` is True); obtain each draw with ``next(ugen)``.  If `f`
+        takes a second argument (conventionally ``hist``), it receives a
+        per-trial history object whose ``recall(varname, lag)`` method returns
+        the value of a variable `lag` steps earlier; see
+        :class:`funcsim.rdarrays.RDdata`.  `f` must return a dict with
+        variable names (strings) as keys and floats as values.  The number of
+        times `f` calls ``next(ugen)`` must be the same in every trial and
+        step, because draws are pre-allocated across trials for stratified
+        sampling.
     ntrials : int, optional
         The number of trials to perform.  Default is 500.
     nsteps : int, optional
@@ -207,12 +210,14 @@ def simulate(f: Callable[[Generator[int, float, None],
         Use multiple processes/cores for the simulation. Default is False.
         When True, `f` must be picklable (e.g., defined at the top level of
         a module, not inside another function), because worker processes
-        are spawned on most platforms.
+        are spawned on most platforms.  For the same reason, a script that
+        calls ``simulate(..., multi=True)`` must guard the call with
+        ``if __name__ == "__main__":``.
     seed : int, optional
         Seed for pseudo-random number generation. Default is 6.
-    stdnorm : book, optional
-        If False, ``next(draw)`` within `trialf` will return standard uniform
-        random draws. If True, ``next(draw)`` will return standard normal draws.
+    stdnorm : bool, optional
+        If False, ``next(ugen)`` within `f` returns standard uniform random
+        draws. If True, ``next(ugen)`` returns standard normal draws.
         Default is False.
     sampling : {'lh', 'mc'}, optional
         If 'lh', Latin Hypercube sampling is employed.  If 'mc', simple
@@ -221,7 +226,22 @@ def simulate(f: Callable[[Generator[int, float, None],
     Returns
     -------
     xarray.DataArray
-        3-D xarray.DataArray with dimensions 'trials', 'variables', and 'steps'.
+        3-D xarray.DataArray with dimensions 'trials', 'variables', and
+        'steps'.  The 'steps' coordinate continues the index of `hist0` (or
+        counts from 0 when `hist0` is not given), and includes any historical
+        steps from `hist0` ahead of the `nsteps` simulated steps.
+
+    Raises
+    ------
+    ValueError
+        If `hist0` is malformed, `f` is not callable or takes more than two
+        arguments, `f` does not return a dict keyed by strings, or `sampling`
+        is not one of 'lh' or 'mc'.
+    RuntimeError
+        If `f` consumes a different number of draws in some trial or step
+        than it did when first probed.
+    funcsim.rdarrays.MissingValue
+        If `f` recalls a lagged value that is not available.
     """
     if hist0 is not None:
         _checkhist0(hist0)

@@ -414,7 +414,8 @@ def fit(data: conversions.VectorLike,
     scipydist : scipy.stats.rv_continuous
         The scipy.stats distribution object to fit (e.g., stats.norm).
     distName : str, optional
-        Name of the distribution. If None, the distribution's name is used.
+        Name recorded in the ``distName`` field of the result (for example,
+        the label used by ``compare``).  Default None.
     lowerBound : float, optional
         If given, the lower bound of the support of the fitted distribution
         is fixed at this value rather than estimated.  The distribution must
@@ -446,6 +447,8 @@ def fit(data: conversions.VectorLike,
             The frozen fitted distribution object.
         distName : str
             Name of the fitted distribution.
+        warnings : list
+            Warnings captured during fitting (empty for a clean fit).
 
     Raises
     ------

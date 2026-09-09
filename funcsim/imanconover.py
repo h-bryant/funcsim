@@ -40,12 +40,12 @@ def imanconover(spear: conversions.ArrayLike,
                 )-> pd.DataFrame:
 
     """
-    Induce a Spearman correlation stucture using the Iman & Conover method.
+    Induce a Spearman correlation structure using the Iman & Conover method.
 
     Parameters
     ----------
     spear : ArrayLike
-        Desired Spearman correlation matrix (must be symetric and
+        Desired Spearman correlation matrix (must be symmetric and
         positive definite).
     vectors : list of VectorLike
         List of vectors, each representing draws for one variable.
@@ -59,7 +59,7 @@ def imanconover(spear: conversions.ArrayLike,
     -------
     pandas.DataFrame
         DataFrame with one column for each vector/variable, where the
-        data refelct the desired Spearman correlation structure.
+        data reflect the desired Spearman correlation structure.
 
     References
     ----------

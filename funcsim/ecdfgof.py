@@ -118,10 +118,14 @@ def kstest(data: conversions.VectorLike,
     ----------
     data : VectorLike
         Sample data vector.
-    dist : str or frozen distribution object
-        Scipy distribution name or frozen distribution object.
+    dist : str, scipy.stats distribution, or frozen distribution
+        The hypothesized distribution: the name of a ``scipy.stats``
+        distribution (e.g., ``"norm"``), an unfrozen distribution object
+        (e.g., ``stats.norm``), or a frozen distribution (e.g.,
+        ``stats.norm(0.0, 1.0)``).
     args : tuple, optional
-        Parameters for the distribution if it is not a string.
+        Shape, location, and scale parameters, applied when `dist` is a name
+        or an unfrozen distribution.  Ignored for a frozen distribution.
     assume_sorted : bool, optional
         If True, assumes that `data` is already sorted.  Defaults to False.
 
@@ -146,10 +150,14 @@ def cvmtest(data: conversions.VectorLike,
     ----------
     data : VectorLike
         Sample data vector.
-    dist : str or frozen distribution object
-        Scipy distribution name or frozen distribution object.
+    dist : str, scipy.stats distribution, or frozen distribution
+        The hypothesized distribution: the name of a ``scipy.stats``
+        distribution (e.g., ``"norm"``), an unfrozen distribution object
+        (e.g., ``stats.norm``), or a frozen distribution (e.g.,
+        ``stats.norm(0.0, 1.0)``).
     args : tuple, optional
-        Parameters for the distribution if it is not a string.
+        Shape, location, and scale parameters, applied when `dist` is a name
+        or an unfrozen distribution.  Ignored for a frozen distribution.
     assume_sorted : bool, optional
         If True, assumes that `data` is already sorted.  Defaults to False.
 
@@ -173,10 +181,14 @@ def adtest(data: conversions.VectorLike,
     ----------
     data : VectorLike
         Sample data vector.
-    dist : str or frozen distribution object
-        Scipy distribution name or frozen distribution object.
+    dist : str, scipy.stats distribution, or frozen distribution
+        The hypothesized distribution: the name of a ``scipy.stats``
+        distribution (e.g., ``"norm"``), an unfrozen distribution object
+        (e.g., ``stats.norm``), or a frozen distribution (e.g.,
+        ``stats.norm(0.0, 1.0)``).
     args : tuple, optional
-        Parameters for the distribution if it is not a string.
+        Shape, location, and scale parameters, applied when `dist` is a name
+        or an unfrozen distribution.  Ignored for a frozen distribution.
     assume_sorted : bool, optional
         If True, assumes that `data` is already sorted.  Defaults to False.
 

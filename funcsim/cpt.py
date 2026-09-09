@@ -315,7 +315,7 @@ def cpt(utilFunc: Callable,
         Sequence of possible stochastic outcomes.
     refOutcome : float
         Reference point for gains and losses.
-    probabilities : float or Iterable, optional
+    probabilities : Iterable of float, optional
         Probabilities for each outcome. If None, outcomes are assumed
         equally likely.
     precision : float, optional
@@ -436,7 +436,7 @@ def cptBV(outcomes: Iterable,
         Sequence of possible stochastic outcomes.
     refOutcome : float
         Reference point for gains and losses.
-    probabilities : float or Iterable, optional
+    probabilities : Iterable of float, optional
         Probabilities for each outcome. If None, outcomes are assumed equally
         likely.
 

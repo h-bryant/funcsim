@@ -3,10 +3,21 @@ import xarray as xr
 
 
 class MissingValue(Exception):
+    """Raised by :meth:`RDdata.recall` when a requested value is unavailable."""
     pass
 
 
 class RDdata():
+    """
+    Per-trial history for a recursive-dynamic simulation.
+
+    ``simulate`` passes an instance of this class as the second argument
+    (conventionally ``hist``) to a step function that accepts two
+    arguments.  It holds the historical values supplied via ``hist0``
+    followed by the values the step function has returned so far in the
+    current trial.  Step functions should only call :meth:`recall`; the
+    class is not meant to be instantiated by users.
+    """
     # container for an np array with pre-allocated memory for future values
     # for a single trial in an RD sim
     def __init__(self, a, steps, namePositions):
@@ -48,7 +59,9 @@ class RDdata():
         varname : str
             Name of the variable to recall.
         lag : int, optional
-            Number of steps to lag (default is 0).
+            Number of steps to look back.  ``lag=1`` is the previous step
+            (the most recent value available while a step is being
+            computed).  Default is 0.
 
         Returns
         -------
@@ -73,7 +86,7 @@ class RDdata():
                                    f'simulation, no (non-NaN) value for the '
                                    f'variable "{varname}" with {lag} lag(s) is '
                                    f'available. Be sure that you passed a '
-                                   f'a "data0" array to "simulate" and that it '
+                                   f'"hist0" array to "simulate" and that it '
                                    f'contains this value.')
             else:
                 raise MissingValue(f'In time step {self._currStep} in the '

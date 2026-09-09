@@ -51,15 +51,18 @@ def fan(da: xr.DataArray,
     varname : str
         Name of the variable to plot from the "variables" dimension.
     filepath : str, optional
-        Path to save the chart. Supports HTML and image formats. Default None.
+        Path to save the chart.  A ``.html`` extension writes an interactive
+        HTML file; ``.png``, ``.jpg``, ``.jpeg``, ``.webp``, ``.svg``, and
+        ``.pdf`` write a static image, which requires the optional
+        ``kaleido`` package.  Default None (do not save).
     line_color : str, optional
         Color of the mean line. Default is 'blue'.
     title : str, optional
         Title for the figure. Default is "" (no title).
     width : int, optional
-        Width of the chart in pixels. Default is 800.
+        Width of the chart in pixels. Default is 750.
     height : int, optional
-        Height of the chart in pixels. Default is 500.
+        Height of the chart in pixels. Default is 400.
 
     Returns
     -------
@@ -244,12 +247,12 @@ def twofuncs(f0: Callable[[float], float],
         Label for the first function. Default is "f0".
     name1 : str, optional
         Label for the second function. Default is "f1".
-    title : str, optinal
-        Title for the top of the figure.  Defaults to None.
+    title : str, optional
+        Title for the figure. Default is "" (no title).
     width : int, optional
-        Width of the chart in pixels. Default is 800.
+        Width of the chart in pixels. Default is 750.
     height : int, optional
-        Height of the chart in pixels. Default is 500.
+        Height of the chart in pixels. Default is 400.
 
     Returns
     -------
@@ -309,9 +312,9 @@ def histpdf(data: conversions.VectorLike,
     title : str, optional
         Title for the figure. Default is "" (no title).
     width : int, optional
-        Width of the chart in pixels. Default is 800.
+        Width of the chart in pixels. Default is 750.
     height : int, optional
-        Height of the chart in pixels. Default is 500.
+        Height of the chart in pixels. Default is 400.
 
     Returns
     -------
@@ -389,7 +392,7 @@ def dblscat(a0: conversions.ArrayLike,
     title : str, optional
         Title for the figure. Default is "" (no title).
     width : int, optional
-        Width of the chart in pixels. Default is 800.
+        Width of the chart in pixels. Default is 500.
     height : int, optional
         Height of the chart in pixels. Default is 500.
 
@@ -530,8 +533,10 @@ def show(fig):
     """
     Flexibly display a plotly plot in a Jupyter notebook.
 
-    Invokes plotly's fig.show() with a `renderer` argument set to the value
-    in the environment variable FUNCSIM_PLOTLY_RENDERER.
+    Invokes plotly's ``fig.show()`` with a `renderer` argument set to the
+    value of the environment variable ``FUNCSIM_PLOTLY_RENDERER`` (for
+    example ``"notebook"``, ``"vscode"``, ``"browser"``, or ``"png"``).
+    If the variable is not set, plotly's default renderer is used.
 
     Parameters
     ----------

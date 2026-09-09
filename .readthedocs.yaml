@@ -1,25 +1,20 @@
-
-
 # Read the Docs configuration file
 # See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
 
-# Required
 version: 2
 
-# Set the OS, Python version, and other tools you might need
 build:
   os: ubuntu-24.04
   tools:
     python: "3.13"
 
-# Build documentation in the "docs/" directory with Sphinx
+# The Sphinx project lives in docs/source (conf.py, *.rst, requirements.txt).
+# funcsim itself is imported from the repository checkout via the sys.path
+# entries in docs/source/conf.py, so it does not need to be installed here.
 sphinx:
-   configuration: docs/conf.py
+  configuration: docs/source/conf.py
+  fail_on_warning: true
 
-# Optionally, but recommended,
-# declare the Python requirements required to build your documentation
-# See https://docs.readthedocs.io/en/stable/guides/reproducible-builds.html
 python:
-   install:
-   - requirements: docs/requirements.txt
-
+  install:
+    - requirements: docs/source/requirements.txt
