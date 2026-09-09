@@ -8,6 +8,32 @@ from typing import Callable, Optional
 from . import conversions
 
 
+def _xvalues(idx: pd.Index) -> list:
+    """
+    Convert a 'steps' index into a list of x values that any JSON encoder
+    can serialize.
+
+    pandas Period and Timestamp labels are rendered as ISO 8601 strings,
+    which plotly.js parses back into a date axis.  Static image export via
+    kaleido >= 1.0 serializes the figure with orjson, which rejects pandas
+    Timestamp objects outright, so the conversion cannot be left to plotly.
+    Other label types (e.g. integers) pass through unchanged.
+    """
+    if isinstance(idx, pd.PeriodIndex):
+        idx = idx.to_timestamp()
+    if isinstance(idx, pd.DatetimeIndex):
+        return [ts.isoformat() for ts in idx]
+
+    def conv(item):
+        if isinstance(item, pd.Period):
+            return item.to_timestamp().isoformat()
+        if isinstance(item, pd.Timestamp):
+            return item.isoformat()
+        return item
+
+    return [conv(item) for item in idx]
+
+
 def fan(da: xr.DataArray,
         varname: str,
         filepath: str = None,
@@ -24,7 +50,7 @@ def fan(da: xr.DataArray,
         Simulation results with dimensions "trials", "variables", "steps".
     varname : str
         Name of the variable to plot from the "variables" dimension.
-    filepath : str, opti
+    filepath : str, optional
         Path to save the chart. Supports HTML and image formats. Default None.
     line_color : str, optional
         Color of the mean line. Default is 'blue'.
@@ -75,45 +101,9 @@ def fan(da: xr.DataArray,
         fig.update_layout(title_text=f"{varname} (No data)")
         return fig
 
-    # 'steps' values from the index of the transposed DataFrame
-    idx_original = dt.index # Keep original for potential messages or fallback
-    idx = dt.index 
-    
-    # Ensure index is JSON serializable by converting to Timestamps if it
-    # contains Periods. This handles both PeriodIndex and object-dtype Index
-    # containing Period objects.
-    if isinstance(idx, pd.PeriodIndex):
-        idx = idx.to_timestamp()
-        # print("DEBUG: Converted PeriodIndex to DatetimeIndex.") # Optional
-    elif hasattr(idx, 'dtype') and pd.api.types.is_object_dtype(idx.dtype):
-        # If it's an object-dtype idx, check if it might contain Period objects.
-        if len(idx) > 0:
-            try:
-                converted_values = []
-                needs_conversion = False
-                for item in idx:
-                    if isinstance(item, pd.Period):
-                        converted_values.append(item.to_timestamp())
-                        needs_conversion = True
-                    else:
-                        # Pass through other types (e.g., pd.NaT, None, or
-                        # other data if mixed)
-                        converted_values.append(item) 
-                
-                if needs_conversion:
-                    idx = pd.DatetimeIndex(converted_values)
-                    # print("DEBUG: Converted object-dtype index with Period "
-                    #       "objects to DatetimeIndex.") # Optional debug
-                # If no Period objects were found and converted, idx remains the
-                # original object-dtype index.
-                    
-            except Exception as e:
-                # This might happen if conversion of an item fails unexpectedly.
-                warnings.warn(f"Attempted to convert an object-dtype "
-                              f"index that might contain Periods, but an error "
-                              f"occurred: {e}. Using original index for x-axis,"
-                              f" which may lead to Plotly errors.", UserWarning)
-                idx = idx_original # Revert to original index
+    # x values for the 'steps' axis, in a form every JSON encoder can
+    # serialize (see _xvalues)
+    xs = _xvalues(dt.index)
         
     # Calculate the mean across trials for each step
     mean_values = dt.mean(axis=1)
@@ -140,7 +130,7 @@ def fan(da: xr.DataArray,
         # start for the lower bound
         # Y-coordinates match this path to create a closed shape
         fig.add_trace(go.Scatter(
-            x=list(idx) + list(idx[::-1]), 
+            x=xs + xs[::-1],
             y=list(y_upper) + list(y_lower[::-1]), 
             fill='toself',  # Fill the area enclosed by the trace
             fillcolor='rgba(173, 216, 230, 0.4)',  # Light blue with 20% opacity
@@ -152,7 +142,7 @@ def fan(da: xr.DataArray,
 
     # Add the mean line (plotted on top of the bands)
     fig.add_trace(go.Scatter(
-        x=idx,
+        x=xs,
         y=mean_values,
         mode='lines',
         line=dict(color=line_color), # Use the specified line color
