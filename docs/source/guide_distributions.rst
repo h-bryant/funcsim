@@ -86,7 +86,7 @@ Legacy arguments
 Earlier versions of funcsim selected the support with the boolean
 positional arguments ``lowerLimit`` and ``upperLimit``, in which case the
 bound was estimated along with the other parameters rather than fixed.
-These arguments still work in 0.2.3 but emit a :class:`FutureWarning` and
+These arguments still work but emit a :class:`FutureWarning` and
 will be removed in a future version.  A legacy flag for one side of the
 support may be combined with a fixed bound for the other side
 (``compare(data, upperLimit=True, lowerBound=0.0)``), but not with a bound

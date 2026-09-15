@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="funcsim",
-    version="0.2.3",
+    version="0.2.4",
     license="bsd-3-clause",
     author="Henry Bryant",
     author_email="henry@tamu.edu",
