@@ -351,8 +351,17 @@ def screen(data: conversions.VectorLike,
     Returns
     -------
     str
-        A formatted string summarizing the results of stationarity, 
+        A formatted string summarizing the results of stationarity,
         heteroskedasticity, autocorrelation, and randomness tests.
+
+    Notes
+    -----
+    Line A is an augmented Dickey-Fuller (ADF) test whose equation includes
+    a constant, so its alternative is stationarity around a constant
+    (possibly nonzero) mean.  Line B adds a linear time trend, so its
+    alternative is trend stationarity.  Lines C (White) and D (Ljung-Box)
+    are applied to the residuals from a regression of the series on the
+    observation number.  Lines E and F test the overall i.i.d. null.
     """
 
     if alpha <= 0 or alpha >= 1:
@@ -369,9 +378,13 @@ def screen(data: conversions.VectorLike,
     y_hat = X @ beta
     resid = y - y_hat
 
-    # ADF tests: line A has no deterministic terms; line B includes a
-    # constant and linear trend, so it is a genuine trend-stationarity test
-    p_adf = adf_test_no_const(seriesA, max_lag=2, n_sim=1000, seed=42)[1]
+    # ADF tests: line A includes a constant, so it tests for stationarity
+    # around a constant mean (a no-constant equation has zero-mean
+    # stationarity as its alternative, so it fails to reject the unit root,
+    # and the report warns, for an i.i.d. series whose mean is large
+    # relative to its standard deviation); line B includes a constant and
+    # a linear trend, so it is a genuine trend-stationarity test
+    p_adf = adf_test_with_const(seriesA, max_lag=2, n_sim=1000, seed=42)[1]
     p_adf_t = adf_test_const_trend(seriesA, max_lag=2, n_sim=1000, seed=42)[1]
 
     # White test for heteroskedasticity (constant is added inside

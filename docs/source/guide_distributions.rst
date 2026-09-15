@@ -231,4 +231,8 @@ the chosen significance level (default 5%):
 
 Note that the two augmented Dickey-Fuller tests (A and B) have
 non-stationarity as their null hypothesis, so for those lines a small
-p-value is reassuring; the report flags the opposite outcome.
+p-value is reassuring; the report flags the opposite outcome.  Line A's
+test equation includes a constant, so it tests for stationarity around a
+constant (possibly nonzero) mean; line B's equation adds a linear time
+trend, so it tests for trend stationarity.  Lines C and D are applied to
+the residuals from a regression of the series on the observation number.
