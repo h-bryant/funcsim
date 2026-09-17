@@ -72,7 +72,7 @@ def nearestpd(array):
 
     if is_positive_definite(A3):
         msg = ("Higham's (1988) first method was employed to compute "
-               "the pos. def. matrix nearest to the sample covariance matrix.")
+               "the positive definite matrix nearest to the input matrix.")
         warnings.warn(msg, UserWarning)
         return repackage(array, A3)
 
@@ -94,6 +94,6 @@ def nearestpd(array):
         A3 += Id * (-mineig * k ** 2 + spacing)
         k += 1
     msg = ("Higham's (1988) second method was employed to compute "
-            "the pos. def. matrix nearest to the sample covariance matrix.")
+           "the positive definite matrix nearest to the input matrix.")
     warnings.warn(msg, UserWarning)
     return repackage(array, A3)

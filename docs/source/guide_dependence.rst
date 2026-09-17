@@ -74,6 +74,19 @@ Shapiro-Wilk test of normality at the 5% level.
    da = fs.simulate(f=trial, ntrials=2000)
    da.sel(steps=0).to_pandas().cov()   # close to data.cov()
 
+When the mean vector and covariance matrix are known rather than
+estimated (specified by an analyst, elicited from experts, or produced by
+a shrinkage estimator), construct the object with
+:meth:`funcsim.MvNorm.from_params` instead.  A covariance matrix that is
+not positive definite is replaced by the nearest positive definite matrix
+(Higham, 1988) with a warning, and no normality check is made.
+
+.. code-block:: python
+
+   mu = [3.0, 4.0]
+   sigma = [[1.0, 0.5], [0.5, 1.0]]
+   mvn = fs.MvNorm.from_params(mu, sigma, names=["a", "b"])
+
 
 Multivariate kernel density estimate
 ------------------------------------
@@ -215,6 +228,10 @@ Correlation and covariance helpers
    six targets of Schafer and Strimmer (2005), labeled ``'A'`` through
    ``'F'``.  Useful when the number of observations is small relative to
    the number of variables.  The result has the same type as the input.
+   With ``return_intensity=True`` the function returns a tuple
+   ``(sigma, lam)``, where ``lam`` in [0, 1] is the estimated shrinkage
+   intensity: 0 leaves the sample covariance matrix unchanged, 1 replaces
+   it with the target.
 
 :func:`funcsim.nearestpd`
    The nearest symmetric positive definite matrix to a given matrix

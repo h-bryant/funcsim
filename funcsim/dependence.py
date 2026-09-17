@@ -2,7 +2,7 @@ import math
 import numpy as np
 import pandas as pd
 from scipy import stats
-from typing import Generator, Optional, Tuple
+from typing import Generator, Optional, Sequence, Tuple
 import warnings
 from . import conversions
 from . import copfit
@@ -284,10 +284,12 @@ class MvKde():
 
 class MvNorm():
     """
-    A multivariate normal distribution object. A vector of means
-    and a covariance matrix are computed from the input data.  If the sample
-    covariance matrix is not positive definite, the Higham
-    method is used to calculate the nearest positive definite matrix.
+    A multivariate normal distribution object.  Constructed from data, a
+    vector of means and a covariance matrix are computed from the input.
+    Constructed with :meth:`from_params`, the mean vector and covariance
+    matrix are supplied directly.  Either way, if the covariance matrix is
+    not positive definite, the Higham method is used to calculate the
+    nearest positive definite matrix.
 
     Parameters
     ----------
@@ -323,9 +325,79 @@ class MvNorm():
             swp = shapiro.swtest(self._data[:, k])[1]
             if not swp > 0.05:
                 msg = (f"variable '{self._names[k]}' may not be "
-                       f" normally distributed. (Shapiro-Wilk p-value"
+                       f"normally distributed. (Shapiro-Wilk p-value"
                        f"={swp:.3f})")
                 warnings.warn(msg, UserWarning)
+
+    @classmethod
+    def from_params(cls,
+                    mu: conversions.VectorLike,
+                    sigma: conversions.ArrayLike,
+                    names: Optional[Sequence[str]] = None,
+                    ) -> "MvNorm":
+        """
+        Create a multivariate normal distribution object from a mean vector
+        and a covariance matrix, rather than from data.
+
+        Parameters
+        ----------
+        mu : VectorLike
+            Mean vector of length K.
+        sigma : ArrayLike
+            K-by-K covariance matrix (a nested list is also accepted).  It
+            must be symmetric.  If it is not positive definite, the nearest
+            positive definite matrix (Higham, 1988) is substituted with a
+            warning.
+        names : sequence of str, optional
+            Variable names, length K.  If omitted, the index of `mu` (if it
+            is a pandas Series) or the column labels of `sigma` (if it is a
+            pandas DataFrame) are used; otherwise the variables are named
+            'v0', 'v1', ....
+
+        Returns
+        -------
+        MvNorm
+            A distribution object whose :meth:`draw` method returns joint
+            draws with the given means and covariances.
+
+        Notes
+        -----
+        No normality check is performed, since there are no data to check.
+
+        Examples
+        --------
+        >>> dist = fs.MvNorm.from_params([3.0, 4.0], [[1.0, 0.5], [0.5, 1.0]])
+        """
+        muA = np.asarray(conversions.vlToArray(mu), dtype=float)
+        if isinstance(sigma, (list, tuple)):
+            sigmaA = np.asarray(sigma, dtype=float)
+        else:
+            sigmaA = np.asarray(conversions.alToArray(sigma), dtype=float)
+        K = muA.shape[0]
+        if sigmaA.shape != (K, K):
+            raise ValueError(f"sigma must be {K}-by-{K} to match mu; "
+                             f"got shape {sigmaA.shape}")
+        if not np.allclose(sigmaA, sigmaA.T):
+            raise ValueError("sigma must be symmetric")
+        if names is not None:
+            nms = pd.Index(list(names))
+        elif isinstance(mu, pd.Series):
+            nms = pd.Index(mu.index)
+        elif isinstance(sigma, pd.DataFrame):
+            nms = pd.Index(sigma.columns)
+        else:
+            nms = pd.Index([f"v{k}" for k in range(K)])
+        if len(nms) != K:
+            raise ValueError(f"names must have length {K}; got {len(nms)}")
+
+        obj = cls.__new__(cls)
+        obj._data = None
+        obj._names = nms
+        (obj._M, obj._K) = (0, K)
+        obj._mu = muA
+        obj._sigma = nearby.nearestpd(sigmaA)
+        obj._A = np.linalg.cholesky(obj._sigma)
+        return obj
 
     def draw(self,
              ugen: Generator[float, None, None]

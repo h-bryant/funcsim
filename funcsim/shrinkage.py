@@ -6,6 +6,7 @@ Genetics and Molecular Biology//, vol 4(2005), issue 1.
 """
 
 import itertools
+from typing import Tuple, Union
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -207,7 +208,10 @@ def _target_f(x):
 
 
 def shrink(data: conversions.ArrayLike,
-           target: str ) -> conversions.ArrayLike:
+           target: str,
+           return_intensity: bool = False
+           ) -> Union[conversions.ArrayLike,
+                      Tuple[conversions.ArrayLike, float]]:
     """
     Covariance shrinkage estimator.
 
@@ -215,6 +219,9 @@ def shrink(data: conversions.ArrayLike,
     ----------
     data : ArrayLike
         Data array with variables in columns and observations in rows.
+    return_intensity : bool, optional
+        If True, also return the estimated shrinkage intensity.  Default is
+        False.
     target : str
         Shrinkage target, one of 'A' through 'F', following Table 2 of
         Schafer and Strimmer (2005):
@@ -232,8 +239,12 @@ def shrink(data: conversions.ArrayLike,
 
     Returns
     -------
-    ArrayLike
-        The estimated covariance matrix, with a type matching the data array
+    ArrayLike or tuple
+        The estimated covariance matrix, with a type matching the data
+        array.  If `return_intensity` is True, a tuple ``(sigma, lam)``,
+        where ``lam`` is the shrinkage intensity, a float in [0, 1]: 0
+        leaves the sample covariance matrix unchanged and 1 replaces it
+        with the target.
 
     Raises
     ------
@@ -259,26 +270,30 @@ def shrink(data: conversions.ArrayLike,
                   'E': _target_e,
                   'F': _target_f}
 
-    sig = target_map[target](a_np)[0]
+    sig, lam = target_map[target](a_np)
 
     # return the same type of array that was passed.  the result is a
     # p-by-p covariance matrix, so both axes are labeled with the
     # variable (column) labels of the input, not the observation index
     if isinstance(data, pd.DataFrame):
-        df = pd.DataFrame(data=sig, index=data.columns, columns=data.columns)
-        return df
+        result = pd.DataFrame(data=sig, index=data.columns,
+                              columns=data.columns)
     elif isinstance(data, xr.DataArray):
         coldim = str(data.dims[-1])
         if coldim in data.coords:
             varnames = np.asarray(data.coords[coldim].values)
         else:
             varnames = np.arange(sig.shape[0])
-        da = xr.DataArray(sig,
-                          dims=(coldim, coldim + "_"),
-                          coords={coldim: varnames, coldim + "_": varnames})
-        return da
+        result = xr.DataArray(sig,
+                              dims=(coldim, coldim + "_"),
+                              coords={coldim: varnames,
+                                      coldim + "_": varnames})
     else:
-        return sig
+        result = sig
+
+    if return_intensity:
+        return result, float(lam)
+    return result
 
 
 if __name__ == '__main__':
