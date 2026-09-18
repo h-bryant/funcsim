@@ -219,9 +219,6 @@ def shrink(data: conversions.ArrayLike,
     ----------
     data : ArrayLike
         Data array with variables in columns and observations in rows.
-    return_intensity : bool, optional
-        If True, also return the estimated shrinkage intensity.  Default is
-        False.
     target : str
         Shrinkage target, one of 'A' through 'F', following Table 2 of
         Schafer and Strimmer (2005):
@@ -236,6 +233,9 @@ def shrink(data: conversions.ArrayLike,
         Targets 'B', 'E', and 'F' originate in Ledoit and Wolf (2003,
         2004).  The shrinkage intensity is estimated analytically in each
         case.
+    return_intensity : bool, optional
+        If True, also return the estimated shrinkage intensity.  Default is
+        False.
 
     Returns
     -------

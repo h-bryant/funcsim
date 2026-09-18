@@ -41,7 +41,8 @@ Features
   support bounds.
 - Kernel density estimates, empirical distribution functions, and
   goodness-of-fit tests.
-- Dependence modeling: multivariate normal, multivariate KDE, and Gaussian,
+- Dependence modeling: multivariate normal (fitted to data or specified by
+  a mean vector and covariance matrix), multivariate KDE, and Gaussian,
   Student's t, Clayton, Gumbel, and Frank copulas, all implemented natively;
   Iman-Conover rank correlation induction; covariance shrinkage.
 - Expected utility and cumulative prospect theory calculations.

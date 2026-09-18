@@ -6,6 +6,7 @@
 
 import os
 import sys
+import typing
 
 # make the funcsim package in this repository importable, so that autodoc
 # documents the working tree rather than any installed copy
@@ -51,6 +52,39 @@ autodoc_type_aliases = {
 typehints_fully_qualified = False
 always_document_param_types = False
 typehints_defaults = 'comma'
+
+
+def _alias_formatter(annotation, config):
+    """Render the conversions.VectorLike / ArrayLike unions by name.
+
+    autodoc_type_aliases only applies to string (PEP 563) annotations, and
+    sphinx_autodoc_typehints expands the aliases into their member types
+    when it writes a "Return type" line.  typing also flattens a union that
+    contains an alias, as in the return type of funcsim.shrink, so the alias
+    is recovered from the member set.  Returning None falls back to the
+    extension's default formatting.
+    """
+    from sphinx_autodoc_typehints import format_annotation
+    from funcsim import conversions
+
+    if typing.get_origin(annotation) is not typing.Union:
+        return None
+    args = typing.get_args(annotation)
+    # VectorLike is a superset of ArrayLike, so it is tested first
+    for name in ("VectorLike", "ArrayLike"):
+        members = set(typing.get_args(getattr(conversions, name)))
+        if members <= set(args):
+            rest = [a for a in args if a not in members]
+            parts = [f"``{name}``"] + [format_annotation(a, config)
+                                       for a in rest]
+            return " | ".join(parts)
+    return None
+
+
+typehints_formatter = _alias_formatter
+# a callable configuration value cannot be pickled into the environment
+# cache; Sphinx warns about that, and -W would turn the warning into an error
+suppress_warnings = ['config.cache']
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),

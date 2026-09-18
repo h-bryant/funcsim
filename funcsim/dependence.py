@@ -416,9 +416,9 @@ class MvNorm():
             A pandas Series representing a joint draw from the multivariate
             normal distribution.  The index values are the variable names,
             and the values are the random values.  If no variable names were
-            provided in the input data,
-            the variables will be named 'v0', 'v1', ..., reflecting the
-            order of the columns in the input data.
+            provided (as column labels of the input data, or through the
+            `names` argument of :meth:`from_params`), the variables are
+            named 'v0', 'v1', ..., in column order.
         """
         uvec = [next(ugen) for i in range(self._K)]
         retA = self._mu + np.dot(self._A, stats.norm.ppf(uvec))

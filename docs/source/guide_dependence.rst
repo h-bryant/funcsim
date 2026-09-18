@@ -2,9 +2,7 @@ Multivariate Distributions and Dependence
 =========================================
 
 When the inputs to a simulation are not independent, a trial function
-needs joint draws.  funcsim provides three approaches, all of which fit to
-data and then produce one joint draw per call from the uniform generator
-passed to the trial function:
+needs joint draws.  funcsim provides three approaches:
 
 - :class:`funcsim.MvNorm` and :class:`funcsim.MvKde` model the joint
   distribution directly (multivariate normal, or multivariate kernel
@@ -25,6 +23,9 @@ the data (variables in columns, observations in rows, as a NumPy array,
 constructor, then call ``draw(ugen)`` inside the trial function.  ``draw``
 returns a :class:`pandas.Series` indexed by variable name (the column
 names of the input, or ``v0``, ``v1``, ... for a bare array).
+``MvNorm`` can alternatively be constructed from a specified mean vector
+and covariance matrix with :meth:`funcsim.MvNorm.from_params`, described
+below.
 
 Draws consumed per call
 -----------------------
@@ -86,6 +87,12 @@ not positive definite is replaced by the nearest positive definite matrix
    mu = [3.0, 4.0]
    sigma = [[1.0, 0.5], [0.5, 1.0]]
    mvn = fs.MvNorm.from_params(mu, sigma, names=["a", "b"])
+
+   # or, pairing the sample means with a shrinkage estimate of the
+   # covariance matrix (fs.shrink is described below); the names are taken
+   # from the index of the mean vector
+   sigma_hat, lam = fs.shrink(data, target="D", return_intensity=True)
+   mvn = fs.MvNorm.from_params(data.mean(), sigma_hat)
 
 
 Multivariate kernel density estimate
