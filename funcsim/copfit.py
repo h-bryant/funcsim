@@ -267,6 +267,31 @@ def fit_frank(u: np.ndarray) -> Tuple[float, float, bool]:
     return (theta, tb, False)
 
 
+def gauss_loglik(R: np.ndarray, u: np.ndarray) -> float:
+    # total Gaussian copula log-density over the rows of u for the
+    # correlation matrix R:
+    # log c(u) = -0.5 log|R| - 0.5 z' (R^-1 - I) z, with z = Phi^-1(u)
+    uc = _clipu(u)
+    z = stats.norm.ppf(uc)
+    (M, d) = z.shape
+    (sign, logdet) = np.linalg.slogdet(R)
+    if sign <= 0:
+        raise ValueError("R must be positive definite")
+    quad = np.einsum("ij,jk,ik->i", z, np.linalg.inv(R) - np.eye(d), z)
+    return float(-0.5 * M * logdet - 0.5 * np.sum(quad))
+
+
+def student_loglik(R: np.ndarray, nu: float, u: np.ndarray) -> float:
+    # total Student's t copula log-density over the rows of u for the
+    # correlation matrix R and degrees of freedom nu:
+    # log c(u) = log t_{nu,R}(x) - sum_k log t_nu(x_k), with x = t_nu^-1(u)
+    uc = _clipu(u)
+    x = stats.t.ppf(uc, df=nu)
+    d = R.shape[0]
+    joint = stats.multivariate_t(loc=np.zeros(d), shape=R, df=nu).logpdf(x)
+    return float(np.sum(joint) - np.sum(stats.t.logpdf(x, df=nu)))
+
+
 def fit_student(u: np.ndarray) -> Tuple[np.ndarray, float]:
     # fit a Student's t copula; returns (correlation matrix, deg. of freedom).
     # stage 1: pairwise Kendall's tau -> rho_ij = sin(pi tau_ij / 2),
@@ -281,17 +306,12 @@ def fit_student(u: np.ndarray) -> Tuple[np.ndarray, float]:
     R = R / np.outer(s, s)  # renormalize to unit diagonal
     np.fill_diagonal(R, 1.0)
 
-    mvt_dim = R.shape[0]
-
     def negll(lognu):
         nu = math.exp(lognu)
         try:
             with np.errstate(divide="ignore", invalid="ignore",
                              over="ignore"):
-                x = stats.t.ppf(uc, df=nu)
-                ll = (stats.multivariate_t(loc=np.zeros(mvt_dim), shape=R,
-                                           df=nu).logpdf(x).sum()
-                      - stats.t.logpdf(x, df=nu).sum())
+                ll = student_loglik(R, nu, uc)
         except Exception:
             return np.inf
         return -ll if np.isfinite(ll) else np.inf

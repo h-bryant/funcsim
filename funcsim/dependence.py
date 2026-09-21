@@ -24,6 +24,62 @@ def _checkcov(cov, name):
     return cov
 
 
+def _cop_names(K: int,
+               names: Optional[Sequence[str]],
+               source: Optional[pd.Index] = None,
+               ) -> pd.Index:
+    # variable names for a copula built from parameters rather than data:
+    # the explicit `names` if given, else the labels carried by the
+    # parameter object (`source`, e.g. a DataFrame's columns), else v0, v1, ...
+    if names is not None:
+        nms = pd.Index(list(names))
+    elif source is not None:
+        nms = pd.Index(source)
+    else:
+        nms = pd.Index([f"v{k}" for k in range(K)])
+    if len(nms) != K:
+        raise ValueError(f"names must have length {K}; got {len(nms)}")
+    return nms
+
+
+def _corr_from_params(rho: conversions.ArrayLike) -> np.ndarray:
+    # validate a user-supplied correlation matrix for an elliptical copula:
+    # square, symmetric, unit diagonal.  If it is not positive definite the
+    # nearest positive definite matrix (Higham, 1988) is substituted and
+    # renormalized to a unit diagonal
+    if isinstance(rho, (list, tuple)):
+        R = np.asarray(rho, dtype=float)
+    else:
+        R = np.asarray(conversions.alToArray(rho), dtype=float)
+    if R.ndim != 2 or R.shape[0] != R.shape[1]:
+        raise ValueError(f"rho must be a square matrix; got shape {R.shape}")
+    if not np.allclose(R, R.T):
+        raise ValueError("rho must be symmetric")
+    if not np.allclose(np.diag(R), 1.0):
+        raise ValueError("rho must have ones on its diagonal")
+    Rpd = nearby.nearestpd(0.5 * (R + R.T))
+    s = np.sqrt(np.diag(Rpd))
+    Rn = Rpd / np.outer(s, s)
+    np.fill_diagonal(Rn, 1.0)
+    return Rn
+
+
+def _param_labels(rho: conversions.ArrayLike) -> Optional[pd.Index]:
+    # column labels carried by a parameter matrix, if any
+    if isinstance(rho, pd.DataFrame):
+        return rho.columns
+    return None
+
+
+def _positive_scalar(x: float, what: str, minimum: float = 0.0) -> float:
+    # validate a scalar copula parameter that must exceed `minimum`
+    xf = float(x)
+    if not (math.isfinite(xf) and xf > minimum):
+        raise ValueError(f"{what} must be a finite number greater than "
+                         f"{minimum}; got {x}")
+    return xf
+
+
 def _rand_int(u, M):
     # given a standard uniform draw "u", select a
     # random integer from a length "M" sequece: 0, 1, ..., M-1
@@ -482,6 +538,57 @@ class CopulaGauss():
         # cholesky decomposition of the correlation matrix, for draws
         self._A = np.linalg.cholesky(self._rho)
 
+    @classmethod
+    def from_params(cls,
+                    rho: conversions.ArrayLike,
+                    names: Optional[Sequence[str]] = None,
+                    ) -> "CopulaGauss":
+        """
+        Create a Gaussian copula object from a correlation matrix, rather
+        than from pseudo-observations.
+
+        Parameters
+        ----------
+        rho : ArrayLike
+            K-by-K correlation matrix (a nested list is also accepted).  It
+            must be symmetric with ones on its diagonal.  If it is not
+            positive definite, the nearest positive definite matrix
+            (Higham, 1988) is substituted and rescaled to a unit diagonal.
+        names : sequence of str, optional
+            Variable names, length K.  If omitted, the column labels of
+            `rho` (if it is a pandas DataFrame) are used; otherwise the
+            variables are named 'v0', 'v1', ....
+
+        Returns
+        -------
+        CopulaGauss
+            A copula object whose :meth:`draw` method returns joint standard
+            uniform draws with the given Gaussian dependence.
+
+        Examples
+        --------
+        >>> cop = fs.CopulaGauss.from_params([[1.0, 0.9], [0.9, 1.0]])
+        """
+        R = _corr_from_params(rho)
+        K = R.shape[0]
+        obj = cls.__new__(cls)
+        obj._data = None
+        obj._z = None
+        obj._names = _cop_names(K, names, _param_labels(rho))
+        (obj._M, obj._K) = (0, K)
+        obj._rho = R
+        obj._A = np.linalg.cholesky(obj._rho)
+        return obj
+
+    @property
+    def rho(self) -> pd.DataFrame:
+        """
+        The copula's correlation matrix parameter, as a DataFrame whose
+        index and columns are the variable names.
+        """
+        return pd.DataFrame(self._rho.copy(), index=self._names,
+                            columns=self._names)
+
     def draw(self,
              ugen: Generator[float, None, None]
              ) -> pd.Series:
@@ -551,6 +658,66 @@ class CopulaStudent():
 
         # cholesky decomposition of the correlation matrix, for draws
         self._A = np.linalg.cholesky(self._rho)
+
+    @classmethod
+    def from_params(cls,
+                    rho: conversions.ArrayLike,
+                    nu: float,
+                    names: Optional[Sequence[str]] = None,
+                    ) -> "CopulaStudent":
+        """
+        Create a Student's t copula object from a correlation matrix and a
+        degrees-of-freedom parameter, rather than from pseudo-observations.
+
+        Parameters
+        ----------
+        rho : ArrayLike
+            K-by-K correlation matrix (a nested list is also accepted).  It
+            must be symmetric with ones on its diagonal.  If it is not
+            positive definite, the nearest positive definite matrix
+            (Higham, 1988) is substituted and rescaled to a unit diagonal.
+        nu : float
+            Degrees of freedom, greater than zero.  As `nu` grows the copula
+            approaches the Gaussian copula with the same `rho`.
+        names : sequence of str, optional
+            Variable names, length K.  If omitted, the column labels of
+            `rho` (if it is a pandas DataFrame) are used; otherwise the
+            variables are named 'v0', 'v1', ....
+
+        Returns
+        -------
+        CopulaStudent
+            A copula object whose :meth:`draw` method returns joint standard
+            uniform draws with the given Student's t dependence.
+
+        Examples
+        --------
+        >>> cop = fs.CopulaStudent.from_params([[1.0, 0.9], [0.9, 1.0]], nu=4)
+        """
+        R = _corr_from_params(rho)
+        K = R.shape[0]
+        obj = cls.__new__(cls)
+        obj._data = None
+        obj._names = _cop_names(K, names, _param_labels(rho))
+        (obj._M, obj._K) = (0, K)
+        obj._rho = R
+        obj._nu = _positive_scalar(nu, "nu")
+        obj._A = np.linalg.cholesky(obj._rho)
+        return obj
+
+    @property
+    def rho(self) -> pd.DataFrame:
+        """
+        The copula's correlation matrix parameter, as a DataFrame whose
+        index and columns are the variable names.
+        """
+        return pd.DataFrame(self._rho.copy(), index=self._names,
+                            columns=self._names)
+
+    @property
+    def nu(self) -> float:
+        """The copula's degrees-of-freedom parameter."""
+        return float(self._nu)
 
     def draw(self,
              ugen: Generator[float, None, None]
@@ -636,6 +803,53 @@ class CopulaClayton():
                           f"should probably choose a different dependence "
                           f"representation for your data.",
                           UserWarning)
+
+    @classmethod
+    def from_params(cls,
+                    theta: float,
+                    K: int = 2,
+                    names: Optional[Sequence[str]] = None,
+                    ) -> "CopulaClayton":
+        """
+        Create a Clayton copula object from its dependence parameter,
+        rather than from pseudo-observations.
+
+        Parameters
+        ----------
+        theta : float
+            Dependence parameter, greater than zero.  Kendall's tau is theta / (theta + 2).
+        K : int, optional
+            Number of variables.  Default is 2.  Ignored when `names` is
+            given, in which case K is the number of names.
+        names : sequence of str, optional
+            Variable names.  If omitted, the variables are named 'v0',
+            'v1', ....
+
+        Returns
+        -------
+        CopulaClayton
+            A copula object whose :meth:`draw` method returns joint standard
+            uniform draws with the given Clayton dependence.
+
+        Examples
+        --------
+        >>> cop = fs.CopulaClayton.from_params(theta=2.0)
+        """
+        th = _positive_scalar(theta, "theta", 0.0)
+        k = len(names) if names is not None else int(K)
+        if k < 2:
+            raise ValueError("a copula needs at least two variables")
+        obj = cls.__new__(cls)
+        obj._data = None
+        obj._names = _cop_names(k, names)
+        (obj._M, obj._K) = (0, k)
+        obj._theta = th
+        return obj
+
+    @property
+    def theta(self) -> float:
+        """The copula's dependence parameter."""
+        return float(self._theta)
 
     def _Ftilde(self, t):
         return (1.0 + t)**(-1.0 / self._theta)
@@ -727,6 +941,53 @@ class CopulaGumbel():
                           f"representation for your data.",
                           UserWarning)
 
+    @classmethod
+    def from_params(cls,
+                    theta: float,
+                    K: int = 2,
+                    names: Optional[Sequence[str]] = None,
+                    ) -> "CopulaGumbel":
+        """
+        Create a Gumbel copula object from its dependence parameter,
+        rather than from pseudo-observations.
+
+        Parameters
+        ----------
+        theta : float
+            Dependence parameter, greater than one (one is independence, which this sampler cannot represent).  Kendall's tau is 1 - 1 / theta.
+        K : int, optional
+            Number of variables.  Default is 2.  Ignored when `names` is
+            given, in which case K is the number of names.
+        names : sequence of str, optional
+            Variable names.  If omitted, the variables are named 'v0',
+            'v1', ....
+
+        Returns
+        -------
+        CopulaGumbel
+            A copula object whose :meth:`draw` method returns joint standard
+            uniform draws with the given Gumbel dependence.
+
+        Examples
+        --------
+        >>> cop = fs.CopulaGumbel.from_params(theta=2.0)
+        """
+        th = _positive_scalar(theta, "theta", 1.0)
+        k = len(names) if names is not None else int(K)
+        if k < 2:
+            raise ValueError("a copula needs at least two variables")
+        obj = cls.__new__(cls)
+        obj._data = None
+        obj._names = _cop_names(k, names)
+        (obj._M, obj._K) = (0, k)
+        obj._theta = th
+        return obj
+
+    @property
+    def theta(self) -> float:
+        """The copula's dependence parameter."""
+        return float(self._theta)
+
     def _Ftilde(self, t):
         return math.exp(-(t**(1.0/self._theta)))
 
@@ -814,6 +1075,53 @@ class CopulaFrank():
                           f"should probably choose a different dependence "
                           f"representation for your data.",
                           UserWarning)
+
+    @classmethod
+    def from_params(cls,
+                    theta: float,
+                    K: int = 2,
+                    names: Optional[Sequence[str]] = None,
+                    ) -> "CopulaFrank":
+        """
+        Create a Frank copula object from its dependence parameter,
+        rather than from pseudo-observations.
+
+        Parameters
+        ----------
+        theta : float
+            Dependence parameter, greater than zero.  Kendall's tau is 1 - 4 (1 - D_1(theta)) / theta, with D_1 the first Debye function.
+        K : int, optional
+            Number of variables.  Default is 2.  Ignored when `names` is
+            given, in which case K is the number of names.
+        names : sequence of str, optional
+            Variable names.  If omitted, the variables are named 'v0',
+            'v1', ....
+
+        Returns
+        -------
+        CopulaFrank
+            A copula object whose :meth:`draw` method returns joint standard
+            uniform draws with the given Frank dependence.
+
+        Examples
+        --------
+        >>> cop = fs.CopulaFrank.from_params(theta=5.0)
+        """
+        th = _positive_scalar(theta, "theta", 0.0)
+        k = len(names) if names is not None else int(K)
+        if k < 2:
+            raise ValueError("a copula needs at least two variables")
+        obj = cls.__new__(cls)
+        obj._data = None
+        obj._names = _cop_names(k, names)
+        (obj._M, obj._K) = (0, k)
+        obj._theta = th
+        return obj
+
+    @property
+    def theta(self) -> float:
+        """The copula's dependence parameter."""
+        return float(self._theta)
 
     def draw(self,
              ugen: Generator[float, None, None]

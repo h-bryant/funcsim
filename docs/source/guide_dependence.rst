@@ -189,6 +189,64 @@ parameter is set to its minimum, which implies near independence, and a
 warning suggests choosing a different representation.  All families
 support any number of variables.
 
+Reading the fitted parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Each copula object exposes its fitted parameters as read-only properties:
+``rho`` (a :class:`pandas.DataFrame` labeled by variable name) on
+``CopulaGauss`` and ``CopulaStudent``, ``nu`` on ``CopulaStudent``, and
+``theta`` on the three Archimedean classes.
+
+.. code-block:: python
+
+   cop = fs.CopulaStudent(udata)
+   print(cop.rho.round(3))
+   print(f"degrees of freedom: {cop.nu:.1f}")
+
+Choosing a family
+~~~~~~~~~~~~~~~~~
+
+:func:`funcsim.copcompare` fits all five families to the same
+pseudo-observations, evaluates each copula log-likelihood at the fitted
+parameters, and tabulates the Akaike and Bayesian information criteria,
+sorted by BIC from best to worst:
+
+.. code-block:: python
+
+   print(fs.copcompare(udata).round(2))
+
+Differences of a few points are ties: the criteria are computed from
+pseudo-likelihoods (the marginals were fitted separately), which makes
+them approximate (Grønneberg and Hjort, 2014).  Because the Student's t
+copula nests the Gaussian, a very large fitted ``nu`` together with a
+BIC that trails the Gaussian by roughly ``log(M)`` says the extra
+parameter is not earning its keep.
+
+Copulas from parameters
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Every copula class also has a ``from_params`` constructor for the case
+where the dependence is specified rather than estimated: an elicited
+correlation matrix, a textbook example, or a sensitivity analysis.
+
+.. code-block:: python
+
+   rho = [[1.0, 0.9], [0.9, 1.0]]
+   cg = fs.CopulaGauss.from_params(rho, names=["yield", "price"])
+   ct = fs.CopulaStudent.from_params(rho, nu=4.0, names=["yield", "price"])
+   cc = fs.CopulaClayton.from_params(theta=3.0, names=["yield", "price"])
+   cgu = fs.CopulaGumbel.from_params(theta=2.5, K=2)
+   cf = fs.CopulaFrank.from_params(theta=8.0, K=2)
+
+A correlation matrix that is not positive definite is replaced by the
+nearest positive definite matrix (Higham, 1988), rescaled to a unit
+diagonal, with a warning, as for :meth:`funcsim.MvNorm.from_params`.
+The Archimedean constructors take the number of variables from ``names``
+when given and from ``K`` (default 2) otherwise.  Kendall's tau pins down
+each single-parameter family: Clayton ``tau = theta / (theta + 2)``,
+Gumbel ``tau = 1 - 1 / theta``, and for both elliptical families
+``tau = (2 / pi) * arcsin(rho)``.
+
 
 Iman-Conover rank correlation
 -----------------------------

@@ -10,6 +10,8 @@ from .dependence import CopulaClayton
 from .dependence import CopulaGumbel
 from .dependence import CopulaFrank
 
+from .copcompare import copcompare
+
 from .imanconover import imanconover
 
 from .shrinkage import shrink

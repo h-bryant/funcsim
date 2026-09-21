@@ -22,7 +22,7 @@ Copulas
 
 .. automodule:: funcsim
    :no-index:
-   :members: CopulaGauss, CopulaStudent, CopulaClayton, CopulaGumbel, CopulaFrank
+   :members: CopulaGauss, CopulaStudent, CopulaClayton, CopulaGumbel, CopulaFrank, copcompare
    :undoc-members:
    :show-inheritance:
 
