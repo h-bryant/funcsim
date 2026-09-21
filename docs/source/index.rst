@@ -43,7 +43,9 @@ Features
   goodness-of-fit tests.
 - Dependence modeling: multivariate normal (fitted to data or specified by
   a mean vector and covariance matrix), multivariate KDE, and Gaussian,
-  Student's t, Clayton, Gumbel, and Frank copulas, all implemented natively;
+  Student's t, Clayton, Gumbel, and Frank copulas (fitted to
+  pseudo-observations or specified by their parameters), all implemented
+  natively; information-criterion comparison of the copula families;
   Iman-Conover rank correlation induction; covariance shrinkage.
 - Expected utility and cumulative prospect theory calculations.
 - Fan charts and diagnostic plots built on plotly.

@@ -23,9 +23,12 @@ the data (variables in columns, observations in rows, as a NumPy array,
 constructor, then call ``draw(ugen)`` inside the trial function.  ``draw``
 returns a :class:`pandas.Series` indexed by variable name (the column
 names of the input, or ``v0``, ``v1``, ... for a bare array).
-``MvNorm`` can alternatively be constructed from a specified mean vector
-and covariance matrix with :meth:`funcsim.MvNorm.from_params`, described
-below.
+``MvNorm`` and the five copula classes can alternatively be constructed
+from specified parameters rather than from data, through their
+``from_params`` class methods: a mean vector and covariance matrix for
+:meth:`funcsim.MvNorm.from_params`, and a correlation matrix, degrees of
+freedom, or dependence parameter for the copulas.  Both routes are
+described below.
 
 Draws consumed per call
 -----------------------
@@ -242,7 +245,12 @@ A correlation matrix that is not positive definite is replaced by the
 nearest positive definite matrix (Higham, 1988), rescaled to a unit
 diagonal, with a warning, as for :meth:`funcsim.MvNorm.from_params`.
 The Archimedean constructors take the number of variables from ``names``
-when given and from ``K`` (default 2) otherwise.  Kendall's tau pins down
+when given and from ``K`` (default 2) otherwise.  Each parameter must lie
+strictly inside its family's range, or the constructor raises
+:class:`ValueError`: ``nu`` greater than zero for the Student's t copula,
+``theta`` greater than zero for Clayton and Frank, and ``theta`` greater
+than one for Gumbel (a Gumbel ``theta`` of exactly one is independence,
+which the sampler cannot represent).  Kendall's tau pins down
 each single-parameter family: Clayton ``tau = theta / (theta + 2)``,
 Gumbel ``tau = 1 - 1 / theta``, and for both elliptical families
 ``tau = (2 / pi) * arcsin(rho)``.
@@ -302,3 +310,18 @@ Correlation and covariance helpers
    The nearest symmetric positive definite matrix to a given matrix
    (Higham, 1988).  ``MvNorm`` and the copulas call this internally when
    needed.
+
+
+References
+----------
+
+Grønneberg, S., & Hjort, N. L. (2014). The copula information criteria.
+*Scandinavian Journal of Statistics*, 41(2), 436-459.
+
+Higham, N. J. (1988). Computing a nearest symmetric positive semidefinite
+matrix. *Linear Algebra and its Applications*, 103, 103-118.
+
+Schafer, J., & Strimmer, K. (2005). A shrinkage approach to large-scale
+covariance matrix estimation and implications for functional genomics.
+*Statistical Applications in Genetics and Molecular Biology*, 4(1),
+Article 32.
