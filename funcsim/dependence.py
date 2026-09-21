@@ -61,7 +61,20 @@ def _corr_from_params(rho: conversions.ArrayLike) -> np.ndarray:
     s = np.sqrt(np.diag(Rpd))
     Rn = Rpd / np.outer(s, s)
     np.fill_diagonal(Rn, 1.0)
-    return Rn
+    Rn = 0.5 * (Rn + Rn.T)
+    # Higham's projection of an indefinite matrix has a zero eigenvalue at
+    # machine precision, and rescaling can push it slightly negative, so the
+    # Cholesky factorization used for draws may fail.  Shrink toward the
+    # identity by the smallest power of ten that restores positive
+    # definiteness; the convex combination keeps the unit diagonal exactly
+    Id = np.eye(R.shape[0])
+    candidates = ((1.0 - eps) * Rn + eps * Id
+                  for eps in (0.0, *(10.0 ** p for p in range(-14, -3))))
+    Rout = next(filter(nearby.is_positive_definite, candidates), None)
+    if Rout is None:
+        raise ValueError("rho could not be repaired to a positive definite "
+                         "correlation matrix")
+    return Rout
 
 
 def _param_labels(rho: conversions.ArrayLike) -> Optional[pd.Index]:

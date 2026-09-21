@@ -74,6 +74,25 @@ def test_gauss_from_params_repairs_indefinite():
     assert np.all(np.linalg.eigvalsh(R) > 0.0)
 
 
+def test_from_params_repairs_borderline_indefinite():
+    # Higham's projection leaves a zero eigenvalue at machine precision, and
+    # rescaling to a unit diagonal pushed it negative for this matrix, so the
+    # Cholesky factorization failed before the shrink toward the identity
+    rho = [[1.0, 0.9, 0.9], [0.9, 1.0, -0.9], [0.9, -0.9, 1.0]]
+    for cls, kwargs in ((fs.CopulaGauss, {}), (fs.CopulaStudent, {"nu": 5.0})):
+        with pytest.warns(UserWarning):
+            cop = cls.from_params(rho, **kwargs)
+        R = cop.rho.to_numpy()
+        assert np.allclose(np.diag(R), 1.0)
+        assert np.allclose(R, R.T)
+        assert np.all(np.linalg.eigvalsh(R) > 0.0)
+        # the repaired matrix stays within rounding of the Higham projection
+        assert abs(R[0, 1] - R[0, 2]) < 1e-6
+        d = _draws(cop, 200, 3)
+        assert d.shape == (200, 3)
+        assert np.all((d > 0.0) & (d < 1.0))
+
+
 def test_student_from_params_roundtrip():
     cop = fs.CopulaStudent.from_params([[1.0, 0.6], [0.6, 1.0]], nu=4.0)
     assert cop.nu == pytest.approx(4.0)
