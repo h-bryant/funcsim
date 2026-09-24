@@ -79,6 +79,31 @@ Points to keep in mind:
   with a warning.
 - **A family that fails to fit** is dropped with a warning rather than
   aborting the comparison.
+- **Runtime.**  Every family in the built-in list fits in well under a
+  second on a few hundred observations, so a full comparison takes a few
+  seconds.  Two scipy families are left out because fitting them takes
+  orders of magnitude longer: ``stats.studentized_range`` (whose density is
+  a numerical double integral; a single fit ran for minutes) and
+  ``stats.levy_stable`` (about half a minute per fit).  Pass either through
+  ``candidates`` if you want it.
+
+Restricting the candidates
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To compare only a few families, or to label them yourself, pass a dict of
+label to :mod:`scipy.stats` distribution through the keyword-only
+``candidates`` argument (an iterable of distributions also works, labeled
+by their scipy names).  Every candidate given is fitted, with the fixed
+bounds if any, and the support-group filtering above is not applied;
+a candidate that cannot be fitted with the requested bound is dropped with
+a warning.
+
+.. code-block:: python
+
+   print(fs.compare(sample, lowerBound=0.0,
+                    candidates={"Gamma": stats.gamma,
+                                "Log-normal": stats.lognorm,
+                                "Weibull": stats.weibull_min}))
 
 Legacy arguments
 ~~~~~~~~~~~~~~~~

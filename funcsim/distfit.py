@@ -6,6 +6,7 @@ from scipy import optimize
 from scipy.stats._distn_infrastructure import rv_continuous
 import numpy as np
 import warnings
+from collections.abc import Mapping
 from .ecdfgof import adtest, cvmtest
 from . import conversions
 from typing import Optional, Tuple
@@ -20,6 +21,16 @@ from typing import Optional, Tuple
 # Such families are listed once per kind of support they can realize on a
 # region of positive measure; `compare` checks the support of every fitted
 # distribution and drops any whose support does not match its group.
+#
+# Two families are deliberately absent because fitting them is orders of
+# magnitude slower than every other candidate (profiled 2026-09-24 on 500
+# observations, where all listed candidates fit in under 0.5 s):
+#   * stats.studentized_range (bounded below): its pdf is a numerical double
+#     integral, and a single fit ran for more than 90 s before being killed,
+#     which is what made compare(..., lowerBound=0.0) hang;
+#   * stats.levy_stable (unbounded): about 30 s per fit.
+# Both can still be compared by passing them through compare's
+# `candidates` argument.
 candidates = [
     ("alpha", stats.alpha, True, False),
     ("anglit", stats.anglit, True, True),
@@ -91,7 +102,7 @@ candidates = [
     ("Asymmetric Laplace", stats.laplace_asymmetric, False, False),
     ("Lévy", stats.levy, True, False),
     ("Left-skewed Lévy", stats.levy_l, False, True),
-    ("Lévy stable", stats.levy_stable, False, False),
+    # ("Lévy stable", stats.levy_stable, False, False),  # ~30 s per fit
     ("Logistic", stats.logistic, False, False),
     ("Log-gamma", stats.loggamma, False, False),
     ("Log-Laplace", stats.loglaplace, True, False),
@@ -120,7 +131,7 @@ candidates = [
     ("Semicircular", stats.semicircular, True, True),
     ("Skewed Cauchy", stats.skewcauchy, False, False),
     ("Skew-normal", stats.skewnorm, False, False),
-    ("Studentized range", stats.studentized_range, True, False),
+    # ("Studentized range", stats.studentized_range, True, False),  # > 90 s
     ("Student's t", stats.t, False, False),
     ("Trapezoidal", stats.trapezoid, True, True),
     ("Triangular", stats.triang, True, True),
@@ -571,12 +582,37 @@ def _resolve_side(limit_name: str, limit, bound_name: str, bound
     return (bool(limit) if limit is not None else False), None
 
 
+def _user_candidates(candidates) -> list:
+    # normalize the `candidates` argument of compare to (name, dist) pairs:
+    # a mapping of name to scipy distribution, or an iterable of scipy
+    # distributions labeled by their scipy names
+    if isinstance(candidates, Mapping):
+        pairs = [(str(name), dist) for name, dist in candidates.items()]
+    else:
+        try:
+            dists = list(candidates)
+        except TypeError:
+            raise TypeError("candidates must be a mapping of name to scipy "
+                            "distribution, or an iterable of scipy "
+                            "distributions") from None
+        pairs = [(str(getattr(d, "name", type(d).__name__)), d)
+                 for d in dists]
+    if not pairs:
+        raise ValueError("candidates must not be empty")
+    for name, dist in pairs:
+        if not (hasattr(dist, "fit") and hasattr(dist, "logpdf")):
+            raise TypeError(f"candidate {name!r} is not a scipy.stats "
+                            f"continuous distribution")
+    return pairs
+
+
 def compare(data: conversions.VectorLike,
             lowerLimit: Optional[bool] = None,
             upperLimit: Optional[bool] = None,
             *,
             lowerBound: Optional[float] = None,
-            upperBound: Optional[float] = None
+            upperBound: Optional[float] = None,
+            candidates: Optional[object] = None
             ) -> str:
     """
     Compare fits of univariate distributions for a continuous random variable.
@@ -616,6 +652,17 @@ def compare(data: conversions.VectorLike,
         and greater than `lowerBound` if that is also given).  If omitted,
         and `upperLimit` is not given, only distributions without an upper
         bound are considered.
+    candidates : dict or iterable, optional
+        Keyword only.  Restrict the comparison to these distributions instead
+        of the built-in list: a dict mapping a label to a
+        :mod:`scipy.stats` continuous distribution (for example
+        ``{"Gamma": stats.gamma, "Log-normal": stats.lognorm}``), or an
+        iterable of distributions labeled by their scipy names.  Every
+        candidate given is fitted, with `lowerBound` and `upperBound` fixed
+        if they are given, and the support-group filtering described in the
+        Notes is not applied; a candidate that cannot be fitted (for
+        example, one without a natural lower bound when `lowerBound` is
+        given) is dropped with a warning.
 
     Returns
     -------
@@ -626,18 +673,29 @@ def compare(data: conversions.VectorLike,
     Raises
     ------
     TypeError
-        If `lowerLimit` or `upperLimit` is not a bool, or if `lowerBound` or
-        `upperBound` is not a real number.
+        If `lowerLimit` or `upperLimit` is not a bool, if `lowerBound` or
+        `upperBound` is not a real number, or if `candidates` holds
+        something other than scipy distributions.
     ValueError
         If a bound is not finite, if the data fall outside a fixed bound, if
-        ``lowerBound >= upperBound``, or if the legacy flag and the bound
-        are both given for the same side of the support.
+        ``lowerBound >= upperBound``, if the legacy flag and the bound are
+        both given for the same side of the support, or if `candidates` is
+        empty.
 
     Notes
     -----
     For reliable results, at least 50 observations are recommended. The summary
     includes BIC, AIC, and Anderson-Darling and Cramer-von Mises heuristic
     scores for each distribution.
+
+    The built-in list (``funcsim.distfit.candidates``) covers more than one
+    hundred families, every one of which fits in well under a second on a
+    few hundred observations, so a full comparison takes a few seconds.  Two
+    scipy families are excluded from it because fitting them takes orders
+    of magnitude longer: ``stats.studentized_range`` (whose density is a
+    numerical double integral; a single fit ran for minutes) and
+    ``stats.levy_stable`` (about half a minute per fit).  Either can still
+    be compared by passing it in `candidates`.
 
     Fixing a bound is a constraint on a distribution's location and scale
     parameters, not truncation.  Each fixed bound removes one free parameter
@@ -692,8 +750,15 @@ def compare(data: conversions.VectorLike,
                f"can produce unreliable results. Interpret "
                f"with caution.")
         warnings.warn(msg, UserWarning)
-    dist_list = [d for d in candidates if d[2] == has_lower and
-                 d[3] == has_upper]
+    if candidates is not None:
+        # an explicit list: fit exactly what was asked for, and skip the
+        # support-group filter that organizes the built-in list
+        dist_list = _user_candidates(candidates)
+        check_support = False
+    else:
+        dist_list = [d for d in globals()["candidates"]
+                     if d[2] == has_lower and d[3] == has_upper]
+        check_support = True
     results, failures = _fit_all(dataA, dist_list, lower, upper)
     results_edit = []
     mismatched = []
@@ -705,7 +770,8 @@ def compare(data: conversions.VectorLike,
             warnings.warn(msg, RuntimeWarning)
             continue
         flags = _fitted_support_flags(r.dist)
-        if flags is not None and flags != (has_lower, has_upper):
+        if (check_support and flags is not None
+                and flags != (has_lower, has_upper)):
             mismatched.append(r.distName)
             continue
         results_edit.append(r)
