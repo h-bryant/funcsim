@@ -292,6 +292,27 @@ def simulate(f: Callable[[Generator[int, float, None],
         than it did when first probed.
     funcsim.rdarrays.MissingValue
         If `f` recalls a lagged value that is not available.
+
+    Notes
+    -----
+    **Draw allocation and common random numbers.**  Before any trial runs,
+    the draws are allocated as one column of `ntrials` values per uniform
+    that `f` consumes over all steps of a trial, generated in consumption
+    order from a single :class:`numpy.random.Generator` seeded with `seed`
+    (stratified across trials when `sampling` is ``'lh'``).  The j-th
+    uniform consumed in trial r therefore depends only on `seed`, `ntrials`,
+    `sampling`, j, and r: not on how many uniforms `f` consumes in total,
+    on what `f` computes from them, or on `multi`.  This is a documented
+    guarantee.  Its consequence is common random numbers across scenarios:
+    two trial functions that consume K and K + 1 uniforms (with `nsteps` of
+    1) receive identical first K uniforms in every trial under the same
+    `seed` and `ntrials`, so differences in their outputs are due to the
+    extra draw and the model alone.  With several steps, step s of trial r
+    receives uniforms sK + 1 through (s + 1)K of that trial's stream, where
+    K is the number consumed per step; two step functions with different
+    per-step counts therefore share their draws only in the first step.
+    With `stdnorm` True the same statements hold for the standard normal
+    draws, which are an elementwise transform of the uniforms.
     """
     if hist0 is not None:
         _checkhist0(hist0)

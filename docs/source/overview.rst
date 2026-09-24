@@ -294,6 +294,31 @@ attributable to the scenario alone, without Monte Carlo noise.  Use
    low = fs.simulate(f=functools.partial(trial, prob=0.25), ntrials=500)
    high = fs.simulate(f=functools.partial(trial, prob=0.50), ntrials=500)
 
+The guarantee behind this is worth stating precisely, because it also
+covers scenarios whose trial functions consume *different* numbers of
+draws.  Before any trial runs, ``simulate`` allocates one column of
+``ntrials`` values per uniform that ``f`` consumes over all steps of a
+trial, generated in consumption order from a single
+:class:`numpy.random.Generator` seeded with ``seed`` (and stratified across
+trials under ``sampling="lh"``).  The j-th uniform consumed in trial r
+therefore depends only on ``seed``, ``ntrials``, ``sampling``, j, and r,
+and not on how many uniforms ``f`` consumes in total, on what ``f``
+computes from them, or on ``multi``.  Consequently two trial functions that
+consume K and K + 1 uniforms (with ``nsteps=1``) receive identical first K
+uniforms in every trial under the same seed and number of trials: a
+scenario that adds one more random input to a model leaves the existing
+inputs' draws untouched.  For example, a Gaussian copula ``draw`` consumes
+K values and a Student's t copula ``draw`` consumes K + 1 (see
+:doc:`guide_dependence`), so two simulations that differ only in the copula
+feed the same K uniforms into the two copulas in every trial.
+
+With several steps the stream is consumed in step order: step s of trial r
+receives uniforms sK + 1 through (s + 1)K, where K is the number consumed
+per step.  Two step functions with different per-step counts therefore
+share their draws only in the first step.  Under ``stdnorm=True`` the same
+statements hold for the standard normal draws, which are an elementwise
+transform of the uniforms.
+
 A ``lambda`` or a closure works as well when ``multi=False``.  Use
 ``functools.partial`` with a module-level function if you intend to run
 the simulation on multiple cores.  Binding by keyword, as above, turns
