@@ -208,6 +208,13 @@ Variables and history
   argument; ``hist0`` is then optional.  Steps are then independent across
   time, which is equivalent to a static simulation with ``nsteps``
   variables per trial.
+- ``simulate`` reads the signature of ``f`` to decide what to pass.  The
+  first parameter receives ``ugen``.  A second parameter receives the
+  history if it has no default or is named ``hist``.  A second parameter
+  with a default and another name, such as ``scale=1.0``, is a setting:
+  it is left at its default and ``f`` is called with ``ugen`` alone.  Any
+  further parameters must have defaults.  A parameter named ``hist``
+  anywhere but second is rejected as ambiguous.
 
 A worked example with two variables, where a call option payoff depends on
 a simulated price:
@@ -289,7 +296,12 @@ attributable to the scenario alone, without Monte Carlo noise.  Use
 
 A ``lambda`` or a closure works as well when ``multi=False``.  Use
 ``functools.partial`` with a module-level function if you intend to run
-the simulation on multiple cores.
+the simulation on multiple cores.  Binding by keyword, as above, turns
+``prob`` into a keyword-only parameter with a default, which ``simulate``
+leaves alone.  Giving the parameter a default in the definition itself
+(``def trial(ugen, prob=0.25)``) works the same way: because the second
+parameter has a default and is not named ``hist``, ``simulate`` calls the
+function with ``ugen`` alone and the default applies.
 
 
 Multi-core simulation
@@ -321,9 +333,11 @@ Errors you may see
 ``ValueError``
    ``hist0`` is not a DataArray with dimensions ``steps`` and
    ``variables``, or its ``steps`` index is neither integer nor a
-   PeriodIndex; ``f`` is not callable, takes more than two arguments, or
-   returns something other than a dict keyed by strings; or ``sampling`` is
-   not ``"lh"`` or ``"mc"``.
+   PeriodIndex; ``f`` is not callable, has more than two parameters without
+   defaults, has a keyword-only parameter without a default, or has a
+   parameter named ``hist`` that is not its second; ``f`` returns something
+   other than a dict keyed by strings; or ``sampling`` is not ``"lh"`` or
+   ``"mc"``.
 
 ``RuntimeError``
    ``f`` consumed a different number of draws in some trial or step than

@@ -12,18 +12,55 @@ from typing import Optional
 import inspect
 
 
-def _get_arg_count(func):
-    sig = inspect.signature(func)
-    params = sig.parameters.values()
-
-    # Count only parameters that are positional or keyword
-    # (excluding *args and **kwargs)
-    return sum(
-        1 for p in params
-        if p.kind in (inspect.Parameter.POSITIONAL_ONLY,
-                      inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                      inspect.Parameter.KEYWORD_ONLY)
-    )
+def _stepf_arity(func):
+    # how many positional arguments simulate passes to the user's trial or
+    # step function: 1 (the draw generator) or 2 (the generator and the
+    # per-trial history).  The rule, stated in the simulate docstring:
+    #   * the first parameter receives the generator;
+    #   * a second parameter receives the history if it has no default or
+    #     is named 'hist'.  A second parameter with a default and another
+    #     name is a setting (e.g., 'scale=1.0') left at its default, and the
+    #     function is called with the generator alone;
+    #   * any further parameters must have defaults; keyword-only
+    #     parameters (as functools.partial produces) must have defaults;
+    #   * a parameter named 'hist' anywhere but second is ambiguous.
+    # Formerly every parameter was counted, so 'def f(ugen, scale=1.0)'
+    # received the history object as 'scale' and failed far from the cause
+    P = inspect.Parameter
+    try:
+        params = list(inspect.signature(func).parameters.values())
+    except (TypeError, ValueError):
+        raise ValueError('"f" must be a function whose signature can be '
+                         'inspected') from None
+    positional = [p for p in params
+                  if p.kind in (P.POSITIONAL_ONLY, P.POSITIONAL_OR_KEYWORD)]
+    required_kw = [p.name for p in params
+                   if p.kind is P.KEYWORD_ONLY and p.default is P.empty]
+    if required_kw:
+        raise ValueError(f'"f" has keyword-only parameter(s) without a '
+                         f'default ({", ".join(required_kw)}); simulate '
+                         f'supplies only the draw generator and the history, '
+                         f'positionally.  Bind such parameters with '
+                         f'functools.partial or give them defaults')
+    if not positional:
+        raise ValueError('"f" must take the draw generator as its first '
+                         'parameter')
+    required = [p.name for p in positional if p.default is P.empty]
+    if len(required) > 2:
+        raise ValueError(f'"f" has {len(required)} parameters without '
+                         f'defaults ({", ".join(required)}); simulate '
+                         f'supplies at most two: the draw generator and the '
+                         f'history.  Give the others defaults or bind them '
+                         f'with functools.partial')
+    if any(p.name == "hist" and i != 1 for i, p in enumerate(positional)):
+        raise ValueError('a parameter of "f" named "hist" receives the '
+                         'per-trial history and must therefore be the second '
+                         'parameter')
+    if len(required) == 2:
+        return 2
+    if len(positional) >= 2 and positional[1].name == "hist":
+        return 2
+    return 1
 
 
 def _checkhist0(hist0):
@@ -197,6 +234,17 @@ def simulate(f: Callable[[Generator[int, float, None],
         times `f` calls ``next(ugen)`` must be the same in every trial and
         step, because draws are pre-allocated across trials for stratified
         sampling.
+
+        Which parameters receive what is decided from the signature of `f`:
+        the first parameter receives the generator; a second parameter
+        receives the history if it has no default or is named ``hist``,
+        whereas a second parameter with a default and another name (for
+        example ``scale=1.0``) is treated as a setting, left at its default,
+        and `f` is called with the generator alone.  Any further parameters
+        must have defaults, as must keyword-only parameters (which is what
+        :func:`functools.partial` produces when binding a scenario
+        parameter by name).  A parameter named ``hist`` in any position but
+        the second is rejected as ambiguous.
     ntrials : int, optional
         The number of trials to perform.  Default is 500.
     nsteps : int, optional
@@ -234,9 +282,11 @@ def simulate(f: Callable[[Generator[int, float, None],
     Raises
     ------
     ValueError
-        If `hist0` is malformed, `f` is not callable or takes more than two
-        arguments, `f` does not return a dict keyed by strings, or `sampling`
-        is not one of 'lh' or 'mc'.
+        If `hist0` is malformed; if `f` is not callable, has more than two
+        parameters without defaults, has a keyword-only parameter without a
+        default, or has a parameter named ``hist`` that is not its second;
+        if `f` does not return a dict keyed by strings; or if `sampling` is
+        not one of 'lh' or 'mc'.
     RuntimeError
         If `f` consumes a different number of draws in some trial or step
         than it did when first probed.
@@ -276,16 +326,13 @@ def simulate(f: Callable[[Generator[int, float, None],
     if not isinstance(f, Callable):
         raise ValueError('"f" must be a callable function')
 
-    # infer number of arguments in 'f'.  If it takes only a single arg, wrap it
-    # in an outer func that takes "hist" as a second arg
-    numb_f_args = _get_arg_count(f)
-    if numb_f_args == 1:
-        stepf = functools.partial(_stepf_1arg, f)
-    elif numb_f_args == 2:
+    # decide from the signature of 'f' whether it takes the history as a
+    # second argument; if not, wrap it in an outer func that does
+    if _stepf_arity(f) == 2:
         stepf = f
     else:
-        raise ValueError('"f" should take two arguments at most')
-     
+        stepf = functools.partial(_stepf_1arg, f)
+
     # indexes for the final output xr.DataArray
     varNames = hist0.indexes['variables']
     namePositionsPrelim = {nm: i for i, nm in enumerate(varNames)}
