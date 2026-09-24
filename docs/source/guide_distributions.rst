@@ -141,8 +141,25 @@ deviation directly in the units of the data.
    def trial(ugen):
        return {"income": kde.ppf(next(ugen))}
 
-The ``ppf`` is computed numerically by root finding on the ``cdf``, so a
-``Kde`` is slower to sample from than a parametric distribution.
+Each of the three methods returns a Python float for a scalar argument and
+a NumPy array of the same shape for an array-like argument (a pandas Series
+gives an array), so results can be used directly in arithmetic without
+wrapping them in ``float()``.
+
+A KDE has no closed-form inverse CDF.  ``ppf`` is served from a monotone
+inverse-CDF table that is built once, on the first call: the CDF is
+evaluated on 4096 points spanning the data range plus eight kernel
+standard deviations on each side, and the quantile is interpolated against
+the normal score of the CDF by a shape-preserving cubic.  The table agrees
+with root finding to better than 1e-8 of the data range in funcsim's tests
+(the documented target is 1e-6), it is monotone in ``u``, and evaluating it
+costs microseconds per value rather than the roughly 0.3 ms of a root
+find, which matters when tens of thousands of trials each draw from several
+KDE marginals.  Probabilities outside the table's range fall back to root
+finding.  Because the table and the root finder differ in the last digits,
+simulated values that pass through ``Kde.ppf`` change at that level when
+upgrading from a version before 0.2.7; ``fs.Kde(sample, exact_ppf=True)``
+keeps the older root-finding behavior for every value.
 
 :func:`funcsim.edf` returns the empirical distribution function of a sample
 as a plain callable:
