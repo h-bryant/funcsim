@@ -297,7 +297,9 @@ def test_gumbel_coefs_vs_stirling():
 
 # ---------------------------------------------------------------------------
 # negative-dependence gate: warn, clamp to the family floor, and still
-# produce finite draws in (0, 1)
+# produce finite draws in (0, 1).  The two-variable Frank copula represents
+# negative dependence and is exercised in test_frank_negative.py; with three
+# variables it is gated like the others
 # ---------------------------------------------------------------------------
 
 def test_gate_negative_dependence():
@@ -305,12 +307,16 @@ def test_gate_negative_dependence():
     u1 = rng.random(500)
     u2 = np.clip(1.0 - u1 + rng.normal(0.0, 0.05, 500), 1e-6, 1.0 - 1e-6)
     neg = np.column_stack([u1, u2])
-    for cls, floor in ((fs.CopulaClayton, copfit.THETA_MIN_CLAYTON),
-                       (fs.CopulaGumbel, copfit.THETA_MIN_GUMBEL),
-                       (fs.CopulaFrank, copfit.THETA_MIN_FRANK)):
+    neg3 = np.column_stack([u1, u2, rng.random(500)])
+    for cls, floor, data in ((fs.CopulaClayton, copfit.THETA_MIN_CLAYTON, neg),
+                             (fs.CopulaGumbel, copfit.THETA_MIN_GUMBEL, neg),
+                             (fs.CopulaFrank, copfit.THETA_MIN_FRANK, neg3)):
         with pytest.warns(UserWarning):
-            cop = cls(neg)
+            cop = cls(data)
         assert cop._theta == floor
         d = _draws(cop, 20, seed=20)
         assert np.all(np.isfinite(d))
         assert np.all((d > 0.0) & (d < 1.0))
+    # two variables: Frank fits a negative theta instead, without a warning
+    cop = fs.CopulaFrank(neg)
+    assert cop._theta < 0.0

@@ -51,7 +51,9 @@ Class                      Draws per ``draw``
 
 The count is constant for a given object, so the fixed-draw rule is
 satisfied automatically as long as ``draw`` is called the same number of
-times in every trial.
+times in every trial.  (``CopulaFrank`` consumes K + 2 values whatever the
+sign of its parameter, although its sampler for negative dependence uses
+only two of them.)
 
 
 Multivariate normal
@@ -181,16 +183,26 @@ Copula families
    Archimedean, with upper-tail dependence (joint booms).
 
 ``CopulaFrank``
-   Archimedean, symmetric, no tail dependence.
+   Archimedean, symmetric, no tail dependence.  With two variables it also
+   represents negative dependence (``theta < 0``).
 
 The three Archimedean families each have a single dependence parameter
 theta, fitted by maximum pseudo-likelihood using the exact K-dimensional
-copula density, starting from the Kendall's-tau inversion estimate.  They
-accommodate **positive dependence only**.  If the data exhibit negative
-dependence on average (mean pairwise Kendall's tau at or below zero), the
-parameter is set to its minimum, which implies near independence, and a
-warning suggests choosing a different representation.  All families
-support any number of variables.
+copula density, starting from the Kendall's-tau inversion estimate.
+Clayton and Gumbel accommodate **positive dependence only**, and so does
+Frank with more than two variables.  With two variables the Frank copula
+is defined for negative theta as well, which makes it the natural
+one-parameter symmetric choice for a pair such as a crop yield and its
+price: its fit then returns a negative theta, ``from_params`` and
+``from_tau`` accept negative values, and draws use conditional inversion
+(closed form for Frank) instead of the frailty construction used for
+positive theta.  In the positive-only cases, if the data exhibit
+non-positive dependence on average (mean pairwise Kendall's tau at or
+below zero), the parameter is set to its minimum, which implies near
+independence, and a warning suggests choosing a different representation.
+(The Clayton copula also exists for negative theta with two variables, but
+that range is not implemented.)  All families support any number of
+variables.
 
 Reading the fitted parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -298,9 +310,10 @@ The Archimedean constructors take the number of variables from ``names``
 when given and from ``K`` (default 2) otherwise.  Each parameter must lie
 strictly inside its family's range, or the constructor raises
 :class:`ValueError`: ``nu`` greater than zero for the Student's t copula,
-``theta`` greater than zero for Clayton and Frank, and ``theta`` greater
-than one for Gumbel (a Gumbel ``theta`` of exactly one is independence,
-which the sampler cannot represent).  Kendall's tau pins down
+``theta`` greater than zero for Clayton, ``theta`` nonzero for Frank
+(negative only with two variables), and ``theta`` greater than one for
+Gumbel (a Gumbel ``theta`` of exactly one is independence, which the
+sampler cannot represent).  Kendall's tau pins down
 each single-parameter family: Clayton ``tau = theta / (theta + 2)``,
 Gumbel ``tau = 1 - 1 / theta``, Frank
 ``tau = 1 - 4 (1 - D_1(theta)) / theta`` with ``D_1`` the first Debye
@@ -332,8 +345,10 @@ unchanged.  The Archimedean constructors take ``K`` and ``names`` as
 ``from_params`` does.  Frank's relation has no closed-form inverse and is
 solved numerically to full floating-point precision.  Each family accepts
 only the values it can represent, and raises :class:`ValueError`
-otherwise: strictly between -1 and 1 for the elliptical copulas, and
-strictly between 0 and 1 for Clayton, Gumbel, and Frank.
+otherwise: strictly between -1 and 1 for the elliptical copulas, strictly
+between 0 and 1 for Clayton and Gumbel, and for Frank strictly between -1
+and 1 and nonzero, a negative value being admissible with two variables
+only (``fs.CopulaFrank.from_tau(-0.5)`` gives ``theta = -5.736``).
 
 
 Iman-Conover rank correlation
@@ -405,6 +420,8 @@ Grønneberg, S., & Hjort, N. L. (2014). The copula information criteria.
 
 Higham, N. J. (1988). Computing a nearest symmetric positive semidefinite
 matrix. *Linear Algebra and its Applications*, 103, 103-118.
+
+Nelsen, R. B. (2006). *An introduction to copulas* (2nd ed.). Springer.
 
 Schafer, J., & Strimmer, K. (2005). A shrinkage approach to large-scale
 covariance matrix estimation and implications for functional genomics.

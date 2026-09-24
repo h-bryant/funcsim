@@ -999,7 +999,11 @@ class CopulaClayton():
     Each call to :meth:`draw` consumes K + 1 values from ``ugen``, where K
     is the number of variables.  If the data exhibit negative dependence
     (mean pairwise Kendall's tau <= 0), theta is set to its minimum
-    (near independence) and a warning is issued.
+    (near independence) and a warning is issued.  The Clayton copula also
+    exists for ``-1 <= theta < 0`` with two variables (negative
+    dependence), but that range is not implemented here; see
+    :class:`CopulaFrank` for a one-parameter family that represents
+    negative dependence between two variables.
     """
 
     def __init__(self,
@@ -1368,16 +1372,20 @@ class CopulaFrank():
         distribution to the raw data for that variable.  The
         values in each column should be in the range (0, 1). The dependence
         parameter theta is fit by maximum pseudo-likelihood, starting from
-        the Kendall's-tau inversion estimate.  This implementation accommodates
-        only positive dependence, so the fitted value for theta is
-        constrained to be > 0.
+        the Kendall's-tau inversion estimate.  With two variables theta may
+        be negative (negative dependence) as well as positive; with more
+        than two variables the Frank copula exists only for theta > 0.
 
     Notes
     -----
     Each call to :meth:`draw` consumes K + 2 values from ``ugen``, where K
-    is the number of variables.  If the data exhibit negative dependence
-    (mean pairwise Kendall's tau <= 0), theta is set to its minimum
-    (near independence) and a warning is issued.
+    is the number of variables, whatever the sign of theta.  For theta > 0
+    draws use the logarithmic-series frailty construction; for theta < 0
+    (two variables) they use conditional inversion, which has a closed form
+    for the Frank copula (Nelsen, 2006, section 4.3).  With more than two
+    variables, data that exhibit non-positive dependence (mean pairwise
+    Kendall's tau <= 0) give a theta at its minimum (near independence)
+    and a warning.
     """
 
     def __init__(self,
@@ -1398,15 +1406,16 @@ class CopulaFrank():
         # fit parameters
         (self._theta, taub, clamped) = copfit.fit_frank(self._data)
         if clamped:
-            warnings.warn(f"The Frank copula implementation in funcsim "
+            warnings.warn(f"The Frank copula with more than two variables "
                           f"accommodates only positive dependence, but the "
-                          f"data exhibit negative dependence (mean pairwise "
-                          f"Kendall's tau = {taub:.3f}).  A theta value of "
-                          f"{copfit.THETA_MIN_FRANK} is being used rather "
-                          f"than a fitted value, which implies (near) "
-                          f"independence among the variables. You "
-                          f"should probably choose a different dependence "
-                          f"representation for your data.",
+                          f"data exhibit non-positive dependence (mean "
+                          f"pairwise Kendall's tau = {taub:.3f}).  A theta "
+                          f"value of {copfit.THETA_MIN_FRANK} is being used "
+                          f"rather than a fitted value, which implies (near) "
+                          f"independence among the variables. You should "
+                          f"probably choose a different dependence "
+                          f"representation for your data (the two-variable "
+                          f"Frank copula does represent negative dependence).",
                           UserWarning)
 
     @classmethod
@@ -1422,7 +1431,11 @@ class CopulaFrank():
         Parameters
         ----------
         theta : float
-            Dependence parameter, greater than zero.  Kendall's tau is 1 - 4 (1 - D_1(theta)) / theta, with D_1 the first Debye function.
+            Dependence parameter, nonzero.  Positive values give positive
+            dependence for any number of variables; negative values give
+            negative dependence and are admissible for two variables only.
+            Kendall's tau is 1 - 4 (1 - D_1(theta)) / theta, with D_1 the
+            first Debye function; it has the sign of theta.
         K : int, optional
             Number of variables.  Default is 2.  Ignored when `names` is
             given, in which case K is the number of names.
@@ -1439,11 +1452,19 @@ class CopulaFrank():
         Examples
         --------
         >>> cop = fs.CopulaFrank.from_params(theta=5.0)
+        >>> neg = fs.CopulaFrank.from_params(theta=-3.0)   # two variables
         """
-        th = _positive_scalar(theta, "theta", 0.0)
+        th = float(theta)
+        if not (math.isfinite(th) and th != 0.0):
+            raise ValueError(f"theta must be a finite nonzero number; got "
+                             f"{theta}")
         k = len(names) if names is not None else int(K)
         if k < 2:
             raise ValueError("a copula needs at least two variables")
+        if th < 0.0 and k > 2:
+            raise ValueError(f"the Frank copula with theta < 0 (negative "
+                             f"dependence) is defined only for two "
+                             f"variables; got theta={theta} with K={k}")
         obj = cls.__new__(cls)
         obj._data = None
         obj._names = _cop_names(k, names)
@@ -1464,11 +1485,12 @@ class CopulaFrank():
         Parameters
         ----------
         tau : float
-            Kendall's tau, strictly between 0 and 1 (this implementation
-            represents positive dependence only).  The relation
-            ``tau = 1 - 4 (1 - D_1(theta)) / theta``, with ``D_1`` the first
-            Debye function, has no closed-form inverse; it is solved
-            numerically to full floating-point precision.
+            Kendall's tau, strictly between -1 and 1 and nonzero.  Negative
+            values (negative dependence) are admissible for two variables
+            only.  The relation ``tau = 1 - 4 (1 - D_1(theta)) / theta``,
+            with ``D_1`` the first Debye function, has no closed-form
+            inverse; it is solved numerically to full floating-point
+            precision, and theta takes the sign of tau.
         K : int, optional
             Number of variables.  Default is 2.  Ignored when `names` is
             given, in which case K is the number of names.
@@ -1485,12 +1507,18 @@ class CopulaFrank():
         Examples
         --------
         >>> cop = fs.CopulaFrank.from_tau(0.6)    # theta = 7.930
+        >>> neg = fs.CopulaFrank.from_tau(-0.5)   # theta = -5.736
         """
         t = float(tau)
-        if not (0.0 < t < 1.0):
+        if not (-1.0 < t < 1.0) or t == 0.0:
             raise ValueError("Kendall's tau for a Frank copula must lie "
-                             "strictly between 0 and 1 (this implementation "
-                             f"represents positive dependence only); got {tau}")
+                             "strictly between -1 and 1 and be nonzero; "
+                             f"got {tau}")
+        k = len(names) if names is not None else int(K)
+        if t < 0.0 and k > 2:
+            raise ValueError(f"a negative Kendall's tau (negative dependence) "
+                             f"is admissible for the Frank copula with two "
+                             f"variables only; got tau={tau} with K={k}")
         return cls.from_params(copfit.frank_theta_from_tau(t), K=K,
                                names=names)
 
@@ -1537,9 +1565,31 @@ class CopulaFrank():
         # Generate d uniform random variables
         uA = np.array([next(ugen) for _ in range(self._K)])
 
+        # the two draws for the log-series frailty (consumed whatever the
+        # sign of theta, so the count per call is fixed)
+        w1 = next(ugen)
+        w2 = next(ugen)
+
+        if self._theta < 0.0:
+            # negative dependence, two variables: conditional inversion,
+            # which is closed form for Frank.  With u1 the first uniform and
+            # a the conditional probability P(U2 <= u2 | U1 = u1),
+            #   u2 = -(1/theta) ln[1 + a (e^-theta - 1)
+            #                       / (a + (1 - a) e^(-theta u1))]
+            # (Nelsen, 2006, section 4.3), evaluated in log space with
+            # s = -theta > 0 so that huge |theta| cannot overflow
+            s = -self._theta
+            u1 = uA[0]
+            a = min(max(uA[1], 1e-300), 1.0 - 1e-16)
+            la = math.log(a)
+            l1a = math.log1p(-a)
+            u2 = (np.logaddexp(l1a + s * u1, la + s)
+                  - np.logaddexp(la, l1a + s * u1)) / s
+            return pd.Series([u1, float(u2)], index=self._names)
+
         # log-series "frailty" draw via Kemp's algorithm (exactly two
         # uniform draws, so the total draw count stays fixed)
-        v = _logser_draw(self._theta, next(ugen), next(ugen))
+        v = _logser_draw(self._theta, w1, w2)
 
         # final draws: -log(1 - (1 - exp(-theta)) * uA**(1/v)) / theta,
         # evaluated in log space so that huge frailty values (which are

@@ -141,7 +141,9 @@ def test_archimedean_from_params_validation():
     with pytest.raises(ValueError):
         fs.CopulaGumbel.from_params(theta=1.0)
     with pytest.raises(ValueError):
-        fs.CopulaFrank.from_params(theta=-1.0)
+        fs.CopulaFrank.from_params(theta=0.0)
+    with pytest.raises(ValueError):
+        fs.CopulaFrank.from_params(theta=-1.0, K=3)   # negative: K = 2 only
     with pytest.raises(ValueError):
         fs.CopulaClayton.from_params(theta=1.0, K=1)
 

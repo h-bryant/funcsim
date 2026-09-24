@@ -139,12 +139,45 @@ def _eulerian(n: int) -> list:
     return row
 
 
+def _log_expm1(x: np.ndarray) -> np.ndarray:
+    # log(exp(x) - 1) for x > 0, without overflow for large x
+    x = np.asarray(x, dtype=float)
+    small = np.log(np.expm1(np.minimum(x, 30.0)))
+    large = x + np.log1p(-np.exp(-np.maximum(x, 30.0)))
+    return np.where(x > 30.0, large, small)
+
+
+def _frank_loglik_neg2(theta: float, u: np.ndarray) -> float:
+    # total bivariate Frank log-density for theta < 0.  The density is the
+    # same expression as for theta > 0 (Nelsen, 2006, table 4.1, family 5);
+    # with s = -theta > 0 it reads, every factor positive,
+    #   c(u, v) = s (e^s - 1) e^{s(u+v)}
+    #             / [(e^s - 1) + (e^{su} - 1)(e^{sv} - 1)]^2,
+    # which is evaluated in log space
+    s = -theta
+    (M, d) = u.shape
+    log_es1 = float(_log_expm1(np.array(s)))
+    log_den = np.logaddexp(log_es1,
+                           _log_expm1(s * u[:, 0]) + _log_expm1(s * u[:, 1]))
+    return float(M * (math.log(s) + log_es1) + s * np.sum(u)
+                 - 2.0 * np.sum(log_den))
+
+
 def frank_loglik(theta: float, u: np.ndarray) -> float:
-    # total Frank copula log-density over the rows of u, for theta > 0:
+    # total Frank copula log-density over the rows of u.  theta = 0 is the
+    # independence limit (log-density zero); theta < 0 is admissible for two
+    # variables only.  For theta > 0 and any d:
     # log c = (d-1) log(theta) + log Li_{-(d-1)}(z)
     #         + sum_j [-theta u_j - log(1 - exp(-theta u_j))]
     # with log z = sum_j log(1 - exp(-theta u_j)) - (d-1) log(1 - exp(-theta))
     # and Li_{-n}(z) evaluated via Eulerian numbers, in log space
+    if theta == 0.0:
+        return 0.0
+    if theta < 0.0:
+        if u.shape[1] != 2:
+            raise ValueError("the Frank copula with theta < 0 (negative "
+                             "dependence) is defined only for two variables")
+        return _frank_loglik_neg2(theta, u)
     (M, d) = u.shape
     n = d - 1
     log1me_u = np.log(-np.expm1(-theta * u))  # log(1 - exp(-theta u))
@@ -322,9 +355,19 @@ def fit_gumbel(u: np.ndarray) -> Tuple[float, float, bool]:
 
 
 def fit_frank(u: np.ndarray) -> Tuple[float, float, bool]:
-    # fit Frank theta; returns (theta, mean pairwise tau, clamped flag)
+    # fit Frank theta; returns (theta, mean pairwise tau, clamped flag).
+    # With two variables negative dependence is admissible (theta < 0): the
+    # log-likelihood is mirrored so that the positive-side machinery (start
+    # value, bracket, floor and ceiling) applies to -theta.  With more
+    # variables the Frank copula exists only for theta > 0, and non-positive
+    # dependence is clamped to the floor
     uc = _clipu(u)
     tb = taubar(uc)
+    if tb < 0.0 and uc.shape[1] == 2:
+        theta0 = frank_theta0(-tb)
+        theta = _fit_theta(lambda th, uu: frank_loglik(-th, uu), uc, theta0,
+                           THETA_MIN_FRANK, _THETA_MAX)
+        return (-theta, tb, False)
     if tb <= 0.0:
         return (THETA_MIN_FRANK, tb, True)
     theta0 = frank_theta0(tb)
