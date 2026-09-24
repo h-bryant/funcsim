@@ -56,7 +56,11 @@ def copcompare(udata: conversions.ArrayLike) -> pd.DataFrame:
     and maximum pseudo-likelihood for the Archimedean families.  The
     Gaussian and Student's t log-likelihoods are therefore evaluated at
     moment-type estimates rather than at the exact maximum, so their
-    criteria are conservative by a small amount.  Standard information
+    criteria are conservative by a small amount.  A Student's t row with
+    ``nu=inf`` means the profile likelihood peaked at the ceiling of the
+    degrees-of-freedom search (200), so the fitted copula is the Gaussian
+    copula with the Kendall's-tau correlation matrix; it still pays for the
+    extra parameter in the criteria.  Standard information
     criteria applied to pseudo-likelihoods are approximate (Grønneberg and
     Hjort, 2014); treat differences of a few points as ties.  Warnings
     issued while fitting a family (for example, negative dependence in data

@@ -41,9 +41,13 @@ THETA_MIN_FRANK = 1e-6
 # largest admissible theta (tau approx. 0.96-0.99 depending on family)
 _THETA_MAX = 100.0
 
-# search bounds for the Student's t degrees of freedom
+# search bounds for the Student's t degrees of freedom.  An optimum within
+# _NU_GAUSS_FRAC of the ceiling is reported as nu = inf (the Gaussian
+# copula with the same correlation matrix): the profile likelihood is flat
+# there and the ceiling itself is an artifact of the search, not an estimate
 _NU_MIN = 2.0
 _NU_MAX = 200.0
+_NU_GAUSS_FRAC = 0.99
 
 
 def _clipu(u: np.ndarray) -> np.ndarray:
@@ -284,7 +288,10 @@ def gauss_loglik(R: np.ndarray, u: np.ndarray) -> float:
 def student_loglik(R: np.ndarray, nu: float, u: np.ndarray) -> float:
     # total Student's t copula log-density over the rows of u for the
     # correlation matrix R and degrees of freedom nu:
-    # log c(u) = log t_{nu,R}(x) - sum_k log t_nu(x_k), with x = t_nu^-1(u)
+    # log c(u) = log t_{nu,R}(x) - sum_k log t_nu(x_k), with x = t_nu^-1(u).
+    # nu = inf is the Gaussian copula with the same R
+    if math.isinf(nu):
+        return gauss_loglik(R, u)
     uc = _clipu(u)
     x = stats.t.ppf(uc, df=nu)
     d = R.shape[0]
@@ -292,12 +299,15 @@ def student_loglik(R: np.ndarray, nu: float, u: np.ndarray) -> float:
     return float(np.sum(joint) - np.sum(stats.t.logpdf(x, df=nu)))
 
 
-def fit_student(u: np.ndarray) -> Tuple[np.ndarray, float]:
-    # fit a Student's t copula; returns (correlation matrix, deg. of freedom).
+def fit_student(u: np.ndarray) -> Tuple[np.ndarray, float, float]:
+    # fit a Student's t copula; returns (correlation matrix, deg. of freedom,
+    # log-likelihood gain of the fitted nu over the Gaussian limit nu = inf
+    # at the same correlation matrix).
     # stage 1: pairwise Kendall's tau -> rho_ij = sin(pi tau_ij / 2),
     # corrected to the nearest positive definite correlation matrix.
     # stage 2: profile maximum pseudo-likelihood for nu, searching on a
-    # log scale (the likelihood is flat in nu near the Gaussian limit)
+    # log scale (the likelihood is flat in nu near the Gaussian limit).  An
+    # optimum at the search ceiling is reported as nu = inf, with zero gain
     uc = _clipu(u)
     R = np.sin(0.5 * np.pi * taumatrix(uc))
     np.fill_diagonal(R, 1.0)
@@ -321,4 +331,8 @@ def fit_student(u: np.ndarray) -> Tuple[np.ndarray, float]:
                                            math.log(_NU_MAX)),
                                    method="bounded")
     nu = float(math.exp(res.x)) if res.success else _NU_MAX
-    return (R, nu)
+    if nu > _NU_GAUSS_FRAC * _NU_MAX:
+        return (R, math.inf, 0.0)
+    ll_gauss = gauss_loglik(R, uc)
+    gain = -negll(math.log(nu)) - ll_gauss
+    return (R, nu, float(gain) if np.isfinite(gain) else math.nan)

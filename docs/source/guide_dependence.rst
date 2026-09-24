@@ -206,6 +206,19 @@ Each copula object exposes its fitted parameters as read-only properties:
    print(cop.rho.round(3))
    print(f"degrees of freedom: {cop.nu:.1f}")
 
+The degrees of freedom are searched over the range 2 to 200.  When the
+profile likelihood keeps rising all the way to the ceiling, the data do not
+distinguish the Student's t copula from its Gaussian limit, and ``nu`` is
+reported as ``inf`` rather than as a number near 200 that would read like an
+estimate.  Such an object draws exactly as ``CopulaGauss`` with the same
+``rho`` would (still consuming K + 1 values per ``draw``).  The companion
+property ``loglik_gain`` gives the log-likelihood at the fitted ``nu`` minus
+the log-likelihood of the Gaussian copula with the same ``rho``; it is zero
+when ``nu`` is ``inf`` and small whenever the profile is flat, so a fitted
+``nu`` of, say, 150 with a gain of a fraction of a point should be read as
+"large" rather than as 150.  ``math.inf`` is also accepted as ``nu`` by
+:meth:`funcsim.CopulaStudent.from_params`.
+
 Choosing a family
 ~~~~~~~~~~~~~~~~~
 
@@ -221,9 +234,10 @@ sorted by BIC from best to worst:
 Differences of a few points are ties: the criteria are computed from
 pseudo-likelihoods (the marginals were fitted separately), which makes
 them approximate (Grønneberg and Hjort, 2014).  Because the Student's t
-copula nests the Gaussian, a very large fitted ``nu`` together with a
-BIC that trails the Gaussian by roughly ``log(M)`` says the extra
-parameter is not earning its keep.
+copula nests the Gaussian, a Student's t row showing ``nu=inf`` (the fit
+reached the ceiling of the search, see above) or a very large fitted
+``nu`` together with a BIC that trails the Gaussian by roughly ``log(M)``
+says the extra parameter is not earning its keep.
 
 Copulas from parameters
 ~~~~~~~~~~~~~~~~~~~~~~~

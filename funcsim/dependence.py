@@ -84,12 +84,17 @@ def _param_labels(rho: conversions.ArrayLike) -> Optional[pd.Index]:
     return None
 
 
-def _positive_scalar(x: float, what: str, minimum: float = 0.0) -> float:
-    # validate a scalar copula parameter that must exceed `minimum`
+def _positive_scalar(x: float, what: str, minimum: float = 0.0,
+                     allow_inf: bool = False) -> float:
+    # validate a scalar copula parameter that must exceed `minimum`; with
+    # `allow_inf`, +inf is accepted as well (e.g., the Gaussian limit of the
+    # Student's t degrees of freedom)
     xf = float(x)
-    if not (math.isfinite(xf) and xf > minimum):
-        raise ValueError(f"{what} must be a finite number greater than "
-                         f"{minimum}; got {x}")
+    ok = xf > minimum and (math.isfinite(xf) or (allow_inf and xf > 0.0))
+    if not ok:
+        kind = "a number" if allow_inf else "a finite number"
+        raise ValueError(f"{what} must be {kind} greater than {minimum}; "
+                         f"got {x}")
     return xf
 
 
@@ -649,6 +654,15 @@ class CopulaStudent():
     -----
     Each call to :meth:`draw` consumes K + 1 values from ``ugen``, where K
     is the number of variables.
+
+    The degrees of freedom are searched over [2, 200].  If the profile
+    likelihood is maximized at the ceiling of that range, the data do not
+    distinguish the fitted copula from its Gaussian limit, and ``nu`` is
+    reported as ``inf`` rather than as a number near 200: the object then
+    behaves exactly as :class:`CopulaGauss` with the same ``rho`` (while
+    still consuming K + 1 draws).  :attr:`loglik_gain` reports how much
+    log-likelihood the fitted ``nu`` adds over that Gaussian limit, which is
+    small whenever ``nu`` is identified only as "large".
     """
 
     def __init__(self,
@@ -667,7 +681,8 @@ class CopulaStudent():
                                  f"in the range (0, 1)")
 
         # fit parameters
-        (self._rho, self._nu) = copfit.fit_student(self._data)
+        (self._rho, self._nu, self._loglik_gain) = \
+            copfit.fit_student(self._data)
 
         # cholesky decomposition of the correlation matrix, for draws
         self._A = np.linalg.cholesky(self._rho)
@@ -691,7 +706,8 @@ class CopulaStudent():
             (Higham, 1988) is substituted and rescaled to a unit diagonal.
         nu : float
             Degrees of freedom, greater than zero.  As `nu` grows the copula
-            approaches the Gaussian copula with the same `rho`.
+            approaches the Gaussian copula with the same `rho`; ``math.inf``
+            is accepted and gives that Gaussian limit exactly.
         names : sequence of str, optional
             Variable names, length K.  If omitted, the column labels of
             `rho` (if it is a pandas DataFrame) are used; otherwise the
@@ -714,7 +730,8 @@ class CopulaStudent():
         obj._names = _cop_names(K, names, _param_labels(rho))
         (obj._M, obj._K) = (0, K)
         obj._rho = R
-        obj._nu = _positive_scalar(nu, "nu")
+        obj._nu = _positive_scalar(nu, "nu", allow_inf=True)
+        obj._loglik_gain = math.nan
         obj._A = np.linalg.cholesky(obj._rho)
         return obj
 
@@ -729,8 +746,25 @@ class CopulaStudent():
 
     @property
     def nu(self) -> float:
-        """The copula's degrees-of-freedom parameter."""
+        """
+        The copula's degrees-of-freedom parameter.  ``inf`` means the
+        Gaussian limit: either the fit reached the ceiling of the search
+        range (see the class notes) or ``math.inf`` was passed to
+        :meth:`from_params`.
+        """
         return float(self._nu)
+
+    @property
+    def loglik_gain(self) -> float:
+        """
+        Log-likelihood gain of the fitted degrees of freedom over the
+        Gaussian limit (``nu = inf``) at the same correlation matrix, i.e.,
+        the copula log-likelihood at the fitted ``nu`` minus the Gaussian
+        copula log-likelihood at ``rho``.  Zero when ``nu`` is ``inf``, and
+        small whenever the data pin ``nu`` down only as "large".  ``nan``
+        for an object built with :meth:`from_params`, which has no data.
+        """
+        return float(self._loglik_gain)
 
     def draw(self,
              ugen: Generator[float, None, None]
@@ -756,7 +790,12 @@ class CopulaStudent():
         """
         uvec = [next(ugen) for i in range(self._K)]
         z = np.dot(self._A, stats.norm.ppf(uvec))
-        chi2 = stats.chi2.ppf(next(ugen), df=self._nu)
+        uchi = next(ugen)
+        if math.isinf(self._nu):
+            # Gaussian limit: the mixing variable is identically one, but
+            # its draw is still consumed so the count per call is fixed
+            return pd.Series(stats.norm.cdf(z), index=self._names)
+        chi2 = stats.chi2.ppf(uchi, df=self._nu)
         mult = (self._nu / chi2)**0.5
         retA = stats.t.cdf(mult * z, df=self._nu)
         return pd.Series(retA, index=self._names)
