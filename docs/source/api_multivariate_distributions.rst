@@ -7,7 +7,9 @@ exposes a ``draw(ugen)`` method that consumes a fixed number of values
 from the uniform generator supplied to a trial or step function and
 returns a :class:`pandas.Series` indexed by variable name.  ``MvNorm``
 and the copula classes also provide a ``from_params`` class method that
-builds the object from specified parameters instead of data, and the
+builds the object from specified parameters instead of data (the copula
+classes additionally have ``from_tau``, which starts from Kendall's tau),
+and the
 copula classes expose their fitted or specified parameters as read-only
 properties (``rho``, ``nu``, ``theta``; ``CopulaStudent`` also reports
 ``loglik_gain``, the log-likelihood gain of its fitted ``nu`` over the

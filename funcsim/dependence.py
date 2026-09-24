@@ -84,6 +84,36 @@ def _param_labels(rho: conversions.ArrayLike) -> Optional[pd.Index]:
     return None
 
 
+def _corr_from_tau(tau: conversions.ArrayLike) -> np.ndarray:
+    # correlation matrix of an elliptical copula from Kendall's tau: a scalar
+    # (two variables) or a K-by-K matrix of pairwise taus, inverted entrywise
+    # through rho = sin(pi tau / 2) (Lindskog, McNeil, and Schmock, 2003).
+    # The diagonal of a matrix is ignored.  The result is a symmetric matrix
+    # with a unit diagonal; positive definiteness is left to
+    # _corr_from_params, which repairs it with a warning
+    if isinstance(tau, (list, tuple)):
+        T = np.asarray(tau, dtype=float)
+    elif np.ndim(tau) == 0:
+        T = np.asarray(float(tau))
+    else:
+        T = np.asarray(conversions.alToArray(tau), dtype=float)
+    if T.ndim == 0:
+        t = float(T)
+        T = np.array([[1.0, t], [t, 1.0]])
+    if T.ndim != 2 or T.shape[0] != T.shape[1]:
+        raise ValueError(f"tau must be a scalar or a square matrix; got "
+                         f"shape {T.shape}")
+    if not np.allclose(T, T.T, equal_nan=False):
+        raise ValueError("tau must be symmetric")
+    off = ~np.eye(T.shape[0], dtype=bool)
+    if not np.all(np.abs(T[off]) < 1.0):
+        raise ValueError("every pairwise tau must lie strictly between -1 "
+                         "and 1")
+    R = np.sin(0.5 * np.pi * T)
+    np.fill_diagonal(R, 1.0)
+    return R
+
+
 def _positive_scalar(x: float, what: str, minimum: float = 0.0,
                      allow_inf: bool = False) -> float:
     # validate a scalar copula parameter that must exceed `minimum`; with
@@ -598,6 +628,44 @@ class CopulaGauss():
         obj._A = np.linalg.cholesky(obj._rho)
         return obj
 
+    @classmethod
+    def from_tau(cls,
+                 tau: conversions.ArrayLike,
+                 names: Optional[Sequence[str]] = None,
+                 ) -> "CopulaGauss":
+        """
+        Create a Gaussian copula object from Kendall's tau, rather than from
+        pseudo-observations or a correlation matrix.
+
+        Parameters
+        ----------
+        tau : float or ArrayLike
+            Kendall's tau: a scalar for two variables, or a K-by-K matrix of
+            pairwise values (a nested list is also accepted) whose diagonal
+            is ignored.  Every pairwise value must lie strictly between -1
+            and 1.  Each is inverted through ``rho = sin(pi * tau / 2)``; a
+            resulting matrix that is not positive definite is repaired as in
+            :meth:`from_params`, with a warning.
+        names : sequence of str, optional
+            Variable names, length K.  If omitted, the column labels of
+            `tau` (if it is a pandas DataFrame) are used; otherwise the
+            variables are named 'v0', 'v1', ....
+
+        Returns
+        -------
+        CopulaGauss
+            A copula object whose :meth:`draw` method returns joint standard
+            uniform draws with the given Kendall's tau.
+
+        Examples
+        --------
+        >>> cop = fs.CopulaGauss.from_tau(0.6, names=["yield", "price"])
+        >>> cop.rho.iloc[0, 1]    # sin(0.3 pi) = 0.809
+        """
+        R = _corr_from_tau(tau)
+        nms = _cop_names(R.shape[0], names, _param_labels(tau))
+        return cls.from_params(R, names=nms)
+
     @property
     def rho(self) -> pd.DataFrame:
         """
@@ -734,6 +802,49 @@ class CopulaStudent():
         obj._loglik_gain = math.nan
         obj._A = np.linalg.cholesky(obj._rho)
         return obj
+
+    @classmethod
+    def from_tau(cls,
+                 tau: conversions.ArrayLike,
+                 nu: float,
+                 names: Optional[Sequence[str]] = None,
+                 ) -> "CopulaStudent":
+        """
+        Create a Student's t copula object from Kendall's tau and a
+        degrees-of-freedom parameter, rather than from pseudo-observations
+        or a correlation matrix.
+
+        Parameters
+        ----------
+        tau : float or ArrayLike
+            Kendall's tau: a scalar for two variables, or a K-by-K matrix of
+            pairwise values (a nested list is also accepted) whose diagonal
+            is ignored.  Every pairwise value must lie strictly between -1
+            and 1.  Each is inverted through ``rho = sin(pi * tau / 2)``,
+            which holds for every elliptical copula and so does not involve
+            `nu`; a resulting matrix that is not positive definite is
+            repaired as in :meth:`from_params`, with a warning.
+        nu : float
+            Degrees of freedom, greater than zero (``math.inf`` gives the
+            Gaussian limit), as in :meth:`from_params`.
+        names : sequence of str, optional
+            Variable names, length K.  If omitted, the column labels of
+            `tau` (if it is a pandas DataFrame) are used; otherwise the
+            variables are named 'v0', 'v1', ....
+
+        Returns
+        -------
+        CopulaStudent
+            A copula object whose :meth:`draw` method returns joint standard
+            uniform draws with the given Kendall's tau and tail behavior.
+
+        Examples
+        --------
+        >>> cop = fs.CopulaStudent.from_tau(0.6, nu=4.0)
+        """
+        R = _corr_from_tau(tau)
+        nms = _cop_names(R.shape[0], names, _param_labels(tau))
+        return cls.from_params(R, nu, names=nms)
 
     @property
     def rho(self) -> pd.DataFrame:
@@ -898,6 +1009,46 @@ class CopulaClayton():
         obj._theta = th
         return obj
 
+    @classmethod
+    def from_tau(cls,
+                 tau: float,
+                 K: int = 2,
+                 names: Optional[Sequence[str]] = None,
+                 ) -> "CopulaClayton":
+        """
+        Create a Clayton copula object from Kendall's tau, rather than from
+        pseudo-observations or from theta.
+
+        Parameters
+        ----------
+        tau : float
+            Kendall's tau, strictly between 0 and 1 (this implementation
+            represents positive dependence only).  Inverted through
+            ``theta = 2 * tau / (1 - tau)``.
+        K : int, optional
+            Number of variables.  Default is 2.  Ignored when `names` is
+            given, in which case K is the number of names.
+        names : sequence of str, optional
+            Variable names.  If omitted, the variables are named 'v0',
+            'v1', ....
+
+        Returns
+        -------
+        CopulaClayton
+            A copula object whose :meth:`draw` method returns joint standard
+            uniform draws with the given Kendall's tau.
+
+        Examples
+        --------
+        >>> cop = fs.CopulaClayton.from_tau(0.5)    # theta = 2.0
+        """
+        t = float(tau)
+        if not (0.0 < t < 1.0):
+            raise ValueError("Kendall's tau for a Clayton copula must lie "
+                             "strictly between 0 and 1 (this implementation "
+                             f"represents positive dependence only); got {tau}")
+        return cls.from_params(2.0 * t / (1.0 - t), K=K, names=names)
+
     @property
     def theta(self) -> float:
         """The copula's dependence parameter."""
@@ -1035,6 +1186,46 @@ class CopulaGumbel():
         obj._theta = th
         return obj
 
+    @classmethod
+    def from_tau(cls,
+                 tau: float,
+                 K: int = 2,
+                 names: Optional[Sequence[str]] = None,
+                 ) -> "CopulaGumbel":
+        """
+        Create a Gumbel copula object from Kendall's tau, rather than from
+        pseudo-observations or from theta.
+
+        Parameters
+        ----------
+        tau : float
+            Kendall's tau, strictly between 0 and 1 (this implementation
+            represents positive dependence only).  Inverted through
+            ``theta = 1 / (1 - tau)``.
+        K : int, optional
+            Number of variables.  Default is 2.  Ignored when `names` is
+            given, in which case K is the number of names.
+        names : sequence of str, optional
+            Variable names.  If omitted, the variables are named 'v0',
+            'v1', ....
+
+        Returns
+        -------
+        CopulaGumbel
+            A copula object whose :meth:`draw` method returns joint standard
+            uniform draws with the given Kendall's tau.
+
+        Examples
+        --------
+        >>> cop = fs.CopulaGumbel.from_tau(0.5)    # theta = 2.0
+        """
+        t = float(tau)
+        if not (0.0 < t < 1.0):
+            raise ValueError("Kendall's tau for a Gumbel copula must lie "
+                             "strictly between 0 and 1 (this implementation "
+                             f"represents positive dependence only); got {tau}")
+        return cls.from_params(1.0 / (1.0 - t), K=K, names=names)
+
     @property
     def theta(self) -> float:
         """The copula's dependence parameter."""
@@ -1169,6 +1360,49 @@ class CopulaFrank():
         (obj._M, obj._K) = (0, k)
         obj._theta = th
         return obj
+
+    @classmethod
+    def from_tau(cls,
+                 tau: float,
+                 K: int = 2,
+                 names: Optional[Sequence[str]] = None,
+                 ) -> "CopulaFrank":
+        """
+        Create a Frank copula object from Kendall's tau, rather than from
+        pseudo-observations or from theta.
+
+        Parameters
+        ----------
+        tau : float
+            Kendall's tau, strictly between 0 and 1 (this implementation
+            represents positive dependence only).  The relation
+            ``tau = 1 - 4 (1 - D_1(theta)) / theta``, with ``D_1`` the first
+            Debye function, has no closed-form inverse; it is solved
+            numerically to full floating-point precision.
+        K : int, optional
+            Number of variables.  Default is 2.  Ignored when `names` is
+            given, in which case K is the number of names.
+        names : sequence of str, optional
+            Variable names.  If omitted, the variables are named 'v0',
+            'v1', ....
+
+        Returns
+        -------
+        CopulaFrank
+            A copula object whose :meth:`draw` method returns joint standard
+            uniform draws with the given Kendall's tau.
+
+        Examples
+        --------
+        >>> cop = fs.CopulaFrank.from_tau(0.6)    # theta = 7.930
+        """
+        t = float(tau)
+        if not (0.0 < t < 1.0):
+            raise ValueError("Kendall's tau for a Frank copula must lie "
+                             "strictly between 0 and 1 (this implementation "
+                             f"represents positive dependence only); got {tau}")
+        return cls.from_params(copfit.frank_theta_from_tau(t), K=K,
+                               names=names)
 
     @property
     def theta(self) -> float:

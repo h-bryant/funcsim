@@ -266,8 +266,38 @@ strictly inside its family's range, or the constructor raises
 than one for Gumbel (a Gumbel ``theta`` of exactly one is independence,
 which the sampler cannot represent).  Kendall's tau pins down
 each single-parameter family: Clayton ``tau = theta / (theta + 2)``,
-Gumbel ``tau = 1 - 1 / theta``, and for both elliptical families
+Gumbel ``tau = 1 - 1 / theta``, Frank
+``tau = 1 - 4 (1 - D_1(theta)) / theta`` with ``D_1`` the first Debye
+function, and for both elliptical families
 ``tau = (2 / pi) * arcsin(rho)``.
+
+Copulas from Kendall's tau
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Dependence is often easier to elicit, or to report, as Kendall's tau than
+as a family-specific parameter.  Every copula class therefore also has a
+``from_tau`` constructor, which inverts the relations just listed and hands
+the result to ``from_params``:
+
+.. code-block:: python
+
+   cg = fs.CopulaGauss.from_tau(0.6, names=["yield", "price"])   # rho = 0.809
+   ct = fs.CopulaStudent.from_tau(0.6, nu=4.0, names=["yield", "price"])
+   cc = fs.CopulaClayton.from_tau(0.6)     # theta = 2 tau / (1 - tau) = 3.0
+   cgu = fs.CopulaGumbel.from_tau(0.6)     # theta = 1 / (1 - tau) = 2.5
+   cf = fs.CopulaFrank.from_tau(0.6)       # theta = 7.930, by root-finding
+
+For the elliptical copulas ``tau`` is a scalar for two variables or a
+K-by-K matrix of pairwise values (a nested list or a labeled DataFrame; the
+diagonal is ignored).  The inverted matrix is repaired to positive definite
+when necessary, exactly as in ``from_params``.  Kendall's tau of the
+Student's t copula does not depend on ``nu``, which is passed through
+unchanged.  The Archimedean constructors take ``K`` and ``names`` as
+``from_params`` does.  Frank's relation has no closed-form inverse and is
+solved numerically to full floating-point precision.  Each family accepts
+only the values it can represent, and raises :class:`ValueError`
+otherwise: strictly between -1 and 1 for the elliptical copulas, and
+strictly between 0 and 1 for Clayton, Gumbel, and Frank.
 
 
 Iman-Conover rank correlation

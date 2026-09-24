@@ -164,9 +164,70 @@ def _debye1(x: float) -> float:
     # Debye function of order 1: (1/x) * integral_0^x t/(e^t - 1) dt
     if x < 1e-8:
         return 1.0 - x / 4.0
+    if x > 200.0:
+        # beyond the quadrature's range (never reached by the fitting code):
+        # the integrand's mass lies below t ~ 40, so the integral is pi^2/6
+        # less the tail integral_x^inf t/(e^t - 1) dt = (x + 1) e^-x (to
+        # within e^-2x).  This agrees with the quadrature to one ulp at
+        # x = 200 and stays finite where expm1 would overflow
+        return (math.pi ** 2 / 6.0 - (x + 1.0) * math.exp(-x)) / x
     val = integrate.quad(lambda t: t / math.expm1(t) if t > 0.0 else 1.0,
                          0.0, x)[0]
     return val / x
+
+
+# Bernoulli numbers B_2, B_4, ..., B_14, for the small-theta series of
+# Frank's Kendall's tau
+_BERNOULLI_EVEN = (1.0 / 6.0, -1.0 / 30.0, 1.0 / 42.0, -1.0 / 30.0,
+                   5.0 / 66.0, -691.0 / 2730.0, 7.0 / 6.0)
+
+
+def frank_tau(theta: float) -> float:
+    # Kendall's tau of the Frank copula, tau = 1 - (4/theta)(1 - D_1(theta)),
+    # an odd function of theta with tau(0) = 0 (Nelsen, 2006, eq. 5.1.5).
+    # Below |theta| = 0.5 the direct formula loses digits to cancellation
+    # (1 - D_1 ~ theta/4), so the power series
+    #   tau = 4 sum_k B_2k theta^(2k-1) / ((2k+1)(2k)!)
+    #       = theta/9 - theta^3/900 + theta^5/52920 - ...
+    # is used there; its truncation error is below 1e-16 at |theta| = 0.5
+    s = abs(float(theta))
+    if s == 0.0:
+        return 0.0
+    if s <= 0.5:
+        t = 4.0 * sum(b * s ** (2 * k - 1)
+                      / ((2 * k + 1) * math.factorial(2 * k))
+                      for k, b in enumerate(_BERNOULLI_EVEN, start=1))
+    else:
+        t = 1.0 - (4.0 / s) * (1.0 - _debye1(s))
+    return math.copysign(t, theta)
+
+
+def frank_theta_from_tau(tau: float) -> float:
+    # exact inverse of frank_tau for tau in (-1, 0) or (0, 1): theta takes
+    # the sign of tau, and |theta| is found by bracketed root-finding on
+    # |tau|.  tau(theta) is concave with slope 1/9 at the origin, so
+    # theta = 9 |tau| is a lower bracket; the upper bracket is doubled until
+    # it overshoots.  Unlike frank_theta0 (the fitting start value, which
+    # clamps tau at 0.96 and theta at _THETA_MAX) nothing is clamped here
+    t = abs(float(tau))
+    if not (0.0 < t < 1.0):
+        raise ValueError("Kendall's tau for a Frank copula must lie strictly "
+                         "between -1 and 1 and be nonzero (tau = 0 is "
+                         "independence, which the Frank copula reaches only "
+                         f"as theta -> 0); got {tau}")
+
+    def f(th):
+        return frank_tau(th) - t
+
+    lo = 9.0 * t
+    hi = max(2.0 * lo, 1.0)
+    while f(hi) < 0.0:
+        hi *= 2.0
+        if hi > 1e300:
+            raise ValueError(f"cannot represent a Frank copula with "
+                             f"Kendall's tau {tau}")
+    theta = optimize.brentq(f, lo, hi, xtol=1e-14, maxiter=500)
+    return math.copysign(theta, tau)
 
 
 def clayton_theta0(tau: float) -> float:
