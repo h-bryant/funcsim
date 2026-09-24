@@ -13,7 +13,8 @@ and the
 copula classes expose their fitted or specified parameters as read-only
 properties (``rho``, ``nu``, ``theta``; ``CopulaStudent`` also reports
 ``loglik_gain``, the log-likelihood gain of its fitted ``nu`` over the
-Gaussian limit).  :func:`funcsim.copcompare` ranks
+Gaussian limit), together with the tail-dependence coefficients
+``lambda_lower`` and ``lambda_upper``.  :func:`funcsim.copcompare` ranks
 the copula families by information criteria.  See :doc:`guide_dependence`
 for a narrative introduction with examples.
 

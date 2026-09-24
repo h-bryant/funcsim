@@ -219,6 +219,42 @@ when ``nu`` is ``inf`` and small whenever the profile is flat, so a fitted
 "large" rather than as 150.  ``math.inf`` is also accepted as ``nu`` by
 :meth:`funcsim.CopulaStudent.from_params`.
 
+Tail dependence
+~~~~~~~~~~~~~~~
+
+The coefficients of lower and upper tail dependence, the limiting
+probabilities that one variable is extreme given that another is extreme
+in the same direction, are available on every copula object as the
+read-only properties ``lambda_lower`` and ``lambda_upper``:
+
+=================  =========================  =========================
+Class              ``lambda_lower``           ``lambda_upper``
+=================  =========================  =========================
+``CopulaGauss``    0                          0
+``CopulaStudent``  see below                  equal to ``lambda_lower``
+``CopulaClayton``  ``2 ** (-1 / theta)``      0
+``CopulaGumbel``   0                          ``2 - 2 ** (1 / theta)``
+``CopulaFrank``    0                          0
+=================  =========================  =========================
+
+For the Student's t copula both coefficients equal
+``2 * t(-sqrt((nu + 1) * (1 - rho) / (1 + rho)); nu + 1)``, where
+``t(.; d)`` is the CDF of Student's t distribution with ``d`` degrees of
+freedom (Embrechts, McNeil, and Straumann, 2002); at ``nu = inf`` they are
+zero, as for the Gaussian copula.  With two variables the properties are
+floats.  With more, the elliptical copulas return a K-by-K
+:class:`pandas.DataFrame` labeled by variable name, with ones on the
+diagonal (a variable is perfectly tail dependent with itself, and the
+Student's t formula gives one at ``rho = 1``); the Archimedean copulas are
+exchangeable, so they return a single float that applies to every pair.
+
+.. code-block:: python
+
+   ct = fs.CopulaStudent.from_params([[1.0, 0.9], [0.9, 1.0]], nu=4.0)
+   ct.lambda_upper                                  # 0.63
+   fs.CopulaGumbel.from_tau(0.85).lambda_upper      # 0.890
+   fs.CopulaClayton.from_tau(0.85).lambda_lower     # 0.941
+
 Choosing a family
 ~~~~~~~~~~~~~~~~~
 
@@ -358,6 +394,11 @@ Correlation and covariance helpers
 
 References
 ----------
+
+Embrechts, P., McNeil, A. J., & Straumann, D. (2002). Correlation and
+dependence in risk management: Properties and pitfalls. In M. A. H. Dempster
+(Ed.), *Risk management: Value at risk and beyond* (pp. 176-223). Cambridge
+University Press.
 
 Grønneberg, S., & Hjort, N. L. (2014). The copula information criteria.
 *Scandinavian Journal of Statistics*, 41(2), 436-459.

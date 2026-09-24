@@ -2,7 +2,7 @@ import math
 import numpy as np
 import pandas as pd
 from scipy import stats
-from typing import Generator, Optional, Sequence, Tuple
+from typing import Generator, Optional, Sequence, Tuple, Union
 import warnings
 from . import conversions
 from . import copfit
@@ -112,6 +112,31 @@ def _corr_from_tau(tau: conversions.ArrayLike) -> np.ndarray:
     R = np.sin(0.5 * np.pi * T)
     np.fill_diagonal(R, 1.0)
     return R
+
+
+def _student_taildep(R: np.ndarray, nu: float) -> np.ndarray:
+    # coefficient of tail dependence (lower and upper coincide) of a
+    # Student's t copula, entrywise over the correlation matrix:
+    # lambda = 2 t_{nu+1}(-sqrt((nu + 1)(1 - rho) / (1 + rho)))
+    # (Embrechts, McNeil, and Straumann, 2002).  The Gaussian limit nu = inf
+    # has no tail dependence; the diagonal (rho = 1) is one either way
+    K = R.shape[0]
+    if math.isinf(nu):
+        return np.eye(K)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        ratio = np.clip(1.0 - R, 0.0, None) / np.clip(1.0 + R, 0.0, None)
+        lam = 2.0 * stats.t.cdf(-np.sqrt((nu + 1.0) * ratio), df=nu + 1.0)
+    lam = np.where(np.isfinite(lam), lam, 0.0)  # rho = -1: no dependence
+    np.fill_diagonal(lam, 1.0)
+    return lam
+
+
+def _taildep_out(lam: np.ndarray, names: pd.Index) -> Union[float, pd.DataFrame]:
+    # tail-dependence coefficients as a float for two variables, otherwise
+    # as a DataFrame labeled by variable name
+    if lam.shape[0] == 2:
+        return float(lam[0, 1])
+    return pd.DataFrame(lam, index=names, columns=names)
 
 
 def _positive_scalar(x: float, what: str, minimum: float = 0.0,
@@ -675,6 +700,24 @@ class CopulaGauss():
         return pd.DataFrame(self._rho.copy(), index=self._names,
                             columns=self._names)
 
+    @property
+    def lambda_lower(self) -> Union[float, pd.DataFrame]:
+        """
+        Coefficient of lower tail dependence: zero for every pair, since the
+        Gaussian copula has no tail dependence for ``|rho| < 1``.  A float
+        with two variables; otherwise a DataFrame labeled by variable name,
+        with ones on the diagonal.
+        """
+        return _taildep_out(np.eye(self._K), self._names)
+
+    @property
+    def lambda_upper(self) -> Union[float, pd.DataFrame]:
+        """
+        Coefficient of upper tail dependence: zero for every pair, as for
+        :attr:`lambda_lower`.
+        """
+        return _taildep_out(np.eye(self._K), self._names)
+
     def draw(self,
              ugen: Generator[float, None, None]
              ) -> pd.Series:
@@ -877,6 +920,27 @@ class CopulaStudent():
         """
         return float(self._loglik_gain)
 
+    @property
+    def lambda_lower(self) -> Union[float, pd.DataFrame]:
+        """
+        Coefficient of lower tail dependence,
+        ``2 * t(-sqrt((nu + 1) * (1 - rho) / (1 + rho)); nu + 1)`` with
+        ``t(.; d)`` the Student's t CDF with ``d`` degrees of freedom
+        (Embrechts, McNeil, and Straumann, 2002); zero when ``nu`` is
+        ``inf``.  A float with two variables; otherwise a DataFrame labeled
+        by variable name, with ones on the diagonal.
+        """
+        return _taildep_out(_student_taildep(self._rho, self._nu),
+                            self._names)
+
+    @property
+    def lambda_upper(self) -> Union[float, pd.DataFrame]:
+        """
+        Coefficient of upper tail dependence; equal to :attr:`lambda_lower`
+        because the Student's t copula is radially symmetric.
+        """
+        return self.lambda_lower
+
     def draw(self,
              ugen: Generator[float, None, None]
              ) -> pd.Series:
@@ -1053,6 +1117,19 @@ class CopulaClayton():
     def theta(self) -> float:
         """The copula's dependence parameter."""
         return float(self._theta)
+
+    @property
+    def lambda_lower(self) -> float:
+        """
+        Coefficient of lower tail dependence, ``2 ** (-1 / theta)``.  The
+        Clayton copula is exchangeable, so one value applies to every pair.
+        """
+        return 2.0 ** (-1.0 / float(self._theta))
+
+    @property
+    def lambda_upper(self) -> float:
+        """Coefficient of upper tail dependence: zero for the Clayton copula."""
+        return 0.0
 
     def _Ftilde(self, t):
         return (1.0 + t)**(-1.0 / self._theta)
@@ -1231,6 +1308,19 @@ class CopulaGumbel():
         """The copula's dependence parameter."""
         return float(self._theta)
 
+    @property
+    def lambda_lower(self) -> float:
+        """Coefficient of lower tail dependence: zero for the Gumbel copula."""
+        return 0.0
+
+    @property
+    def lambda_upper(self) -> float:
+        """
+        Coefficient of upper tail dependence, ``2 - 2 ** (1 / theta)``.  The
+        Gumbel copula is exchangeable, so one value applies to every pair.
+        """
+        return 2.0 - 2.0 ** (1.0 / float(self._theta))
+
     def _Ftilde(self, t):
         return math.exp(-(t**(1.0/self._theta)))
 
@@ -1408,6 +1498,19 @@ class CopulaFrank():
     def theta(self) -> float:
         """The copula's dependence parameter."""
         return float(self._theta)
+
+    @property
+    def lambda_lower(self) -> float:
+        """
+        Coefficient of lower tail dependence: zero, since the Frank copula
+        has no tail dependence in either tail.
+        """
+        return 0.0
+
+    @property
+    def lambda_upper(self) -> float:
+        """Coefficient of upper tail dependence: zero for the Frank copula."""
+        return 0.0
 
     def draw(self,
              ugen: Generator[float, None, None]
