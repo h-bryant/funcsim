@@ -73,3 +73,58 @@ def test_none_is_scott():
     data = _data(2)
     np.testing.assert_array_equal(_draws(fs.MvKde(data, bw=None), 20),
                                   _draws(fs.MvKde(data, bw="scott"), 20))
+
+
+# ---------------------------------------------------------------------------
+# item 2: Silverman's rule of thumb
+
+
+def _factor(kde) -> float:
+    # the common factor on the data's standard deviation, from the
+    # standardized-unit bandwidth matrix (a diagonal of factor squared)
+    return float(np.sqrt(kde._bw[0, 0]))
+
+
+def test_silverman_one_column_matches_scipy_and_kde():
+    x = _data(1)["x0"]
+    mv = fs.MvKde(x.to_frame(), bw="silverman")
+    uni = fs.Kde(x, bw="silverman")
+    scipy_factor = stats.gaussian_kde(x.to_numpy()).silverman_factor()
+    assert _factor(mv) == pytest.approx(scipy_factor, rel=1e-12)
+    assert uni.gkde.factor == pytest.approx(scipy_factor, rel=1e-12)
+    # in the units of the data the two classes differ only through the
+    # standard deviation each applies the factor to (ddof=0 in MvKde,
+    # ddof=1 in Kde through scipy)
+    mv_h2 = mv._stds[0] ** 2 * mv._bw[0, 0]
+    uni_h2 = uni.gkde.covariance[0, 0]
+    assert mv_h2 / x.var(ddof=0) == pytest.approx(uni_h2 / x.var(ddof=1),
+                                                  rel=1e-12)
+
+
+def test_silverman_k2_unchanged():
+    # chapter 15's example has two variables, where Silverman's and Scott's
+    # rules coincide: the factor and the draws must not move
+    data = _data(2)
+    silverman = fs.MvKde(data, bw="silverman")
+    scott = fs.MvKde(data, bw="scott")
+    assert _factor(silverman) == pytest.approx(M ** (-1.0 / 6.0), rel=1e-14)
+    assert _factor(silverman) == pytest.approx(0.3928606365489575, rel=1e-14)
+    np.testing.assert_array_equal(silverman._bw, scott._bw)
+    np.testing.assert_array_equal(_draws(silverman, 50), _draws(scott, 50))
+
+
+@pytest.mark.parametrize("K", [1, 3, 4])
+def test_silverman_factor_formula(K):
+    kde = fs.MvKde(_data(K), bw="silverman")
+    expected = ((K + 2.0) * M / 4.0) ** (-1.0 / (K + 4.0))
+    inverted = (4.0 * M / (K + 2.0)) ** (-1.0 / (K + 4.0))  # pre-0.2.8
+    assert _factor(kde) == pytest.approx(expected, rel=1e-14)
+    assert abs(_factor(kde) - inverted) > 1e-3
+    assert np.allclose(kde._bw, np.eye(K) * expected ** 2)
+
+
+def test_scott_factor_formula():
+    for K in (1, 2, 3):
+        kde = fs.MvKde(_data(K), bw="scott")
+        assert _factor(kde) == pytest.approx(M ** (-1.0 / (K + 4.0)),
+                                             rel=1e-14)

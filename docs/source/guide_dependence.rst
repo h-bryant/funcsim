@@ -115,6 +115,15 @@ perturbs it with the kernel.
    mvk = fs.MvKde(data)                 # or fs.MvKde(data, bw="silverman")
    mvk = fs.MvKde(data, bw=np.array([[0.052, 0.510], [0.510, 8.882]]))
 
+Both rules give a diagonal bandwidth matrix, a common factor times the
+variance of each variable, for M observations and K variables: Scott's
+rule uses ``M ** (-2 / (K + 4))`` and Silverman's rule
+``((K + 2) * M / 4) ** (-2 / (K + 4))``, where the variances are computed
+with ``ddof=0``.  The two coincide when K = 2.  (Before version 0.2.8 the
+Silverman factor was inverted, ``(4 * M / (K + 2)) ** (-1 / (K + 4))`` on
+the standard deviation, so Silverman bandwidths for K other than 2 change
+on upgrading: they are wider for K = 1 and narrower for K greater than 2.)
+
    def trial(ugen):
        d = mvk.draw(ugen)
        return dict(d)
@@ -429,3 +438,9 @@ Schafer, J., & Strimmer, K. (2005). A shrinkage approach to large-scale
 covariance matrix estimation and implications for functional genomics.
 *Statistical Applications in Genetics and Molecular Biology*, 4(1),
 Article 32.
+
+Scott, D. W. (1992). *Multivariate density estimation: Theory, practice,
+and visualization*. John Wiley & Sons.
+
+Silverman, B. W. (1986). *Density estimation for statistics and data
+analysis*. Chapman and Hall.

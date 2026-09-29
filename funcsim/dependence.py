@@ -332,6 +332,31 @@ class MvKde():
     -----
     Each call to :meth:`draw` consumes K + 1 values from ``ugen``, where K
     is the number of variables.
+
+    Both rules of thumb give a diagonal bandwidth matrix whose entries are
+    a common factor times the variance of each variable, with M
+    observations and K variables:
+
+    - Scott's rule: ``H = M ** (-2 / (K + 4)) * diag(s_1 ** 2, ..., s_K ** 2)``
+    - Silverman's rule:
+      ``H = ((K + 2) * M / 4) ** (-2 / (K + 4)) * diag(s_1 ** 2, ..., s_K ** 2)``
+
+    where ``s_k`` is the standard deviation of variable k, computed with
+    ``ddof=0`` (dividing by M).  The two rules coincide when K = 2.  These
+    are the normal-reference rules of Scott (1992, eq. 6.42) and Silverman
+    (1986, eq. 4.14), and the same expressions as
+    :class:`scipy.stats.gaussian_kde`'s ``scotts_factor`` and
+    ``silverman_factor``.  Before version 0.2.8 the Silverman factor was
+    computed as ``(4 * M / (K + 2)) ** (-1 / (K + 4))``, which is correct
+    only at K = 2.
+
+    References
+    ----------
+    Scott, D.W. (1992). Multivariate Density Estimation: Theory, Practice,
+    and Visualization. John Wiley & Sons.
+
+    Silverman, B.W. (1986). Density Estimation for Statistics and Data
+    Analysis. Chapman and Hall.
     """
     def __init__(self,
                  data: conversions.ArrayLike,
@@ -353,8 +378,11 @@ class MvKde():
         mult = self._M**(-1.0/(self._K+4.0))
         self._scott =  np.square(mult * np.diagflat(stdevs))
 
-        # rule-of-thumb silverman bandwidth
-        smult = ((4.0 * self._M)/ (self._K+2.0))**(-1.0 / (self._K+4.0))
+        # rule-of-thumb silverman bandwidth (Silverman, 1986, eq. 4.14;
+        # the same expression as scipy's gaussian_kde.silverman_factor).
+        # Before 0.2.8 the (K + 2) / 4 factor was inverted, which agrees
+        # with this only at K = 2
+        smult = ((self._K+2.0) * self._M / 4.0)**(-1.0 / (self._K+4.0))
         self._silverman = np.square(smult * np.diagflat(stdevs))
 
         # dispatch on the type of bw before comparing it with anything: a
