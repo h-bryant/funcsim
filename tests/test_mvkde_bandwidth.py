@@ -128,3 +128,85 @@ def test_scott_factor_formula():
         kde = fs.MvKde(_data(K), bw="scott")
         assert _factor(kde) == pytest.approx(M ** (-1.0 / (K + 4.0)),
                                              rel=1e-14)
+
+
+# ---------------------------------------------------------------------------
+# item 3: the bandwidth property
+
+
+def test_kde_bandwidth_scott():
+    x = _data(1)["x0"]
+    kde = fs.Kde(x)
+    assert isinstance(kde.bandwidth, float)
+    assert kde.bandwidth == pytest.approx(kde.gkde.factor * x.std(ddof=1),
+                                          rel=1e-12)
+    assert kde.bandwidth == pytest.approx(M ** (-0.2) * x.std(ddof=1),
+                                          rel=1e-12)
+
+
+def test_kde_bandwidth_silverman_and_float():
+    x = _data(1)["x0"]
+    silverman = fs.Kde(x, bw="silverman")
+    assert silverman.bandwidth == pytest.approx(
+        (3.0 * M / 4.0) ** (-0.2) * x.std(ddof=1), rel=1e-12)
+    assert fs.Kde(x, bw=0.5).bandwidth == pytest.approx(0.5, rel=1e-12)
+
+
+def test_mvkde_bandwidth_scott():
+    data = _data(3)
+    kde = fs.MvKde(data)
+    H = kde.bandwidth
+    assert isinstance(H, pd.DataFrame)
+    assert list(H.index) == list(data.columns)
+    assert list(H.columns) == list(data.columns)
+    expected = np.diag(data.var(ddof=0).to_numpy()) * M ** (-2.0 / 7.0)
+    np.testing.assert_allclose(H.to_numpy(), expected, rtol=1e-12)
+
+
+def test_mvkde_bandwidth_silverman():
+    data = _data(3)
+    H = fs.MvKde(data, bw="silverman").bandwidth
+    expected = np.diag(data.var(ddof=0).to_numpy()) * \
+        (5.0 * M / 4.0) ** (-2.0 / 7.0)
+    np.testing.assert_allclose(H.to_numpy(), expected, rtol=1e-12)
+
+
+def test_mvkde_bandwidth_round_trip():
+    data = _data(2)
+    for bw in (H2, np.array(H2)):
+        H = fs.MvKde(data, bw=bw).bandwidth
+        np.testing.assert_allclose(H.to_numpy(), np.array(H2), rtol=1e-12)
+
+
+def test_mvkde_bandwidth_names_from_array_data():
+    H = fs.MvKde(_data(2).to_numpy()).bandwidth
+    assert list(H.index) == ["v0", "v1"]
+    assert list(H.columns) == ["v0", "v1"]
+
+
+def test_mvkde_bandwidth_reports_repaired_matrix():
+    data = _data(2)
+    singular = [[1.0, 1.0], [1.0, 1.0]]
+    with pytest.warns(UserWarning):
+        kde = fs.MvKde(data, bw=singular)
+    H = kde.bandwidth.to_numpy()
+    assert np.all(np.linalg.eigvalsh(H) > 0.0)
+    # the reported matrix is the one the draws apply
+    D = np.diag(kde._stds)
+    np.testing.assert_allclose(H, D @ kde._chol @ kde._chol.T @ D,
+                               rtol=1e-10, atol=1e-12)
+
+
+def test_one_column_classes_differ_only_by_ddof():
+    x = _data(1)["x0"]
+    mv = fs.MvKde(x.to_frame()).bandwidth.iloc[0, 0]
+    uni = fs.Kde(x).bandwidth
+    assert mv == pytest.approx(uni ** 2 * (M - 1) / M, rel=1e-12)
+
+
+def test_bandwidth_is_read_only():
+    x = _data(1)["x0"]
+    with pytest.raises(AttributeError):
+        fs.Kde(x).bandwidth = 1.0
+    with pytest.raises(AttributeError):
+        fs.MvKde(x.to_frame()).bandwidth = np.eye(1)

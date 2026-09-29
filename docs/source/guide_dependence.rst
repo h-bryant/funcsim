@@ -123,6 +123,14 @@ with ``ddof=0``.  The two coincide when K = 2.  (Before version 0.2.8 the
 Silverman factor was inverted, ``(4 * M / (K + 2)) ** (-1 / (K + 4))`` on
 the standard deviation, so Silverman bandwidths for K other than 2 change
 on upgrading: they are wider for K = 1 and narrower for K greater than 2.)
+The matrix in use, whichever way it was chosen, is the ``bandwidth``
+property: a K-by-K DataFrame in the units of the data, indexed and
+labeled by the variable names.
+
+.. code-block:: python
+
+   fs.MvKde(data).bandwidth                     # Scott's rule, diagonal
+   fs.MvKde(data, bw="silverman").bandwidth     # the same at K = 2
 
    def trial(ugen):
        d = mvk.draw(ugen)

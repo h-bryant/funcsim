@@ -326,7 +326,8 @@ class MvKde():
         Bandwidth selection method ('scott' or 'silverman'), or a K-by-K
         bandwidth covariance matrix in the units of the data, given as
         anything :func:`numpy.asarray` accepts (a nested list, a NumPy
-        array, or a DataFrame).  Default is 'scott'.
+        array, or a DataFrame).  Default is 'scott'.  The matrix in use is
+        available as :attr:`bandwidth`.
 
     Notes
     -----
@@ -408,9 +409,32 @@ class MvKde():
             Dinv = np.diag(1.0 / self._stds)
             self._bw = Dinv @ H @ Dinv
 
+        # a bandwidth matrix that is not positive definite is repaired to
+        # the nearest one, and the repaired matrix is the one reported by
+        # the bandwidth property (nearestpd returns a positive definite
+        # input unchanged)
+        self._bw = nearby.nearestpd(self._bw)
+
         # cholesky decomp of the bandwidth (covariance) matrix, so that
         # draws apply covariance H (not H @ H.T)
-        self._chol = np.linalg.cholesky(nearby.nearestpd(self._bw))
+        self._chol = np.linalg.cholesky(self._bw)
+
+    @property
+    def bandwidth(self) -> pd.DataFrame:
+        """
+        The bandwidth matrix ``H`` in use, in the units of the data, as a
+        K-by-K covariance DataFrame whose index and columns are the
+        variable names.
+
+        For ``bw='scott'`` or ``bw='silverman'`` this is diagonal, the
+        rule's factor squared times the variance of each variable with
+        ``ddof=0`` (see the class notes); for a user-supplied matrix it is
+        that matrix, or the nearest positive definite matrix to it if it
+        was not positive definite.
+        """
+        D = np.diag(self._stds)
+        return pd.DataFrame(D @ self._bw @ D, index=self._names,
+                            columns=self._names)
 
     def draw(self,
              ugen: Generator[float, None, None]

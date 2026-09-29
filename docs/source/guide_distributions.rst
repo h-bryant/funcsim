@@ -156,12 +156,16 @@ When no parametric family is satisfactory, :class:`funcsim.Kde` represents
 a sample by a Gaussian kernel density estimate with ``pdf``, ``cdf``, and
 ``ppf`` methods.  The bandwidth is chosen by Scott's rule by default;
 pass ``bw="silverman"``, or a positive float to set the kernel standard
-deviation directly in the units of the data.
+deviation directly in the units of the data.  The bandwidth in use is
+the ``bandwidth`` property, in the units of the data: for M observations
+with sample standard deviation ``s`` (``ddof=1``), Scott's rule gives
+``M ** (-1 / 5) * s`` and Silverman's rule ``(3 * M / 4) ** (-1 / 5) * s``.
 
 .. code-block:: python
 
    kde = fs.Kde(sample)
    kde.pdf(5.0), kde.cdf(5.0), kde.ppf(0.5)     # 0.103, 0.509, 4.92
+   kde.bandwidth                                # kernel std. dev., data units
 
    def trial(ugen):
        return {"income": kde.ppf(next(ugen))}

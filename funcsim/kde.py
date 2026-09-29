@@ -69,7 +69,8 @@ class Kde():
         Bandwidth selection method ('scott', 'silverman') or a positive
         float to use as the bandwidth (the standard deviation of the
         Gaussian kernel), in the same units as the data.
-        Default is 'scott'.
+        Default is 'scott'.  The bandwidth in use is available as
+        :attr:`bandwidth`.
     exact_ppf : bool, optional
         If True, :meth:`ppf` finds every value by root finding on
         :meth:`cdf`, as funcsim did before version 0.2.7 (about 0.3 ms per
@@ -81,6 +82,14 @@ class Kde():
     ``pdf``, ``cdf``, and ``ppf`` return a Python float for a scalar
     argument and a NumPy array of the same shape for an array-like argument
     (a pandas Series or a list gives an array).
+
+    The two rules of thumb set the bandwidth to a factor times the sample
+    standard deviation ``s`` of the M observations, computed with
+    ``ddof=1`` (dividing by M - 1, as :class:`scipy.stats.gaussian_kde`
+    does): Scott's rule gives ``M ** (-1 / 5) * s`` and Silverman's rule
+    ``(3 * M / 4) ** (-1 / 5) * s``.  (:class:`funcsim.MvKde` applies the
+    same factors to a ``ddof=0`` standard deviation, so on the same single
+    column its bandwidth is smaller by the factor ``sqrt((M - 1) / M)``.)
 
     The inverse-CDF table evaluates the CDF on 4096 points spanning the data
     range plus eight kernel standard deviations on each side, and
@@ -128,6 +137,18 @@ class Kde():
 
         self._exact_ppf = bool(exact_ppf)
         self._table = None  # inverse-CDF table, built on first use
+
+    @property
+    def bandwidth(self) -> float:
+        """
+        The bandwidth in use, the standard deviation of the Gaussian
+        kernel, in the units of the data.
+
+        For ``bw='scott'`` or ``bw='silverman'`` this is the rule's factor
+        (``gkde.factor``) times the sample standard deviation of the data
+        with ``ddof=1``; for a float ``bw`` it is that value.
+        """
+        return math.sqrt(float(self.gkde.covariance[0, 0]))
 
     @staticmethod
     def _apply(func, x):
