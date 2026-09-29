@@ -106,12 +106,14 @@ Multivariate kernel density estimate
 :class:`funcsim.MvKde` places a Gaussian kernel on each observation.  Data
 are standardized internally, and the bandwidth matrix is chosen by Scott's
 rule (default), Silverman's rule (``bw="silverman"``), or supplied as a
-K-by-K covariance matrix in the units of the data.  A draw picks one
-observation at random and perturbs it with the kernel.
+K-by-K covariance matrix in the units of the data (a nested list, a NumPy
+array, or a DataFrame).  A draw picks one observation at random and
+perturbs it with the kernel.
 
 .. code-block:: python
 
    mvk = fs.MvKde(data)                 # or fs.MvKde(data, bw="silverman")
+   mvk = fs.MvKde(data, bw=np.array([[0.052, 0.510], [0.510, 8.882]]))
 
    def trial(ugen):
        d = mvk.draw(ugen)

@@ -324,8 +324,9 @@ class MvKde():
         in rows.
     bw : str or ArrayLike, optional
         Bandwidth selection method ('scott' or 'silverman'), or a K-by-K
-        bandwidth covariance matrix in the units of the data.
-        Default is 'scott'.
+        bandwidth covariance matrix in the units of the data, given as
+        anything :func:`numpy.asarray` accepts (a nested list, a NumPy
+        array, or a DataFrame).  Default is 'scott'.
 
     Notes
     -----
@@ -334,7 +335,7 @@ class MvKde():
     """
     def __init__(self,
                  data: conversions.ArrayLike,
-                 bw: str = 'scott'
+                 bw: Union[str, conversions.ArrayLike, None] = 'scott'
                 ) -> None:
         self._data = conversions.alToArray(data)
         self._names = conversions.alColNames(data)
@@ -356,14 +357,20 @@ class MvKde():
         smult = ((4.0 * self._M)/ (self._K+2.0))**(-1.0 / (self._K+4.0))
         self._silverman = np.square(smult * np.diagflat(stdevs))
 
-        if bw is None or bw == 'scott':
-            self._bw = self._scott
-        elif bw == 'silverman':
-            self._bw = self._silverman
-        elif isinstance(bw, str):
-            raise ValueError(f"unknown bandwidth method '{bw}'; expected "
-                             f"'scott', 'silverman', or a "
-                             f"{self._K}-by-{self._K} bandwidth matrix")
+        # dispatch on the type of bw before comparing it with anything: a
+        # NumPy array compared with a string evaluates elementwise under
+        # NumPy 2, and its truth value is ambiguous
+        if bw is None:
+            bw = 'scott'
+        if isinstance(bw, str):
+            if bw == 'scott':
+                self._bw = self._scott
+            elif bw == 'silverman':
+                self._bw = self._silverman
+            else:
+                raise ValueError(f"unknown bandwidth method '{bw}'; "
+                                 f"expected 'scott', 'silverman', or a "
+                                 f"{self._K}-by-{self._K} bandwidth matrix")
         else:
             H = np.asarray(bw, dtype=float)
             if H.shape != (self._K, self._K):
