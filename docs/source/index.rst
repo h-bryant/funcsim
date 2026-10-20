@@ -47,7 +47,8 @@ Features
   pseudo-observations or specified by their parameters), all implemented
   natively; information-criterion comparison of the copula families;
   Iman-Conover rank correlation induction; covariance shrinkage.
-- Expected utility and cumulative prospect theory calculations.
+- Expected utility, cumulative prospect theory, and regret-theoretical
+  expected utility calculations.
 - Fan charts and diagnostic plots built on plotly.
 
 

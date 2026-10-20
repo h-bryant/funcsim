@@ -14,5 +14,6 @@ on the user's behalf.
    api_multivariate_distributions
    api_eut
    api_cpt
+   api_rteu
    api_plotting
    api_misctools

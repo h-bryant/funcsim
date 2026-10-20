@@ -10,7 +10,7 @@ Features:
 - painless multi-core simulations
 - fitting and comparison of univariate distributions, kernel density estimates, and goodness-of-fit tests
 - multivariate normal (fitted to data or specified by a mean vector and covariance matrix) and multivariate KDE distributions; Gaussian, Student's t, Clayton, Gumbel, and Frank copulas, fitted to pseudo-observations or specified by their parameters (implemented natively, no additional packages required); information-criterion comparison of copula families; Iman-Conover; covariance shrinkage
-- expected utility and cumulative prospect theory calculations
+- expected utility, cumulative prospect theory, and regret-theoretical expected utility calculations
 - plotly-based fan charts and diagnostic plots
 - highly flexible, and as simple as possible (but no more)
 - functional paradigm

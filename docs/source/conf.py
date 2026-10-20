@@ -62,11 +62,20 @@ def _alias_formatter(annotation, config):
     when it writes a "Return type" line.  typing also flattens a union that
     contains an alias, as in the return type of funcsim.shrink, so the alias
     is recovered from the member set.  Returning None falls back to the
-    extension's default formatting.
+    extension's default formatting.  numpy.typing.NDArray gets the same
+    treatment, since NumPy 2 defines it as a typing.TypeAliasType.
     """
     from sphinx_autodoc_typehints import format_annotation
+    import numpy as np
+    from numpy.typing import NDArray
     from funcsim import conversions
 
+    # numpy.typing.NDArray is a typing.TypeAliasType in NumPy 2, which the
+    # extension can only render as "TypeAliasType"; show the array class it
+    # stands for.  The hook is called for each member of a union too, so
+    # this covers Union[float, NDArray] as well as a bare NDArray
+    if annotation is NDArray:
+        return format_annotation(np.ndarray, config)
     if typing.get_origin(annotation) is not typing.Union:
         return None
     args = typing.get_args(annotation)
