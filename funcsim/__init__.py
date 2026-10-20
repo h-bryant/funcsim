@@ -39,6 +39,8 @@ from .cpt import weightPrelec2, cptBV
 
 from .eut import eut, utilIsoelastic, eutIsoelastic
 
+from .rteu import rteu, regretPower
+
 from .plotting import fan, twofuncs, histpdf, dblscat, qqplot, show
 
 def version():
