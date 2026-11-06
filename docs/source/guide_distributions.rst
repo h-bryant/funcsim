@@ -175,13 +175,34 @@ a NumPy array of the same shape for an array-like argument (a pandas Series
 gives an array), so results can be used directly in arithmetic without
 wrapping them in ``float()``.
 
+**Bounded support.**  A nonnegative quantity, or a share confined to
+``[0, 1]``, is represented with ``lowerBound`` and ``upperBound`` (a float
+or ``None``, as for :func:`funcsim.fit`); observations may lie on a bound
+but not beyond it.  The estimate is then the reflection estimator
+(Silverman, 1986, section 2.10): the Gaussian KDE of the data is folded
+back across each bound, so that with a lower bound ``a`` the density is
+``f(x) + f(2a - x)`` on ``[a, inf)`` and zero below ``a``.  The result is
+a proper density on the support: ``cdf(a) == 0``, ``ppf(0) == a``, and
+likewise at an upper bound.  Reflection makes the estimated density flat
+at a bound, which is right when the true density is flat there (a
+half-normal at zero) and biased by an amount of order the bandwidth when
+it is not (an exponential at zero).  The bandwidth rules are computed from
+the data as given and are unchanged by bounds.
+
+.. code-block:: python
+
+   cost = fs.Kde(sample, lowerBound=0.0)
+   share = fs.Kde(shares, lowerBound=0.0, upperBound=1.0)
+   share.cdf(0.0), share.ppf(1.0)              # 0.0, 1.0
+
 A KDE has no closed-form inverse CDF.  ``ppf`` is served from a monotone
 inverse-CDF table that is built once, on the first call: the CDF is
 evaluated on 4096 points spanning the data range plus eight kernel
-standard deviations on each side, and the quantile is interpolated against
-the normal score of the CDF by a shape-preserving cubic.  The table agrees
-with root finding to better than 1e-8 of the data range in funcsim's tests
-(the documented target is 1e-6), it is monotone in ``u``, and evaluating it
+standard deviations on each side (cut off at any bound, with extra points
+crowded toward it), and the quantile is interpolated against the normal
+score of the CDF by a monotone cubic.  The table agrees with root finding
+to better than 1e-8 of the data range in funcsim's tests (the documented
+target is 1e-6), it is monotone in ``u``, and evaluating it
 costs microseconds per value rather than the roughly 0.3 ms of a root
 find, which matters when tens of thousands of trials each draw from several
 KDE marginals.  Probabilities outside the table's range fall back to root
