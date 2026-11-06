@@ -1,10 +1,11 @@
 import math
-from typing import Union
+from typing import Callable, Optional, Tuple, Union
 import numpy as np
 import scipy.optimize
 import scipy.stats as stats
 from scipy import interpolate, special
 from . import conversions
+from .bounds import validate_bound, check_bounds_against_data
 
 
 # inverse-CDF table: number of grid points, and the margin beyond the data
@@ -12,43 +13,101 @@ from . import conversions
 # eight standard deviations from every observation)
 _PPF_GRID = 4096
 _PPF_MARGIN = 8.0
+# at a hard bound the CDF goes to 0 or 1 linearly, so a uniform grid is
+# sparse in normal-score space there.  Next to each bound the first
+# _BOUND_CELLS grid cells are subdivided _BOUND_SUBDIV times, and points at
+# distances R * 2 ** -k from the bound (k over _BOUND_K, R the grid width)
+# carry the table down to probabilities of order 1e-12 of the way to it
+_BOUND_CELLS = 16
+_BOUND_SUBDIV = 8
+_BOUND_K = range(13, 41)
+# Fritsch-Carlson limit on a node derivative relative to the adjacent
+# secants, which keeps a cubic Hermite interpolant monotone
+_HERMITE_LIMIT = 3.0
+
+# a pair of arrays (CDF, survival function) evaluated on an x array
+_CdfPair = Callable[[np.ndarray], Tuple[np.ndarray, np.ndarray]]
+
+
+def _gaussian_cdf_pair(data: np.ndarray, weights: np.ndarray, h: float,
+                       x: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    # CDF and survival function of the unbounded Gaussian KDE with centers
+    # `data`, weights `weights`, and kernel standard deviation h, on x.
+    # Chunked so the (x by data) intermediate stays modest
+    n = x.size
+    F = np.empty(n)
+    S = np.empty(n)
+    step = max(1, 2_000_000 // max(1, data.size))
+    for i in range(0, n, step):
+        z = (x[i:i + step, None] - data[None, :]) / h
+        F[i:i + step] = special.ndtr(z) @ weights
+        S[i:i + step] = special.ndtr(-z) @ weights
+    return F, S
 
 
 class _PpfTable:
-    # monotone inverse of a Gaussian KDE's CDF.  The CDF F and survival
-    # function S are evaluated on a uniform x grid spanning the data plus a
-    # margin, and x is interpolated as a function of the normal score
-    # q = Phi^-1(F) (computed from S in the upper half, where 1 - F loses
-    # precision) by a shape-preserving cubic (PCHIP).  On that scale the
-    # inverse CDF is smooth and nearly linear in the tails, so the
-    # interpolant is accurate to about 1e-9 of the data range with 4096
-    # points (see tests/test_kde_ppf_table.py), and monotone in u
-    def __init__(self, gkde: stats.gaussian_kde) -> None:
-        data = np.asarray(gkde.dataset[0], dtype=float)
-        weights = np.asarray(gkde.weights, dtype=float)
-        h = math.sqrt(float(gkde.covariance[0, 0]))
-        lo = float(data.min()) - _PPF_MARGIN * h
-        hi = float(data.max()) + _PPF_MARGIN * h
+    # monotone inverse of a KDE's CDF.  The CDF F and survival function S
+    # are evaluated on a grid spanning [lo, hi], and x is interpolated as a
+    # function of the normal score q = Phi^-1(F) (computed from S in the
+    # upper half, where 1 - F loses precision).  On that scale the inverse
+    # CDF is smooth and nearly linear in the tails of an unbounded
+    # estimate, so a shape-preserving cubic (PCHIP) on a uniform grid of
+    # 4096 points is accurate to about 1e-9 of the data range and monotone
+    # in u (see tests/test_kde_ppf_table.py).
+    #
+    # At a hard bound x(q) is strongly curved (F goes to 0 linearly in x,
+    # so x - a is about Phi(q) / f(a)), and PCHIP's secant-based
+    # derivatives limit it to about 1e-6 of the range there.  With a bound
+    # the table therefore uses a cubic Hermite interpolant with the exact
+    # derivative dx/dq = phi(q) / f(x), clipped where needed to keep it
+    # monotone (Fritsch and Carlson, 1980), on the uniform grid plus points
+    # crowded toward each bound; that is accurate to about 1e-8 of the
+    # range (tests/test_kde_bounds.py).  Unbounded tables keep PCHIP so
+    # that results are unchanged from versions 0.2.7 to 0.2.9
+    def __init__(self, cdf_pair: _CdfPair, pdf: Callable[[np.ndarray],
+                                                         np.ndarray],
+                 lo: float, hi: float,
+                 lower_is_bound: bool, upper_is_bound: bool) -> None:
         xg = np.linspace(lo, hi, _PPF_GRID)
-        F = np.empty(_PPF_GRID)
-        S = np.empty(_PPF_GRID)
-        # chunk the grid so the (grid x data) intermediate stays modest
-        step = max(1, 2_000_000 // max(1, data.size))
-        for i in range(0, _PPF_GRID, step):
-            z = (xg[i:i + step, None] - data[None, :]) / h
-            F[i:i + step] = special.ndtr(z) @ weights
-            S[i:i + step] = special.ndtr(-z) @ weights
+        bounded = lower_is_bound or upper_is_bound
+        if bounded:
+            R = hi - lo
+            cell = R / (_PPF_GRID - 1)
+            near = np.concatenate([
+                np.linspace(0.0, _BOUND_CELLS * cell,
+                            _BOUND_CELLS * _BOUND_SUBDIV + 1)[1:],
+                R * 2.0 ** -np.array(_BOUND_K, dtype=float)])
+            parts = [xg]
+            if lower_is_bound:
+                parts.append(lo + near)
+            if upper_is_bound:
+                parts.append(hi - near)
+            xg = np.unique(np.concatenate(parts))
+            xg = xg[(xg >= lo) & (xg <= hi)]
+        F, S = cdf_pair(xg)
         with np.errstate(divide="ignore"):
             q = np.where(F <= 0.5, special.ndtri(F), -special.ndtri(S))
-        # PCHIP needs strictly increasing abscissae; drop grid points where
-        # the CDF is flat to machine precision (a gap between data
-        # clusters) or the score is not finite
+        # the interpolant needs strictly increasing abscissae; drop grid
+        # points where the CDF is flat to machine precision (a gap between
+        # data clusters, or a hard bound) or the score is not finite
         keep = np.isfinite(q)
         keep[1:] &= np.diff(q) > 0.0
         self._q = q[keep]
         self._x = xg[keep]
-        self._interp = interpolate.PchipInterpolator(self._q, self._x,
-                                                     extrapolate=False)
+        if not bounded:
+            self._interp = interpolate.PchipInterpolator(self._q, self._x,
+                                                         extrapolate=False)
+            return
+        with np.errstate(divide="ignore", invalid="ignore"):
+            d = stats.norm.pdf(self._q) / pdf(self._x)
+        secant = np.diff(self._x) / np.diff(self._q)
+        limit = np.empty_like(d)
+        limit[0] = _HERMITE_LIMIT * secant[0]
+        limit[-1] = _HERMITE_LIMIT * secant[-1]
+        limit[1:-1] = _HERMITE_LIMIT * np.minimum(secant[:-1], secant[1:])
+        d = np.where(np.isfinite(d), np.minimum(d, limit), limit)
+        self._interp = interpolate.CubicHermiteSpline(self._q, self._x, d,
+                                                      extrapolate=False)
 
     def __call__(self, u: np.ndarray) -> np.ndarray:
         # inverse CDF for probabilities inside the table's range; NaN outside
@@ -71,11 +130,27 @@ class Kde():
         Gaussian kernel), in the same units as the data.
         Default is 'scott'.  The bandwidth in use is available as
         :attr:`bandwidth`.
+    lowerBound : float, optional
+        Lower bound of the support.  If given, the estimate is confined to
+        values at or above it by reflection; see Notes.  Default is None
+        (no lower bound).
+    upperBound : float, optional
+        Upper bound of the support, likewise.  Default is None.
     exact_ppf : bool, optional
         If True, :meth:`ppf` finds every value by root finding on
         :meth:`cdf`, as funcsim did before version 0.2.7 (about 0.3 ms per
         value).  If False (the default), :meth:`ppf` is served from an
         inverse-CDF table built once, on the first call; see Notes.
+
+    Raises
+    ------
+    TypeError
+        If a bound is a bool or not a real number, or `bw` is neither a
+        string nor a real number.
+    ValueError
+        If a bound is not finite, ``lowerBound >= upperBound``, an
+        observation lies outside the bounds, `bw` is an unknown method
+        name, or a numeric `bw` is not positive.
 
     Notes
     -----
@@ -90,50 +165,119 @@ class Kde():
     ``(3 * M / 4) ** (-1 / 5) * s``.  (:class:`funcsim.MvKde` applies the
     same factors to a ``ddof=0`` standard deviation, so on the same single
     column its bandwidth is smaller by the factor ``sqrt((M - 1) / M)``.)
+    The rules are computed from the data as given; bounds do not change
+    the bandwidth.
+
+    **Bounded support.**  With a bound, the estimate is the reflection
+    estimator (Schuster, 1985; Silverman, 1986, section 2.10): the
+    unbounded Gaussian KDE ``f`` of the data is folded back across each
+    bound, so that with a lower bound ``a`` the density on the support is
+    ``f(x) + f(2a - x)``, and with an upper bound ``b`` it is
+    ``f(x) + f(2b - x)``.  With both bounds the sum of the three terms is
+    divided by its total mass on ``[a, b]``, which is within machine
+    precision of one unless the interval is narrower than about eight
+    bandwidths.  The result is a proper density: it is nonnegative,
+    integrates to one on the support, and is zero outside it, so
+    ``cdf(a) == 0``, ``cdf(b) == 1``, ``ppf(0) == a``, and
+    ``ppf(1) == b``.  Observations exactly on a bound are allowed.
+
+    Reflection forces the estimated density to have zero slope at each
+    bound.  It is therefore most accurate when the true density is flat
+    at the bound (a half-normal at zero, say) and biased, by an amount of
+    order the bandwidth, when the true density has a nonzero slope there
+    (an exponential at zero).  Corrections that remove that bias can
+    produce negative densities, which would make ``ppf`` ill defined, so
+    they are not offered.
 
     The inverse-CDF table evaluates the CDF on 4096 points spanning the data
-    range plus eight kernel standard deviations on each side, and
+    range plus eight kernel standard deviations on each side (truncated at
+    the bounds, with extra points crowded toward each bound), and
     interpolates x against the normal score of the CDF with a
     shape-preserving cubic (PCHIP).  The interpolant is monotone, so ``ppf``
     is nondecreasing in ``u``, and in tests over samples of 20 to 1000
-    observations (unimodal, bimodal, and on scales from 1e-6 upward) it
-    agrees with the root finder to better than 1e-8 of the data range; the
-    documented accuracy target is 1e-6 of the data range.  Probabilities
-    outside the table's range (below about 1e-15 or above 1 - 1e-15) fall
-    back to root finding.  Because the table and the root finder differ in
-    the last digits, simulations that pass draws through ``ppf`` change
-    slightly at that level when upgrading; pass ``exact_ppf=True`` to
-    reproduce earlier results exactly.
+    observations (unimodal, bimodal, bounded, and on scales from 1e-6
+    upward) it agrees with the root finder to better than 1e-8 of the data
+    range; the documented accuracy target is 1e-6 of the data range.
+    Probabilities outside the table's range (below about 1e-15 or above
+    1 - 1e-15 at an unbounded end) fall back to root finding.  Because the
+    table and the root finder differ in the last digits, simulations that
+    pass draws through ``ppf`` change slightly at that level when
+    upgrading; pass ``exact_ppf=True`` to reproduce earlier results
+    exactly.
+
+    References
+    ----------
+    Schuster, E. F. (1985). Incorporating support constraints into
+    nonparametric estimators of densities. *Communications in Statistics,
+    Theory and Methods*, 14(5), 1123-1136.
+
+    Silverman, B. W. (1986). *Density Estimation for Statistics and Data
+    Analysis*. Chapman and Hall.
     """
     def __init__(self,
                  data : conversions.VectorLike,
                  bw : Union[str, float] = 'scott',
+                 lowerBound : Optional[float] = None,
+                 upperBound : Optional[float] = None,
                  exact_ppf : bool = False):
 
-        sampleA = conversions.vlToArray(data)
+        sampleA = np.asarray(conversions.vlToArray(data), dtype=float)
+        self._data = sampleA
 
-        # raw kde object.  a numeric bw is the kernel standard deviation
-        # in data units; scipy's float bw_method is instead a factor
-        # multiplied by the sample std. dev., so convert
-        if isinstance(bw, (int, float)) and not isinstance(bw, bool):
+        self._lower = validate_bound(lowerBound, "lowerBound")
+        self._upper = validate_bound(upperBound, "upperBound")
+        check_bounds_against_data(sampleA, self._lower, self._upper)
+
+        # raw kde object: the unbounded Gaussian KDE of the data.  a
+        # numeric bw is the kernel standard deviation in data units;
+        # scipy's float bw_method is instead a factor multiplied by the
+        # sample std. dev., so convert
+        if isinstance(bw, (bool, np.bool_)):
+            raise TypeError("'bw' must be a method name or a positive "
+                            "number, not a bool")
+        if isinstance(bw, str):
+            if bw not in ('scott', 'silverman'):
+                raise ValueError(f"unknown bandwidth method '{bw}'; use "
+                                 f"'scott', 'silverman', or a positive float")
+            bw_method = bw
+        elif isinstance(bw, (int, float, np.integer, np.floating)):
             if bw <= 0.0:
                 raise ValueError("a numeric 'bw' must be positive")
-            bw = float(bw) / float(np.std(sampleA, ddof=1))
-        self.gkde = stats.gaussian_kde(sampleA, bw)
+            bw_method = float(bw) / float(np.std(sampleA, ddof=1))
+        else:
+            raise TypeError("'bw' must be a method name or a positive "
+                            f"number, not {type(bw).__name__}")
+        self.gkde = stats.gaussian_kde(sampleA, bw_method)
+        self._h = math.sqrt(float(self.gkde.covariance[0, 0]))
+        self._weights = np.asarray(self.gkde.weights, dtype=float)
 
         # initial guess for PPF optimization: the sample mean
         self.ppf_x0 = float(sum(sampleA)) / float(len(sampleA))
 
-        # "bracket" for PPF root finding
-        self.ppf_low = float(min(sampleA)) - \
-            3.0 * (max(sampleA) - min(sampleA))
-        self.ppf_high = float(max(sampleA)) + \
-            3.0 * (max(sampleA) - min(sampleA))
+        # "bracket" for PPF root finding: the support where bounded, else
+        # the data range extended by three times its width on each side
+        width = float(max(sampleA) - min(sampleA))
+        self.ppf_low = (self._lower if self._lower is not None
+                        else float(min(sampleA)) - 3.0 * width)
+        self.ppf_high = (self._upper if self._upper is not None
+                         else float(max(sampleA)) + 3.0 * width)
 
         # x tolerance for PPF root finding, proportional to the data
         # scale (an absolute tolerance would make ppf meaningless for
         # data on scales much smaller than the tolerance)
         self.ppf_xtol = max((self.ppf_high - self.ppf_low) * 1e-9, 1e-300)
+
+        # constants of the reflected CDF (see _cdf_pair): the unnormalized
+        # CDF G at the ends of the support, and the mass between them
+        if self._lower is not None and self._upper is not None:
+            a, b = self._lower, self._upper
+            Fab, Sab = self._F_S(np.array([2.0 * a - b, 2.0 * b - a]))
+            self._G_lo = float(Sab[1])          # G(a) = S(2b - a)
+            self._H_hi = float(Fab[0])          # 1 - G(b) = F(2a - b)
+        else:
+            self._G_lo = 0.0
+            self._H_hi = 0.0
+        self._Z = 1.0 - self._H_hi - self._G_lo
 
         self._exact_ppf = bool(exact_ppf)
         self._table = None  # inverse-CDF table, built on first use
@@ -148,7 +292,71 @@ class Kde():
         (``gkde.factor``) times the sample standard deviation of the data
         with ``ddof=1``; for a float ``bw`` it is that value.
         """
-        return math.sqrt(float(self.gkde.covariance[0, 0]))
+        return self._h
+
+    @property
+    def lowerBound(self) -> Optional[float]:
+        """The lower bound of the support, or None."""
+        return self._lower
+
+    @property
+    def upperBound(self) -> Optional[float]:
+        """The upper bound of the support, or None."""
+        return self._upper
+
+    # ------------------------------------------------------------------
+    # unbounded and reflected CDFs
+
+    def _F_S(self, x: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        # CDF and survival function of the unbounded KDE
+        return _gaussian_cdf_pair(self._data, self._weights, self._h, x)
+
+    def _cdf_pair(self, x: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        # CDF and survival function of the (possibly reflected) estimate,
+        # for x inside the support.  With f the unbounded KDE, F its CDF,
+        # and S = 1 - F, the reflected density is
+        #     f_R(x) = [f(x) + [a] f(2a - x) + [b] f(2b - x)] / Z
+        # and its unnormalized CDF is
+        #     G(x) = F(x) - [a] F(2a - x) + [b] S(2b - x)
+        # so that F_R = (G(x) - G(lo)) / Z and S_R = (G(hi) - G(x)) / Z
+        # with Z = G(hi) - G(lo).  G(lo) is S(2b - a) when both bounds are
+        # given and 0 otherwise; 1 - G(hi) is F(2a - b) when both are
+        # given and 0 otherwise.  The survival side is accumulated from
+        # survival terms so that it keeps its precision near 0
+        a, b = self._lower, self._upper
+        F, S = self._F_S(x)
+        G = F.copy()
+        H = S.copy()                        # H(x) = 1 - G(x)
+        if a is not None:
+            Fa, Sa = self._F_S(2.0 * a - x)
+            G -= Fa
+            H += Fa
+        if b is not None:
+            Fb, Sb = self._F_S(2.0 * b - x)
+            G += Sb
+            H -= Sb
+        if a is None and b is None:
+            return G, H
+        cdf = np.clip((G - self._G_lo) / self._Z, 0.0, 1.0)
+        sf = np.clip((H - self._H_hi) / self._Z, 0.0, 1.0)
+        # exact at and beyond the bounds (the ratio can be off by rounding)
+        if a is not None:
+            at = x <= a
+            cdf[at] = 0.0
+            sf[at] = 1.0
+        if b is not None:
+            at = x >= b
+            cdf[at] = 1.0
+            sf[at] = 0.0
+        return cdf, sf
+
+    def _in_support(self, x: np.ndarray) -> np.ndarray:
+        inside = np.ones(x.shape, dtype=bool)
+        if self._lower is not None:
+            inside &= x >= self._lower
+        if self._upper is not None:
+            inside &= x <= self._upper
+        return inside
 
     @staticmethod
     def _apply(func, x):
@@ -158,6 +366,19 @@ class Kde():
         if arr.ndim == 0:
             return float(func(arr.reshape(1))[0])
         return func(arr.ravel()).reshape(arr.shape)
+
+    def _pdf_array(self, v: np.ndarray) -> np.ndarray:
+        a, b = self._lower, self._upper
+        out = np.asarray(self.gkde(v), dtype=float)
+        if a is None and b is None:
+            return out
+        if a is not None:
+            out = out + self.gkde(2.0 * a - v)
+        if b is not None:
+            out = out + self.gkde(2.0 * b - v)
+        out = out / self._Z
+        out[~self._in_support(v)] = 0.0
+        return out
 
     def pdf(self,
             v: Union[float, conversions.VectorLike]
@@ -174,15 +395,15 @@ class Kde():
         -------
         float or numpy.ndarray
             The estimated probability density at v: a float for a scalar
-            `v`, an array of the same shape otherwise.
+            `v`, an array of the same shape otherwise.  Zero outside the
+            support when a bound is given.
         """
-        return self._apply(lambda a: np.asarray(self.gkde(a), dtype=float), v)
+        return self._apply(self._pdf_array, v)
 
     def _cdf_array(self, v: np.ndarray) -> np.ndarray:
-        # integrate from -inf (not from an arbitrary finite cutoff, which
-        # loses tail mass); clip to [0, 1] against numerical error
-        return np.array([min(1.0, max(0.0, self.gkde.integrate_box_1d(-np.inf, x)))
-                         for x in v])
+        # clip to [0, 1] against numerical error; exactly 0 and 1 at and
+        # beyond any bound (handled in _cdf_pair)
+        return np.clip(self._cdf_pair(v)[0], 0.0, 1.0)
 
     def cdf(self,
             v: Union[float, conversions.VectorLike]
@@ -199,7 +420,8 @@ class Kde():
         -------
         float or numpy.ndarray
             The estimated cumulative probability at v: a float for a scalar
-            `v`, an array of the same shape otherwise.
+            `v`, an array of the same shape otherwise.  Exactly 0 below a
+            lower bound and 1 above an upper bound.
         """
         return self._apply(self._cdf_array, v)
 
@@ -222,14 +444,41 @@ class Kde():
     def _ppf_array(self, u: np.ndarray) -> np.ndarray:
         if np.any(np.isnan(u)) or np.any((u < 0.0) | (u > 1.0)):
             raise ValueError("u must be within the range [0.0, 1.0]")
+        out = np.full(u.shape, np.nan)
+        # at a hard bound the inverse CDF of 0 or 1 is the bound itself
+        done = np.zeros(u.shape, dtype=bool)
+        if self._lower is not None:
+            at = u == 0.0
+            out[at] = self._lower
+            done |= at
+        if self._upper is not None:
+            at = u == 1.0
+            out[at] = self._upper
+            done |= at
+        todo = np.flatnonzero(~done)
+        if todo.size == 0:
+            return out
         if self._exact_ppf:
-            return np.array([self._ppf_root(x) for x in u])
+            out[todo] = [self._ppf_root(x) for x in u[todo]]
+            return out
         if self._table is None:
-            self._table = _PpfTable(self.gkde)
-        out = self._table(u)
-        for i in np.flatnonzero(~np.isfinite(out)):
-            out[i] = self._ppf_root(u[i])  # outside the table's range
+            self._table = _PpfTable(self._cdf_pair, self._pdf_array,
+                                    self._table_lo(), self._table_hi(),
+                                    self._lower is not None,
+                                    self._upper is not None)
+        vals = self._table(u[todo])
+        for i in np.flatnonzero(~np.isfinite(vals)):
+            vals[i] = self._ppf_root(u[todo[i]])  # outside the table's range
+        out[todo] = vals
         return out
+
+    def _table_lo(self) -> float:
+        lo = float(self._data.min()) - _PPF_MARGIN * self._h
+        return lo if self._lower is None else max(lo, self._lower)
+
+    def _table_hi(self) -> float:
+        hi = float(self._data.max()) + _PPF_MARGIN * self._h
+        return hi if self._upper is None else min(hi, self._upper)
 
     def ppf(self,
             u: Union[float, conversions.VectorLike]
@@ -260,9 +509,10 @@ class Kde():
         By default values are read from a monotone inverse-CDF table built
         on the first call (see the class notes for its accuracy); with
         ``exact_ppf=True`` each value is found by root finding on
-        :meth:`cdf`.  A value of exactly 0 or 1 lies outside the table and
-        returns the lower or upper end of the root-finding bracket (the
-        data range extended by three times its width on each side), as in
-        earlier versions.
+        :meth:`cdf`.  A value of exactly 0 or 1 returns the corresponding
+        bound when one is given; at an unbounded end it lies outside the
+        table and returns the lower or upper end of the root-finding
+        bracket (the data range extended by three times its width on each
+        side), as in earlier versions.
         """
         return self._apply(self._ppf_array, u)

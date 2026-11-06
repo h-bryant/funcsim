@@ -3,7 +3,8 @@ import funcsim as fs
 
 
 def test_kde():
-    sample = np.random.rand(1000)
+    # seeded: unseeded draws fail the 0.01 tolerance about a third of the time
+    sample = np.random.default_rng(12).random(1000)
     kde = fs.Kde(sample)
     assert abs(kde.cdf(0.5) - 0.5) < 0.01
     assert abs(kde.ppf(0.5) - 0.5) < 0.01

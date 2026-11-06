@@ -104,11 +104,15 @@ def test_cdf_values_unchanged_and_pdf_matches_scipy():
     data = np.random.default_rng(10).uniform(size=500)
     kde = fs.Kde(data)
     x = np.array([0.1, 0.5, 0.9])
-    np.testing.assert_array_equal(
+    # the vectorized CDF differs from scipy's integrate_box_1d only in the
+    # order of summation (last-bit level)
+    np.testing.assert_allclose(
         kde.cdf(x),
-        [kde.gkde.integrate_box_1d(-np.inf, v) for v in x])
+        [kde.gkde.integrate_box_1d(-np.inf, v) for v in x], rtol=1e-14)
     np.testing.assert_allclose(kde.pdf(x), kde.gkde(x))
-    assert kde.cdf(0.5) == kde.gkde.integrate_box_1d(-np.inf, 0.5)
+    np.testing.assert_allclose(kde.cdf(0.5),
+                               kde.gkde.integrate_box_1d(-np.inf, 0.5),
+                               rtol=1e-14)
 
 
 def test_table_is_built_lazily_and_once():

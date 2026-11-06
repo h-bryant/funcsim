@@ -1,5 +1,4 @@
 
-import numbers
 from collections import namedtuple
 import scipy.stats as stats
 from scipy import optimize
@@ -9,6 +8,7 @@ import warnings
 from collections.abc import Mapping
 from .ecdfgof import adtest, cvmtest
 from . import conversions
+from .bounds import validate_bound, check_bounds_against_data
 from typing import Optional, Tuple
 
 
@@ -166,34 +166,8 @@ _PENALTY = 100.0 * np.log(np.finfo(float).max)
 # argument validation
 
 
-def _validate_bound(value, name: str) -> Optional[float]:
-    # None (bound not fixed) or a finite real number; bools are rejected
-    # because they are the legacy "which group" flags of `compare`
-    if value is None:
-        return None
-    if isinstance(value, (bool, np.bool_)):
-        raise TypeError(f"{name} must be a float or None, not a bool")
-    if not isinstance(value, numbers.Real):
-        raise TypeError(f"{name} must be a float or None, "
-                        f"not {type(value).__name__}")
-    bound = float(value)
-    if not np.isfinite(bound):
-        raise ValueError(f"{name} must be finite, not {value}")
-    return bound
-
-
-def _check_bounds_against_data(dataA: np.ndarray,
-                               lower: Optional[float],
-                               upper: Optional[float]) -> None:
-    if lower is not None and upper is not None and not lower < upper:
-        raise ValueError(f"lowerBound ({lower}) must be strictly less than "
-                         f"upperBound ({upper})")
-    if lower is not None and dataA.min() < lower:
-        raise ValueError(f"lowerBound ({lower}) exceeds the smallest "
-                         f"observation ({dataA.min()})")
-    if upper is not None and dataA.max() > upper:
-        raise ValueError(f"upperBound ({upper}) is below the largest "
-                         f"observation ({dataA.max()})")
+_validate_bound = validate_bound
+_check_bounds_against_data = check_bounds_against_data
 
 
 # ---------------------------------------------------------------------------
