@@ -7,6 +7,7 @@ import scipy.stats as stats
 from scipy import interpolate, special
 from . import conversions
 from .bounds import validate_bound, check_bounds_against_data
+from .samplesize import check_sample_size, FIXED
 
 
 # inverse-CDF table: number of grid points, and the margin beyond the data
@@ -380,7 +381,17 @@ class Kde():
     ValueError
         If a bound is not finite, ``lowerBound >= upperBound``, an
         observation lies outside the bounds, `bw` is an unknown method
-        name, or a numeric `bw` is not positive.
+        name, a numeric `bw` is not positive, or there are too few
+        observations: fewer than two, or fewer than three for ``'lscv'``
+        and ``'sj'``.
+
+    Warns
+    -----
+    UserWarning
+        If there are fewer observations than Silverman's (1986, Table
+        4.2) requirement of four for a usable univariate estimate, or
+        fewer than ten for ``'lscv'`` and ``'sj'``; and in the
+        circumstances described under each of those methods in Notes.
 
     Notes
     -----
@@ -529,6 +540,13 @@ class Kde():
         if isinstance(bw, (bool, np.bool_)):
             raise TypeError("'bw' must be a method name or a positive "
                             "number, not a bool")
+        # too few observations for the method: an error if the bandwidth
+        # cannot be computed, a warning if the estimate is unreliable
+        if isinstance(bw, str) and bw in ('scott', 'silverman', 'lscv',
+                                          'sj'):
+            check_sample_size(sampleA.size, 1, bw, False)
+        elif not isinstance(bw, str):
+            check_sample_size(sampleA.size, 1, FIXED, False)
         if isinstance(bw, str):
             if bw in ('scott', 'silverman'):
                 bw_method = bw

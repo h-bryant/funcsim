@@ -5,6 +5,8 @@ from scipy import stats
 from typing import Generator, Optional, Sequence, Tuple, Union
 import warnings
 from . import conversions
+from . import mvbandwidth
+from .samplesize import check_sample_size, FIXED
 from . import copfit
 from . import nearby
 from . import shapiro
@@ -323,49 +325,130 @@ class MvKde():
         Input data array with variables in columns and observations
         in rows.
     bw : str or ArrayLike, optional
-        Bandwidth selection method ('scott' or 'silverman'), or a K-by-K
-        bandwidth covariance matrix in the units of the data, given as
-        anything :func:`numpy.asarray` accepts (a nested list, a NumPy
-        array, or a DataFrame).  Default is 'scott'.  The matrix in use is
-        available as :attr:`bandwidth`.
+        Bandwidth selection method ('scott', 'silverman', 'lscv', or
+        'scv'; see Notes), or a K-by-K bandwidth covariance matrix in the
+        units of the data, given as anything :func:`numpy.asarray`
+        accepts (a nested list, a NumPy array, or a DataFrame).  Default
+        is 'scott'.  The matrix in use is available as :attr:`bandwidth`.
+    full : bool, optional
+        If False (the default) a named method gives a diagonal bandwidth
+        matrix; if True it gives a full matrix, with off-diagonal entries
+        (see Notes).  Ignored for a user-supplied matrix.
+
+    Raises
+    ------
+    ValueError
+        If `bw` is an unknown method name or a matrix of the wrong shape,
+        or if there are too few observations for the method and
+        structure chosen (see Notes).
+
+    Warns
+    -----
+    UserWarning
+        If there are enough observations to compute the bandwidth but too
+        few to trust the estimate (see Notes), if a cross-validation
+        criterion appears to have collapsed, or if more than a tenth of
+        the observations are tied.
 
     Notes
     -----
     Each call to :meth:`draw` consumes K + 1 values from ``ugen``, where K
     is the number of variables.
 
-    Both rules of thumb give a diagonal bandwidth matrix whose entries are
-    a common factor times the variance of each variable, with M
-    observations and K variables:
-
-    - Scott's rule: ``H = M ** (-2 / (K + 4)) * diag(s_1 ** 2, ..., s_K ** 2)``
-    - Silverman's rule:
-      ``H = ((K + 2) * M / 4) ** (-2 / (K + 4)) * diag(s_1 ** 2, ..., s_K ** 2)``
-
-    where ``s_k`` is the standard deviation of variable k, computed with
-    ``ddof=0`` (dividing by M).  The two rules coincide when K = 2.  These
-    are the normal-reference rules of Scott (1992, eq. 6.42) and Silverman
-    (1986, eq. 4.14), and the same expressions as
+    **Rules of thumb.**  Both rules give a bandwidth matrix that is a
+    common factor times the sample (co)variance of the data, computed
+    with ``ddof=0`` (dividing by M), with M observations and K
+    variables: Scott's factor is ``M ** (-2 / (K + 4))`` and Silverman's
+    ``((K + 2) * M / 4) ** (-2 / (K + 4))``.  With ``full=False`` the
+    factor multiplies ``diag(s_1 ** 2, ..., s_K ** 2)``; with
+    ``full=True`` it multiplies the full sample covariance matrix, so the
+    kernels are oriented along the data's correlation (the normal-scale
+    rule of Wand and Jones, 1995, section 4.3, which is also what
+    :class:`scipy.stats.gaussian_kde` uses, up to its ``ddof=1``
+    covariance).  The two rules coincide when K = 2.  These are the
+    normal-reference rules of Scott (1992, eq. 6.42) and Silverman (1986,
+    eq. 4.14), and the diagonal ones use the same factors as
     :class:`scipy.stats.gaussian_kde`'s ``scotts_factor`` and
     ``silverman_factor``.  Before version 0.2.8 the Silverman factor was
     computed as ``(4 * M / (K + 2)) ** (-1 / (K + 4))``, which is correct
     only at K = 2.
 
+    **Cross-validation.**  ``bw='lscv'`` minimizes the least-squares
+    cross-validation criterion (Sain, Baggerly, and Scott, 1994; the
+    multivariate form of :class:`funcsim.Kde`'s), an estimate of the
+    integrated squared error, over diagonal (``full=False``) or all
+    positive definite (``full=True``) matrices, by Nelder-Mead from the
+    Silverman matrix of the same structure.  ``bw='scv'`` minimizes the
+    smoothed cross-validation criterion (Hall, Marron, and Park, 1992;
+    Duong and Hazelton, 2005), which replaces the leave-one-out term by
+    a pilot-smoothed estimate of the squared bias and is far less
+    variable than ``'lscv'``; its scalar pilot bandwidth is the
+    one-stage normal-reference rule of R's ``ks`` package (its
+    ``Hscv(..., nstage=1, pilot="dscalar")``), computed on the
+    standardized data (``full=False``) or the sphered data
+    (``full=True``).  Both criteria are closed-form sums over all pairs
+    of observations, so each evaluation costs of order ``M ** 2 * K``
+    operations and the search several hundred evaluations: well under a
+    second for a few hundred observations, tens of seconds for a few
+    thousand.  ``'scv'`` is the recommended data-driven choice;
+    ``'lscv'`` with ``full=True`` in particular is known to be
+    unstable.  Results agree with ``ks::Hlscv`` and ``ks::Hscv`` to
+    about one percent in tests (the remaining differences are
+    optimizer tolerances and ``ks``'s ``ddof=1`` covariance in the
+    pilot).
+
+    **Sample size.**  The constructor raises ``ValueError`` when the
+    bandwidth cannot be computed: fewer than two observations; with
+    ``full=True``, no more observations than variables (the sample
+    covariance is singular); and for ``'lscv'`` or ``'scv'``, fewer
+    observations than bandwidth parameters (K, or K (K + 1) / 2 with
+    ``full=True``) plus two.  It warns when the bandwidth can be
+    computed but the estimate is unreliable: fewer observations than
+    Silverman's (1986, Table 4.2) requirement for a usable estimate of a
+    K-variate normal density (4, 19, 67, 223, 768, 2790, 10,700, 43,700,
+    187,000, and 842,000 for K = 1 to 10; always beyond K = 10), raised
+    to ten observations per variable for a full-matrix rule and ten per
+    bandwidth parameter for ``'lscv'`` or ``'scv'``.
+
     References
     ----------
+    Duong, T., & Hazelton, M. L. (2005). Cross-validation bandwidth
+    matrices for multivariate kernel density estimation. *Scandinavian
+    Journal of Statistics*, 32(3), 485-506.
+
+    Hall, P., Marron, J. S., & Park, B. U. (1992). Smoothed
+    cross-validation. *Probability Theory and Related Fields*, 92, 1-20.
+
+    Sain, S. R., Baggerly, K. A., & Scott, D. W. (1994). Cross-validation
+    of multivariate densities. *Journal of the American Statistical
+    Association*, 89(427), 807-817.
+
     Scott, D.W. (1992). Multivariate Density Estimation: Theory, Practice,
     and Visualization. John Wiley & Sons.
 
     Silverman, B.W. (1986). Density Estimation for Statistics and Data
     Analysis. Chapman and Hall.
+
+    Wand, M. P., & Jones, M. C. (1995). *Kernel Smoothing*. Chapman and
+    Hall.
     """
     def __init__(self,
                  data: conversions.ArrayLike,
-                 bw: Union[str, conversions.ArrayLike, None] = 'scott'
+                 bw: Union[str, conversions.ArrayLike, None] = 'scott',
+                 full: bool = False
                 ) -> None:
         self._data = conversions.alToArray(data)
         self._names = conversions.alColNames(data)
         (self._M, self._K) = self._data.shape
+        full = bool(full)
+
+        # too few observations for the method and structure: an error if
+        # the bandwidth cannot be computed, a warning if it is unreliable
+        if bw is None:
+            bw = 'scott'
+        family = bw if isinstance(bw, str) else FIXED
+        check_sample_size(self._M, self._K, family,
+                          full and family != FIXED)
 
         # standardize data (store mean/std to undo later)
         self._means = self._data.mean(axis=0)
@@ -386,20 +469,31 @@ class MvKde():
         smult = ((self._K+2.0) * self._M / 4.0)**(-1.0 / (self._K+4.0))
         self._silverman = np.square(smult * np.diagflat(stdevs))
 
+        # full-matrix versions: the squared factor times the sample
+        # covariance (ddof=0) of the standardized data, i.e. its
+        # correlation matrix
+        if full:
+            S0 = np.cov(self._data, rowvar=False, bias=True)
+            S0 = np.asarray(S0, dtype=float).reshape(self._K, self._K)
+            self._scott = mult ** 2 * S0
+            self._silverman = smult ** 2 * S0
+
         # dispatch on the type of bw before comparing it with anything: a
         # NumPy array compared with a string evaluates elementwise under
         # NumPy 2, and its truth value is ambiguous
-        if bw is None:
-            bw = 'scott'
         if isinstance(bw, str):
             if bw == 'scott':
                 self._bw = self._scott
             elif bw == 'silverman':
                 self._bw = self._silverman
+            elif bw in ('lscv', 'scv'):
+                self._bw = mvbandwidth.select(bw, self._data, full,
+                                              self._silverman)
             else:
                 raise ValueError(f"unknown bandwidth method '{bw}'; "
-                                 f"expected 'scott', 'silverman', or a "
-                                 f"{self._K}-by-{self._K} bandwidth matrix")
+                                 f"expected 'scott', 'silverman', 'lscv', "
+                                 f"'scv', or a {self._K}-by-{self._K} "
+                                 f"bandwidth matrix")
         else:
             H = np.asarray(bw, dtype=float)
             if H.shape != (self._K, self._K):
@@ -426,11 +520,12 @@ class MvKde():
         K-by-K covariance DataFrame whose index and columns are the
         variable names.
 
-        For ``bw='scott'`` or ``bw='silverman'`` this is diagonal, the
-        rule's factor squared times the variance of each variable with
-        ``ddof=0`` (see the class notes); for a user-supplied matrix it is
-        that matrix, or the nearest positive definite matrix to it if it
-        was not positive definite.
+        For ``bw='scott'`` or ``bw='silverman'`` this is the rule's factor
+        times the variances (``full=False``, a diagonal matrix) or the
+        covariance matrix (``full=True``) of the data with ``ddof=0`` (see
+        the class notes); for ``'lscv'`` or ``'scv'`` the selected matrix;
+        for a user-supplied matrix that matrix, or the nearest positive
+        definite matrix to it if it was not positive definite.
         """
         D = np.diag(self._stds)
         return pd.DataFrame(D @ self._bw @ D, index=self._names,
