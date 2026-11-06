@@ -105,32 +105,69 @@ Multivariate kernel density estimate
 
 :class:`funcsim.MvKde` places a Gaussian kernel on each observation.  Data
 are standardized internally, and the bandwidth matrix is chosen by Scott's
-rule (default), Silverman's rule (``bw="silverman"``), or supplied as a
-K-by-K covariance matrix in the units of the data (a nested list, a NumPy
-array, or a DataFrame).  A draw picks one observation at random and
-perturbs it with the kernel.
+rule (default), Silverman's rule (``bw="silverman"``), least-squares or
+smoothed cross-validation (``bw="lscv"``, ``bw="scv"``; see below), or
+supplied as a K-by-K covariance matrix in the units of the data (a nested
+list, a NumPy array, or a DataFrame).  Each named method gives a diagonal
+matrix by default and a full matrix, with off-diagonal entries that
+orient the kernels along the data's correlation, with ``full=True``.  A
+draw picks one observation at random and perturbs it with the kernel.
 
 .. code-block:: python
 
    mvk = fs.MvKde(data)                 # or fs.MvKde(data, bw="silverman")
+   mvk = fs.MvKde(data, bw="scott", full=True)
    mvk = fs.MvKde(data, bw=np.array([[0.052, 0.510], [0.510, 8.882]]))
 
-Both rules give a diagonal bandwidth matrix, a common factor times the
-variance of each variable, for M observations and K variables: Scott's
-rule uses ``M ** (-2 / (K + 4))`` and Silverman's rule
-``((K + 2) * M / 4) ** (-2 / (K + 4))``, where the variances are computed
-with ``ddof=0``.  The two coincide when K = 2.  (Before version 0.2.8 the
-Silverman factor was inverted, ``(4 * M / (K + 2)) ** (-1 / (K + 4))`` on
-the standard deviation, so Silverman bandwidths for K other than 2 change
-on upgrading: they are wider for K = 1 and narrower for K greater than 2.)
-The matrix in use, whichever way it was chosen, is the ``bandwidth``
-property: a K-by-K DataFrame in the units of the data, indexed and
-labeled by the variable names.
+Both rules give a common factor times the sample (co)variance, for M
+observations and K variables: Scott's rule uses ``M ** (-2 / (K + 4))``
+and Silverman's rule ``((K + 2) * M / 4) ** (-2 / (K + 4))``, where the
+variances are computed with ``ddof=0``.  With ``full=False`` the factor
+multiplies the diagonal matrix of variances; with ``full=True`` it
+multiplies the full sample covariance matrix, the normal-scale rule of
+Wand and Jones (1995) that :class:`scipy.stats.gaussian_kde` also uses
+(with ``ddof=1``).  The two rules coincide when K = 2.  (Before version
+0.2.8 the Silverman factor was inverted, ``(4 * M / (K + 2)) ** (-1 /
+(K + 4))`` on the standard deviation, so Silverman bandwidths for K other
+than 2 change on upgrading: they are wider for K = 1 and narrower for K
+greater than 2.)  The matrix in use, whichever way it was chosen, is the
+``bandwidth`` property: a K-by-K DataFrame in the units of the data,
+indexed and labeled by the variable names.
+
+**Cross-validation.**  ``bw="lscv"`` minimizes the least-squares
+cross-validation criterion (Sain, Baggerly, and Scott, 1994), the
+multivariate form of the one :class:`funcsim.Kde` uses, over diagonal or
+full matrices.  ``bw="scv"`` minimizes the smoothed cross-validation
+criterion (Hall, Marron, and Park, 1992; Duong and Hazelton, 2005),
+which replaces the noisy leave-one-out term by a pilot-smoothed estimate
+of the squared bias; it is far less variable than ``"lscv"``, whose
+full-matrix form in particular is known to be unstable, and is the
+recommended data-driven choice.  Its scalar pilot is the one-stage
+normal-reference rule of R's ``ks`` package, and funcsim's results agree
+with ``ks::Hlscv`` and ``ks::Hscv`` to about a percent in its tests.
+Both criteria are closed-form sums over all pairs of observations,
+minimized by Nelder-Mead from the Silverman matrix: well under a second
+for a few hundred observations, tens of seconds for a few thousand.
 
 .. code-block:: python
 
    fs.MvKde(data).bandwidth                     # Scott's rule, diagonal
    fs.MvKde(data, bw="silverman").bandwidth     # the same at K = 2
+   fs.MvKde(data, bw="scv", full=True).bandwidth
+
+**Sample size.**  Kernel density estimates need rapidly more data as the
+number of variables grows.  The constructor raises ``ValueError`` when
+the bandwidth cannot be computed at all (fewer than two observations; no
+more observations than variables with ``full=True``, where the sample
+covariance is singular; or, for ``"lscv"`` and ``"scv"``, fewer
+observations than bandwidth parameters plus two) and warns when it can
+be computed but the estimate is unreliable: fewer observations than
+Silverman's (1986, Table 4.2) requirement for a usable estimate of a
+K-variate normal density, which is 4, 19, 67, 223, 768, and 2790 for
+K = 1 to 6 and reaches 842,000 at K = 10, raised to ten observations
+per variable for a full-matrix rule and ten per bandwidth parameter for
+cross-validation.  :class:`funcsim.Kde` applies the same two-tier check
+in one dimension.
 
    def trial(ugen):
        d = mvk.draw(ugen)
@@ -429,6 +466,10 @@ Correlation and covariance helpers
 References
 ----------
 
+Duong, T., & Hazelton, M. L. (2005). Cross-validation bandwidth matrices
+for multivariate kernel density estimation. *Scandinavian Journal of
+Statistics*, 32(3), 485-506.
+
 Embrechts, P., McNeil, A. J., & Straumann, D. (2002). Correlation and
 dependence in risk management: Properties and pitfalls. In M. A. H. Dempster
 (Ed.), *Risk management: Value at risk and beyond* (pp. 176-223). Cambridge
@@ -437,10 +478,17 @@ University Press.
 Grønneberg, S., & Hjort, N. L. (2014). The copula information criteria.
 *Scandinavian Journal of Statistics*, 41(2), 436-459.
 
+Hall, P., Marron, J. S., & Park, B. U. (1992). Smoothed cross-validation.
+*Probability Theory and Related Fields*, 92, 1-20.
+
 Higham, N. J. (1988). Computing a nearest symmetric positive semidefinite
 matrix. *Linear Algebra and its Applications*, 103, 103-118.
 
 Nelsen, R. B. (2006). *An introduction to copulas* (2nd ed.). Springer.
+
+Sain, S. R., Baggerly, K. A., & Scott, D. W. (1994). Cross-validation of
+multivariate densities. *Journal of the American Statistical Association*,
+89(427), 807-817.
 
 Schafer, J., & Strimmer, K. (2005). A shrinkage approach to large-scale
 covariance matrix estimation and implications for functional genomics.
@@ -452,3 +500,5 @@ and visualization*. John Wiley & Sons.
 
 Silverman, B. W. (1986). *Density estimation for statistics and data
 analysis*. Chapman and Hall.
+
+Wand, M. P., & Jones, M. C. (1995). *Kernel smoothing*. Chapman and Hall.
