@@ -35,6 +35,12 @@ _LSCV_GRID = 25
 _LSCV_RANGE = (1.0 / 20.0, 4.0)
 _PAIR_CHUNK = 4_000_000
 
+# Sheather-Jones plug-in: the root of the solve-the-equation rule is
+# bracketed in [0.1, 1] times a normal-reference bandwidth, and the bracket
+# is widened by the factor 1.2 (alternately above and below) at most
+# _SJ_MAX_WIDEN times before giving up, as R's bw.SJ does
+_SJ_MAX_WIDEN = 99
+
 # a pair of arrays (CDF, survival function) evaluated on an x array
 _CdfPair = Callable[[np.ndarray], Tuple[np.ndarray, np.ndarray]]
 
@@ -166,6 +172,108 @@ def _lscv_bandwidth(data: np.ndarray, lower: Optional[float],
     return float(res.x) if res.fun <= vals[i] else float(grid[i])
 
 
+def _psi(r: int, g: float, centers: np.ndarray) -> float:
+    # kernel estimate of the density functional psi_r = int f^(r) f, for
+    # r = 4 or 6, with the Gaussian kernel at pilot bandwidth g:
+    #     psi_r(g) = (1 / (N (N - 1) g^(r+1))) sum_{k,l} phi^(r)((c_k - c_l) / g)
+    # over all N centers including the diagonal, with
+    #     phi^(4)(z) = (z^4 - 6 z^2 + 3) phi(z)
+    #     phi^(6)(z) = (z^6 - 15 z^4 + 45 z^2 - 15) phi(z)
+    # (the conventions of R's bw.SJ).  Summed once over k < l by symmetry
+    N = centers.size
+    upper_tri = 0.0
+    step = max(1, _PAIR_CHUNK // N)
+    for i in range(0, N, step):
+        z = (centers[i:i + step, None] - centers[None, i:]) / g
+        z2 = z * z
+        if r == 4:
+            term = (z2 * z2 - 6.0 * z2 + 3.0) * np.exp(-0.5 * z2)
+        else:
+            term = ((z2 * z2 * z2 - 15.0 * z2 * z2 + 45.0 * z2 - 15.0)
+                    * np.exp(-0.5 * z2))
+        k = term.shape[0]
+        upper_tri += float(term.sum()) - float(np.tril(term[:, :k]).sum())
+    diag = N * (3.0 if r == 4 else -15.0)
+    return (2.0 * upper_tri + diag) / (N * (N - 1) * g ** (r + 1)
+                                       * math.sqrt(2.0 * math.pi))
+
+
+def _sj_bandwidth(data: np.ndarray, lower: Optional[float],
+                  upper: Optional[float], method: str = "ste") -> float:
+    # Sheather and Jones (1991) plug-in bandwidth, in the form of R's
+    # bw.SJ: "ste" solves the equation
+    #     h = (c1 / psi_4(alpha_2(h)))^(1/5),
+    #     alpha_2(h) = 1.357 (psi_4(a) / TD)^(1/7) h^(5/7)
+    # with pilots a = 1.24 lam M^(-1/7) and b = 1.23 lam M^(-1/9),
+    # lam = min(s, IQR / 1.349), TD = -psi_6(b), c1 = 1 / (2 sqrt(pi) M);
+    # "dpi" is the two-stage direct plug-in h = (c1 / psi_4(g))^(1/5) with
+    # g = (2.394 / (M TD))^(1/7).
+    #
+    # With a bound (a heuristic; see kde-plan-2026-11-06.md, step 3b) the
+    # functionals are estimated from the data together with their images,
+    # as a sample from the symmetric extension of f, and multiplied by the
+    # number of centers per observation (int (f'')^2 over the support is
+    # that multiple of its value for the extension over the line); M, lam,
+    # and the pilots are those of the data
+    M = data.size
+    if M < 3:
+        raise ValueError("bw='sj' needs at least three observations")
+    s = float(np.std(data, ddof=1))
+    q75, q25 = np.percentile(data, [75.0, 25.0])
+    lam = min(s, float(q75 - q25) / 1.349)
+    if not lam > 0.0:
+        raise ValueError("bw='sj' needs a sample with a positive "
+                         "interquartile range; use another bw")
+    centers = _centers(data, lower, upper)
+    n_img = centers.size // M
+    psi4 = lambda g: n_img * _psi(4, g, centers)
+    psi6 = lambda g: n_img * _psi(6, g, centers)
+    a = 1.24 * lam * M ** (-1.0 / 7.0)
+    b = 1.23 * lam * M ** (-1.0 / 9.0)
+    c1 = 1.0 / (2.0 * math.sqrt(math.pi) * M)
+    TD = -psi6(b)
+    if not (np.isfinite(TD) and TD > 0.0):
+        raise ValueError("bw='sj': the sample is too sparse to estimate "
+                         "the density functional TD; use another bw")
+    if method == "dpi":
+        S = psi4((2.394 / (M * TD)) ** (1.0 / 7.0))
+        if not (np.isfinite(S) and S > 0.0):
+            raise ValueError("bw='sj': the sample is too sparse to estimate "
+                             "the density functional SD; use another bw")
+        return (c1 / S) ** 0.2
+    S_a = psi4(a)
+    if not (np.isfinite(S_a) and S_a > 0.0):
+        raise ValueError("bw='sj': the sample is too sparse to estimate "
+                         "the density functional SD; use another bw")
+    alph2 = 1.357 * (S_a / TD) ** (1.0 / 7.0)
+
+    def fSD(h):
+        S = psi4(alph2 * h ** (5.0 / 7.0))
+        if not (np.isfinite(S) and S > 0.0):
+            return np.nan
+        return (c1 / S) ** 0.2 - h
+
+    hmax = 1.144 * lam * M ** (-0.2)
+    lo, hi = 0.1 * hmax, hmax
+    f_lo, f_hi = fSD(lo), fSD(hi)
+    tries = 0
+    while not (f_lo * f_hi < 0.0):
+        if tries >= _SJ_MAX_WIDEN or not (np.isfinite(f_lo)
+                                          and np.isfinite(f_hi)):
+            raise ValueError("bw='sj': no solution of the Sheather-Jones "
+                             "equation was found in the range of "
+                             "bandwidths searched; use bw='lscv' or a "
+                             "float")
+        if tries % 2 == 0:
+            hi *= 1.2
+            f_hi = fSD(hi)
+        else:
+            lo /= 1.2
+            f_lo = fSD(lo)
+        tries += 1
+    return float(scipy.optimize.brentq(fSD, lo, hi, xtol=1e-9 * hmax))
+
+
 class _PpfTable:
     # monotone inverse of a KDE's CDF.  The CDF F and survival function S
     # are evaluated on a grid spanning [lo, hi], and x is interpolated as a
@@ -246,11 +354,12 @@ class Kde():
     data : conversions.VectorLike
         1-D data vector (list, tuple, np.ndarray, xr.DataArray, or pd.Series).
     bw : str or float, optional
-        Bandwidth selection method ('scott', 'silverman', or 'lscv' for
-        least-squares cross-validation; see Notes) or a positive float to
-        use as the bandwidth (the standard deviation of the Gaussian
-        kernel), in the same units as the data.  Default is 'scott'.  The
-        bandwidth in use is available as :attr:`bandwidth`.
+        Bandwidth selection method ('scott', 'silverman', 'lscv' for
+        least-squares cross-validation, or 'sj' for the Sheather-Jones
+        plug-in rule; see Notes) or a positive float to use as the
+        bandwidth (the standard deviation of the Gaussian kernel), in the
+        same units as the data.  Default is 'scott'.  The bandwidth in
+        use is available as :attr:`bandwidth`.
     lowerBound : float, optional
         Lower bound of the support.  If given, the estimate is confined to
         values at or above it by reflection; see Notes.  Default is None
@@ -312,6 +421,30 @@ class Kde():
     are tied.  Cross-validated bandwidths are considerably more variable
     from sample to sample than the rules of thumb.
 
+    **Plug-in bandwidth.**  ``bw='sj'`` is the solve-the-equation plug-in
+    rule of Sheather and Jones (1991), in the form of R's ``bw.SJ``: the
+    bandwidth minimizing the asymptotic mean integrated squared error,
+    with the unknown curvature functional of the density estimated from
+    the data at a pilot bandwidth that itself depends on the bandwidth
+    sought (Wand and Jones, 1995, section 3.6).  It is far less variable
+    than cross-validation and is the usual recommendation for smooth
+    densities on the whole line; it needs a sample with a positive
+    interquartile range and raises ``ValueError`` when the sample is too
+    sparse or rounded to estimate the functionals, or when the equation
+    has no solution in the range searched.  Evaluating a functional
+    costs of order ``M ** 2`` operations.
+
+    With a bound the plug-in rule is a heuristic, because the expansion
+    behind it assumes a density that is smooth on the whole line: the
+    functionals are estimated from the data together with their
+    reflections, as a sample from the symmetric extension of the density
+    across the bound, and scaled to the support.  That is exact in spirit
+    when the density is flat at the bound (its symmetric extension is
+    then smooth) and remains reasonable in tests when it is not (for an
+    exponential sample bounded at zero it comes within a few percent of
+    the cross-validated choice), but ``'lscv'`` is the choice with a
+    guarantee in the bounded case.
+
     **Bounded support.**  With a bound, the estimate is the reflection
     estimator (Schuster, 1985; Silverman, 1986, section 2.10): the
     unbounded Gaussian KDE ``f`` of the data is folded back across each
@@ -365,8 +498,15 @@ class Kde():
     nonparametric estimators of densities. *Communications in Statistics,
     Theory and Methods*, 14(5), 1123-1136.
 
+    Sheather, S. J., & Jones, M. C. (1991). A reliable data-based
+    bandwidth selection method for kernel density estimation. *Journal
+    of the Royal Statistical Society B*, 53(3), 683-690.
+
     Silverman, B. W. (1986). *Density Estimation for Statistics and Data
     Analysis*. Chapman and Hall.
+
+    Wand, M. P., & Jones, M. C. (1995). *Kernel Smoothing*. Chapman and
+    Hall.
     """
     def __init__(self,
                  data : conversions.VectorLike,
@@ -395,10 +535,13 @@ class Kde():
             elif bw == 'lscv':
                 h = _lscv_bandwidth(sampleA, self._lower, self._upper)
                 bw_method = h / float(np.std(sampleA, ddof=1))
+            elif bw == 'sj':
+                h = _sj_bandwidth(sampleA, self._lower, self._upper)
+                bw_method = h / float(np.std(sampleA, ddof=1))
             else:
                 raise ValueError(f"unknown bandwidth method '{bw}'; use "
-                                 f"'scott', 'silverman', 'lscv', or a "
-                                 f"positive float")
+                                 f"'scott', 'silverman', 'lscv', 'sj', or "
+                                 f"a positive float")
         elif isinstance(bw, (int, float, np.integer, np.floating)):
             if bw <= 0.0:
                 raise ValueError("a numeric 'bw' must be positive")
