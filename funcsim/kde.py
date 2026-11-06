@@ -1,4 +1,5 @@
 import math
+import warnings
 from typing import Callable, Optional, Tuple, Union
 import numpy as np
 import scipy.optimize
@@ -25,6 +26,15 @@ _BOUND_K = range(13, 41)
 # secants, which keeps a cubic Hermite interpolant monotone
 _HERMITE_LIMIT = 3.0
 
+# least-squares cross-validation: the bandwidth is searched on a grid of
+# _LSCV_GRID log-spaced points between _LSCV_RANGE[0] and _LSCV_RANGE[1]
+# times Scott's bandwidth, then refined between the neighbors of the
+# chosen grid point.  Pairwise sums are evaluated in chunks of at most
+# _PAIR_CHUNK elements
+_LSCV_GRID = 25
+_LSCV_RANGE = (1.0 / 20.0, 4.0)
+_PAIR_CHUNK = 4_000_000
+
 # a pair of arrays (CDF, survival function) evaluated on an x array
 _CdfPair = Callable[[np.ndarray], Tuple[np.ndarray, np.ndarray]]
 
@@ -43,6 +53,117 @@ def _gaussian_cdf_pair(data: np.ndarray, weights: np.ndarray, h: float,
         F[i:i + step] = special.ndtr(z) @ weights
         S[i:i + step] = special.ndtr(-z) @ weights
     return F, S
+
+
+def _centers(data: np.ndarray, lower: Optional[float],
+             upper: Optional[float]) -> np.ndarray:
+    # kernel centers of the reflected estimator: the data followed by their
+    # images in each bound, so that the first data.size entries are the data
+    parts = [data]
+    if lower is not None:
+        parts.append(2.0 * lower - data)
+    if upper is not None:
+        parts.append(2.0 * upper - data)
+    return np.concatenate(parts)
+
+
+def _lscv_criterion(h: float, data: np.ndarray, centers: np.ndarray,
+                    lower: Optional[float], upper: Optional[float]) -> float:
+    # least-squares cross-validation criterion (Rudemo, 1982; Bowman, 1984)
+    #     LSCV(h) = int f_R^2 - (2 / M) sum_i f_{R,-i}(x_i)
+    # for the reflected estimator with kernel standard deviation h,
+    # unnormalized (Z taken as 1).  Both terms are closed-form pairwise
+    # sums over the centers c_k (data and images; see kde-plan-2026-11-06.md,
+    # step 2):
+    #     int_lo^hi f_R^2 = (1 / M^2) sum_{k,l} phi_{h sqrt2}(c_k - c_l) W_kl
+    #     W_kl = Phi((hi - m) / (h / sqrt2)) - Phi((lo - m) / (h / sqrt2)),
+    #     m = (c_k + c_l) / 2
+    # (the product of two Gaussian kernels is a Gaussian in the difference
+    # times a normal density in x with mean m and variance h^2 / 2), and
+    # the leave-one-out estimate at x_i sums phi_h(x_i - c_l) over the
+    # centers of every other observation.  With no bound W = 1; with one
+    # bound the integral is half the unweighted integral over the line
+    M = data.size
+    n_img = centers.size // M
+    N = centers.size
+    # with a single bound the reflected density extended below (above)
+    # the bound is symmetric about it, so the integral over the support is
+    # half the integral over the line and no weight W is needed; with two
+    # bounds W is computed from the midpoints
+    both = lower is not None and upper is not None
+    half = 0.5 if (n_img == 2) else 1.0
+    root2_h = math.sqrt(2.0) / h
+    # squared-integral term, by symmetry over pairs k <= l: for each chunk
+    # of rows the rectangle of columns from the chunk's first index on is
+    # summed, and the strictly lower triangle of its diagonal block (which
+    # the rectangle includes) is removed
+    upper_tri = 0.0     # sum over k < l
+    diag = 0.0          # sum over k == l
+    step = max(1, _PAIR_CHUNK // N)
+    for i in range(0, N, step):
+        rows = centers[i:i + step, None]
+        cols = centers[None, i:]
+        d = rows - cols
+        g2 = np.exp(-d * d / (4.0 * h * h))
+        if both:
+            m = 0.5 * (rows + cols)
+            g2 *= (special.ndtr((upper - m) * root2_h)
+                   - special.ndtr((lower - m) * root2_h))
+        k = g2.shape[0]
+        block = g2[:, :k]
+        diag += float(np.trace(block))
+        upper_tri += float(g2.sum()) - float(np.tril(block).sum())
+    sq_int = half * (2.0 * upper_tri + diag)
+    # leave-one-out term: data rows against every center, minus each
+    # observation's own centers
+    loo = 0.0
+    step = max(1, _PAIR_CHUNK // N)
+    for i in range(0, M, step):
+        d = data[i:i + step, None] - centers[None, :]
+        loo += float(np.exp(-d * d / (2.0 * h * h)).sum())
+    own = float(M)                                  # phi_h(0) terms
+    for k in range(1, n_img):
+        dk = data - centers[k * M:(k + 1) * M]
+        own += float(np.exp(-dk * dk / (2.0 * h * h)).sum())
+    loo -= own
+    sq_int /= (h * math.sqrt(4.0 * math.pi) * M * M)
+    loo /= (h * math.sqrt(2.0 * math.pi) * M * (M - 1))
+    return sq_int - 2.0 * loo
+
+
+def _lscv_bandwidth(data: np.ndarray, lower: Optional[float],
+                    upper: Optional[float]) -> float:
+    # bandwidth minimizing the least-squares cross-validation criterion:
+    # the largest local minimizer on a log-spaced grid (Hall and Marron,
+    # 1991), refined between its grid neighbors
+    M = data.size
+    if M < 3:
+        raise ValueError("bw='lscv' needs at least three observations")
+    if np.unique(data).size < 0.9 * M:
+        warnings.warn("more than a tenth of the observations are tied; "
+                      "least-squares cross-validation is unreliable for "
+                      "rounded data and may undersmooth", stacklevel=3)
+    h_scott = M ** (-0.2) * float(np.std(data, ddof=1))
+    centers = _centers(data, lower, upper)
+    crit = lambda h: _lscv_criterion(h, data, centers, lower, upper)
+    grid = np.geomspace(_LSCV_RANGE[0] * h_scott, _LSCV_RANGE[1] * h_scott,
+                        _LSCV_GRID)
+    vals = np.array([crit(h) for h in grid])
+    interior = np.flatnonzero((vals[1:-1] < vals[:-2])
+                              & (vals[1:-1] <= vals[2:])) + 1
+    if interior.size == 0:
+        i = int(np.argmin(vals))
+        warnings.warn("the least-squares cross-validation criterion has no "
+                      "interior minimum between %.3g and %.3g times "
+                      "Scott's bandwidth; using the %s end of that range"
+                      % (_LSCV_RANGE[0], _LSCV_RANGE[1],
+                         "lower" if i == 0 else "upper"), stacklevel=3)
+        return float(grid[i])
+    i = int(interior.max())
+    res = scipy.optimize.minimize_scalar(
+        crit, bounds=(grid[i - 1], grid[i + 1]), method="bounded",
+        options={"xatol": 1e-5 * grid[i]})
+    return float(res.x) if res.fun <= vals[i] else float(grid[i])
 
 
 class _PpfTable:
@@ -125,11 +246,11 @@ class Kde():
     data : conversions.VectorLike
         1-D data vector (list, tuple, np.ndarray, xr.DataArray, or pd.Series).
     bw : str or float, optional
-        Bandwidth selection method ('scott', 'silverman') or a positive
-        float to use as the bandwidth (the standard deviation of the
-        Gaussian kernel), in the same units as the data.
-        Default is 'scott'.  The bandwidth in use is available as
-        :attr:`bandwidth`.
+        Bandwidth selection method ('scott', 'silverman', or 'lscv' for
+        least-squares cross-validation; see Notes) or a positive float to
+        use as the bandwidth (the standard deviation of the Gaussian
+        kernel), in the same units as the data.  Default is 'scott'.  The
+        bandwidth in use is available as :attr:`bandwidth`.
     lowerBound : float, optional
         Lower bound of the support.  If given, the estimate is confined to
         values at or above it by reflection; see Notes.  Default is None
@@ -167,6 +288,29 @@ class Kde():
     column its bandwidth is smaller by the factor ``sqrt((M - 1) / M)``.)
     The rules are computed from the data as given; bounds do not change
     the bandwidth.
+
+    **Cross-validated bandwidth.**  ``bw='lscv'`` chooses the bandwidth
+    that minimizes the least-squares cross-validation criterion (Rudemo,
+    1982; Bowman, 1984), an unbiased estimate, up to a constant, of the
+    integrated squared error of the estimate: ``int f^2 - (2 / M) sum_i
+    f_{-i}(x_i)``, where ``f_{-i}`` is the estimate without observation
+    ``i``.  With a bound the criterion is evaluated for the reflected
+    estimate (ignoring the two-bound normalization), not for the
+    unbounded estimate of the raw data, which the boundary bias would
+    pull toward too small a bandwidth.  Both terms are closed-form
+    pairwise sums for the Gaussian kernel, costing of order ``M ** 2``
+    operations per evaluation; the search takes well under a second for
+    a few hundred observations and a few seconds for a few thousand.
+    The criterion is minimized on a grid of 25 log-spaced bandwidths
+    from 1/20 to 4 times Scott's bandwidth, taking the largest local
+    minimizer when there are several (Hall and Marron, 1991), refined
+    between its grid neighbors.  A warning is issued when the minimum
+    lies at an end of the grid (at the lower end usually because of tied
+    or rounded data, which the criterion rewards with ever smaller
+    bandwidths; at the upper end when the sample is close to uniform
+    under reflection), and when more than a tenth of the observations
+    are tied.  Cross-validated bandwidths are considerably more variable
+    from sample to sample than the rules of thumb.
 
     **Bounded support.**  With a bound, the estimate is the reflection
     estimator (Schuster, 1985; Silverman, 1986, section 2.10): the
@@ -207,6 +351,16 @@ class Kde():
 
     References
     ----------
+    Bowman, A. W. (1984). An alternative method of cross-validation for
+    the smoothing of density estimates. *Biometrika*, 71(2), 353-360.
+
+    Hall, P., & Marron, J. S. (1991). Local minima in cross-validation
+    functions. *Journal of the Royal Statistical Society B*, 53(1),
+    245-252.
+
+    Rudemo, M. (1982). Empirical choice of histograms and kernel density
+    estimators. *Scandinavian Journal of Statistics*, 9(2), 65-78.
+
     Schuster, E. F. (1985). Incorporating support constraints into
     nonparametric estimators of densities. *Communications in Statistics,
     Theory and Methods*, 14(5), 1123-1136.
@@ -236,10 +390,15 @@ class Kde():
             raise TypeError("'bw' must be a method name or a positive "
                             "number, not a bool")
         if isinstance(bw, str):
-            if bw not in ('scott', 'silverman'):
+            if bw in ('scott', 'silverman'):
+                bw_method = bw
+            elif bw == 'lscv':
+                h = _lscv_bandwidth(sampleA, self._lower, self._upper)
+                bw_method = h / float(np.std(sampleA, ddof=1))
+            else:
                 raise ValueError(f"unknown bandwidth method '{bw}'; use "
-                                 f"'scott', 'silverman', or a positive float")
-            bw_method = bw
+                                 f"'scott', 'silverman', 'lscv', or a "
+                                 f"positive float")
         elif isinstance(bw, (int, float, np.integer, np.floating)):
             if bw <= 0.0:
                 raise ValueError("a numeric 'bw' must be positive")
