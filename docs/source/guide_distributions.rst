@@ -155,11 +155,12 @@ Nonparametric representations
 When no parametric family is satisfactory, :class:`funcsim.Kde` represents
 a sample by a Gaussian kernel density estimate with ``pdf``, ``cdf``, and
 ``ppf`` methods.  The bandwidth is chosen by Scott's rule by default;
-pass ``bw="silverman"``, or a positive float to set the kernel standard
-deviation directly in the units of the data.  The bandwidth in use is
-the ``bandwidth`` property, in the units of the data: for M observations
-with sample standard deviation ``s`` (``ddof=1``), Scott's rule gives
-``M ** (-1 / 5) * s`` and Silverman's rule ``(3 * M / 4) ** (-1 / 5) * s``.
+pass ``bw="silverman"``, ``bw="lscv"`` (see below), or a positive float to
+set the kernel standard deviation directly in the units of the data.  The
+bandwidth in use is the ``bandwidth`` property, in the units of the data:
+for M observations with sample standard deviation ``s`` (``ddof=1``),
+Scott's rule gives ``M ** (-1 / 5) * s`` and Silverman's rule
+``(3 * M / 4) ** (-1 / 5) * s``.
 
 .. code-block:: python
 
@@ -194,6 +195,28 @@ the data as given and are unchanged by bounds.
    cost = fs.Kde(sample, lowerBound=0.0)
    share = fs.Kde(shares, lowerBound=0.0, upperBound=1.0)
    share.cdf(0.0), share.ppf(1.0)              # 0.0, 1.0
+
+**Cross-validated bandwidth.**  The rules of thumb are tuned to a normal
+sample and oversmooth multimodal or skewed data.  ``bw="lscv"`` instead
+picks the bandwidth that minimizes the least-squares cross-validation
+criterion (Rudemo, 1982; Bowman, 1984), an estimate of the integrated
+squared error of the density estimate, searched on a grid from 1/20 to 4
+times Scott's bandwidth and refined; with several local minima the
+largest minimizer is taken (Hall and Marron, 1991).  With a bound the
+criterion is that of the reflected estimate, so the two options combine
+correctly.  The cost is of order the square of the sample size per
+criterion evaluation: well under a second for a few hundred
+observations, a few seconds for a few thousand.  Cross-validated
+bandwidths vary much more from sample to sample than the rules of thumb,
+and the criterion is unreliable for rounded data, where ties pull it
+toward ever smaller bandwidths; a warning is issued when more than a
+tenth of the observations are tied, or when the minimum lies at an end of
+the search range.
+
+.. code-block:: python
+
+   kde = fs.Kde(sample, bw="lscv", lowerBound=0.0)
+   kde.bandwidth                                # the selected bandwidth
 
 A KDE has no closed-form inverse CDF.  ``ppf`` is served from a monotone
 inverse-CDF table that is built once, on the first call: the CDF is
