@@ -155,8 +155,9 @@ Nonparametric representations
 When no parametric family is satisfactory, :class:`funcsim.Kde` represents
 a sample by a Gaussian kernel density estimate with ``pdf``, ``cdf``, and
 ``ppf`` methods.  The bandwidth is chosen by Scott's rule by default;
-pass ``bw="silverman"``, ``bw="lscv"`` (see below), or a positive float to
-set the kernel standard deviation directly in the units of the data.  The
+pass ``bw="silverman"``, ``bw="lscv"`` or ``bw="sj"`` (see below), or a
+positive float to set the kernel standard deviation directly in the units
+of the data.  The
 bandwidth in use is the ``bandwidth`` property, in the units of the data:
 for M observations with sample standard deviation ``s`` (``ddof=1``),
 Scott's rule gives ``M ** (-1 / 5) * s`` and Silverman's rule
@@ -217,6 +218,26 @@ the search range.
 
    kde = fs.Kde(sample, bw="lscv", lowerBound=0.0)
    kde.bandwidth                                # the selected bandwidth
+
+**Plug-in bandwidth.**  ``bw="sj"`` is the Sheather and Jones (1991)
+solve-the-equation plug-in rule, computed as R's ``bw.SJ`` does (funcsim
+agrees with it to a few parts per million in tests): the bandwidth that
+minimizes the asymptotic mean integrated squared error, with the
+curvature of the density estimated from the data at a pilot bandwidth.
+It is much less variable than cross-validation and is the usual
+recommendation for a smooth density on the whole line.  It needs a sample
+with a positive interquartile range, and raises ``ValueError`` for a
+sample too sparse or rounded to estimate the curvature or when its
+equation has no solution.  With a bound the rule is a heuristic, since
+its derivation assumes a density smooth on the whole line: the curvature
+is estimated from the data together with their reflections, which is
+sound when the density is flat at the bound and reasonable otherwise in
+funcsim's tests; ``bw="lscv"`` is the option with a guarantee in the
+bounded case.
+
+.. code-block:: python
+
+   kde = fs.Kde(sample, bw="sj")
 
 A KDE has no closed-form inverse CDF.  ``ppf`` is served from a monotone
 inverse-CDF table that is built once, on the first call: the CDF is
