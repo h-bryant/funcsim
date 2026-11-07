@@ -15,8 +15,10 @@ properties (``rho``, ``nu``, ``theta``; ``CopulaStudent`` also reports
 ``loglik_gain``, the log-likelihood gain of its fitted ``nu`` over the
 Gaussian limit), together with the tail-dependence coefficients
 ``lambda_lower`` and ``lambda_upper``.  :func:`funcsim.copcompare` ranks
-the copula families by information criteria.  See :doc:`guide_dependence`
-for a narrative introduction with examples.
+the copula families by information criteria, and :func:`funcsim.energy`
+and :func:`funcsim.mmd` test whether two multivariate samples, say
+simulated output and historical data, share a joint distribution.  See
+:doc:`guide_dependence` for a narrative introduction with examples.
 
 Multivariate distributions
 --------------------------
@@ -33,6 +35,15 @@ Copulas
 .. automodule:: funcsim
    :no-index:
    :members: CopulaGauss, CopulaStudent, CopulaClayton, CopulaGumbel, CopulaFrank, copcompare
+   :undoc-members:
+   :show-inheritance:
+
+Two-sample goodness-of-fit tests
+--------------------------------
+
+.. automodule:: funcsim
+   :no-index:
+   :members: energy, mmd
    :undoc-members:
    :show-inheritance:
 

@@ -12,6 +12,9 @@ from .dependence import CopulaFrank
 
 from .copcompare import copcompare
 
+from .mvgof import energy
+from .mvgof import mmd
+
 from .imanconover import imanconover
 
 from .shrinkage import shrink

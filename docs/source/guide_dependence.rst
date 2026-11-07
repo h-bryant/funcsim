@@ -437,6 +437,59 @@ example to build a correlated input dataset or to post-process
 independently simulated variables.
 
 
+Testing simulated output against historical data
+------------------------------------------------
+
+Once a joint distribution has been specified, the question is whether draws
+from it look like the historical sample.  :func:`funcsim.energy` and
+:func:`funcsim.mmd` are two-sample, multivariate goodness-of-fit tests
+of the null hypothesis that two samples, which may differ in size, were
+drawn from the same joint distribution.  The energy test (Székely and
+Rizzo, 2004) builds its statistic from the Euclidean distances between
+observations: twice the mean distance between the samples, less the mean
+distance within each.  The maximum mean discrepancy (MMD) test (Gretton et
+al., 2012) does the same with a Gaussian kernel in place of the distance.
+Both statistics are zero in the population when the two distributions
+coincide and positive otherwise, so a smaller value is a closer fit and
+the statistics can be compared across candidate specifications.
+
+.. code-block:: python
+
+   hist = ...                      # historical data, variables in columns
+   sim = fs.simulate(f=trial, ntrials=1000, seed=0).sel(steps=0).to_pandas()
+   sim = sim[hist.columns]         # the tests pair variables by position
+
+   fs.energy(hist, sim, seed=0)
+   # GofResult(statistic=0.0041, pvalue=0.19)
+   fs.mmd(hist, sim, seed=0)
+   # GofResult(statistic=-1.2e-05, pvalue=0.27)
+
+Each p-value comes from a permutation test: the pooled observations are
+relabeled ``reps`` times (1000 by default) and the p-value is the share of
+relabelings whose statistic is at least the observed one.  Pass ``seed``
+for a reproducible p-value, or ``method="chi2"`` for the nearly
+instantaneous chi-square approximation of Shen, Panda, and Vogelstein
+(2022).
+
+Because both statistics are built from Euclidean distances, a variable
+measured in large units dominates them.  By default (``standardize=True``)
+each variable is therefore centered and scaled by the mean and standard
+deviation of the pooled sample before anything is computed.  This is one
+affine map applied to both samples, so it leaves the null hypothesis
+intact, and every variable then enters the distances with equal weight.
+``standardize="first"`` scales by the first sample instead, say the
+historical data, and ``standardize=False`` uses the data as given, which is
+appropriate only when the variables already share a meaningful scale.
+
+The statistics reported are the unbiased estimates, in which the
+within-sample means are taken over distinct pairs of observations.  They
+are slightly negative when the two samples are indistinguishable; a small
+negative value means "no detectable difference", not a better-than-perfect
+fit.  Pass ``unbiased=False`` for the nonnegative versions.  The tests are
+omnibus: with a few hundred observations they can miss a defect confined to
+a small share of the probability mass, so they complement plots and feature
+checks rather than replace them.
+
 Correlation and covariance helpers
 ----------------------------------
 
@@ -475,6 +528,10 @@ dependence in risk management: Properties and pitfalls. In M. A. H. Dempster
 (Ed.), *Risk management: Value at risk and beyond* (pp. 176-223). Cambridge
 University Press.
 
+Gretton, A., Borgwardt, K. M., Rasch, M. J., Schölkopf, B., & Smola, A.
+(2012). A kernel two-sample test. *Journal of Machine Learning Research*,
+13, 723-773.
+
 Grønneberg, S., & Hjort, N. L. (2014). The copula information criteria.
 *Scandinavian Journal of Statistics*, 41(2), 436-459.
 
@@ -498,7 +555,14 @@ Article 32.
 Scott, D. W. (1992). *Multivariate density estimation: Theory, practice,
 and visualization*. John Wiley & Sons.
 
+Shen, C., Panda, S., & Vogelstein, J. T. (2022). The chi-square test of
+distance correlation. *Journal of Computational and Graphical Statistics*,
+31(1), 254-262.
+
 Silverman, B. W. (1986). *Density estimation for statistics and data
 analysis*. Chapman and Hall.
+
+Székely, G. J., & Rizzo, M. L. (2004). Testing for equal distributions in
+high dimension. *InterStat*, 5.
 
 Wand, M. P., & Jones, M. C. (1995). *Kernel smoothing*. Chapman and Hall.
